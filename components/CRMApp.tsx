@@ -284,6 +284,17 @@ export default function CRMApp() {
     notify("Tâche ajoutée.");
   }
 
+  function updateLead(updatedLead: Lead) {
+    setData((current) => ({
+      ...current,
+      leads: current.leads.map((lead) =>
+        lead.id === updatedLead.id ? updatedLead : lead
+      )
+    }));
+
+    notify("Lead mis à jour.");
+  }
+
   function updateLeadStatus(id: string, status: LeadStatus) {
     setData((current) => ({
       ...current,
@@ -400,7 +411,7 @@ export default function CRMApp() {
         )}
 
         {activeTab === "leads" && (
-          <LeadsView leads={filteredLeads} contacts={data.contacts} onAdd={addLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} />
+          <LeadsView leads={filteredLeads} contacts={data.contacts} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} />
         )}
 
         {activeTab === "properties" && (
@@ -740,15 +751,56 @@ function LeadsView({
   leads,
   contacts,
   onAdd,
+  onUpdate,
   onStatusChange,
   onDelete
 }: {
   leads: Lead[];
   contacts: Contact[];
   onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
+  onUpdate: (lead: Lead) => void;
   onStatusChange: (id: string, status: LeadStatus) => void;
   onDelete: (id: string) => void;
 }) {
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
+
+  function submitEdit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!editingLead) return;
+
+    const form = new FormData(event.currentTarget);
+
+    const updatedLead: Lead = {
+      ...editingLead,
+      category: String(form.get("category") ?? "Villa") as Lead["category"],
+      contactName: String(form.get("contactName") ?? "").trim(),
+      status: String(form.get("status") ?? "Nouveau") as LeadStatus,
+      value: safeNumber(form.get("value")),
+      priority: String(form.get("priority") ?? "Moyenne") as Lead["priority"],
+      dueDate: String(form.get("dueDate") ?? ""),
+      rentalStartDate: String(form.get("rentalStartDate") ?? ""),
+      rentalEndDate: String(form.get("rentalEndDate") ?? ""),
+      nextAction: String(form.get("nextAction") ?? "").trim()
+    };
+
+    if (!updatedLead.contactName) return;
+
+    onUpdate(updatedLead);
+    setEditingLead(null);
+  }
+
+  function openEdit(lead: Lead) {
+    setEditingLead(lead);
+
+    setTimeout(() => {
+      document.getElementById("lead-edit-panel")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }, 50);
+  }
+
   return (
     <div className="stack">
       <section className="card form-card horizontal-form">
@@ -756,6 +808,7 @@ function LeadsView({
           <p className="eyebrow">Nouveau</p>
           <h3>Ajouter un lead</h3>
         </div>
+
         <form className="form-grid compact" onSubmit={onAdd}>
           <label>Catégorie
             <select name="category" defaultValue="Villa">
@@ -777,13 +830,30 @@ function LeadsView({
             </select>
           </label>
 
-          <label>Statut<select name="status">{leadStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
+          <label>Statut
+            <select name="status">
+              {leadStatuses.map((status) => <option key={status}>{status}</option>)}
+            </select>
+          </label>
+
           <label>Valeur<input name="value" type="number" min="0" placeholder="180000" /></label>
-          <label>Priorité<select name="priority"><option>Basse</option><option>Moyenne</option><option>Haute</option></select></label>
+
+          <label>Priorité
+            <select name="priority">
+              <option>Basse</option>
+              <option>Moyenne</option>
+              <option>Haute</option>
+            </select>
+          </label>
+
           <label>Échéance<input name="dueDate" type="date" /></label>
           <label>Début réservation<input name="rentalStartDate" type="date" /></label>
           <label>Fin réservation<input name="rentalEndDate" type="date" /></label>
-          <label className="full">Prochaine action<input name="nextAction" placeholder="Appeler, envoyer proposition..." /></label>
+
+          <label className="full">Prochaine action
+            <input name="nextAction" placeholder="Appeler, envoyer proposition..." />
+          </label>
+
           <button className="primary-button" type="submit">Ajouter</button>
         </form>
       </section>
@@ -791,30 +861,61 @@ function LeadsView({
       <section className="pipeline-grid">
         {leadStatuses.map((status) => {
           const columnLeads = leads.filter((lead) => lead.status === status);
+
           return (
             <div className="pipeline-column" key={status}>
               <div className="pipeline-title">
                 <strong>{status}</strong>
                 <span>{columnLeads.length}</span>
               </div>
+
               <div className="list-stack">
                 {columnLeads.map((lead) => (
                   <article className="lead-card" key={lead.id}>
                     <div className="lead-topline">
                       <Badge>{lead.priority}</Badge>
-                      <button className="icon-button" onClick={() => onDelete(lead.id)} aria-label="Supprimer">×</button>
+
+                      <button
+                        className="icon-button"
+                        onClick={() => {
+                          const confirmed = window.confirm(
+                            `Supprimer ce lead pour "${lead.contactName}" ?`
+                          );
+
+                          if (confirmed) {
+                            onDelete(lead.id);
+                          }
+                        }}
+                        aria-label="Supprimer"
+                      >
+                        ×
+                      </button>
                     </div>
+
                     <strong>{lead.category}</strong>
                     <span>{lead.contactName}</span>
                     <small>{formatReservationPeriod(lead.rentalStartDate, lead.rentalEndDate)}</small>
+
                     <p>{lead.nextAction || "Aucune prochaine action"}</p>
+
                     <div className="lead-footer">
                       <b>{currency.format(lead.value)}</b>
-                      <small>{lead.dueDate ? `Échéance réponse ${formatDateFR(lead.dueDate)}` : "Échéance réponse non renseignée"}</small>
+                      <small>
+                        {lead.dueDate ? `Échéance ${formatDateFR(lead.dueDate)}` : "Échéance non renseignée"}
+                      </small>
                     </div>
+
                     <select value={lead.status} onChange={(event) => onStatusChange(lead.id, event.target.value as LeadStatus)}>
                       {leadStatuses.map((option) => <option key={option}>{option}</option>)}
                     </select>
+
+                    <button
+                      className="lead-edit-button"
+                      type="button"
+                      onClick={() => openEdit(lead)}
+                    >
+                      Modifier
+                    </button>
                   </article>
                 ))}
               </div>
@@ -822,6 +923,71 @@ function LeadsView({
           );
         })}
       </section>
+
+      {editingLead && (
+        <div className="confirm-backdrop">
+          <div id="lead-edit-panel" className="confirm-dialog edit-dialog" role="dialog" aria-modal="true">
+            <p className="eyebrow">Modification</p>
+            <h3>Modifier le lead</h3>
+
+            <form className="form-grid" onSubmit={submitEdit}>
+              <label>Catégorie
+                <select name="category" defaultValue={editingLead.category}>
+                  <option value="Villa">Villa</option>
+                  <option value="Voiture">Voiture</option>
+                  <option value="Bateau">Bateau</option>
+                  <option value="Conciergerie">Conciergerie</option>
+                </select>
+              </label>
+
+              <label>Contact
+                <select name="contactName" defaultValue={editingLead.contactName} required>
+                  <option value="">Sélectionner un contact</option>
+                  {contacts.map((contact) => (
+                    <option key={contact.id} value={contact.name}>
+                      {contact.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>Statut
+                <select name="status" defaultValue={editingLead.status}>
+                  {leadStatuses.map((status) => <option key={status}>{status}</option>)}
+                </select>
+              </label>
+
+              <label>Valeur<input name="value" type="number" min="0" defaultValue={editingLead.value || ""} /></label>
+
+              <label>Priorité
+                <select name="priority" defaultValue={editingLead.priority}>
+                  <option>Basse</option>
+                  <option>Moyenne</option>
+                  <option>Haute</option>
+                </select>
+              </label>
+
+              <label>Échéance<input name="dueDate" type="date" defaultValue={editingLead.dueDate} /></label>
+              <label>Début réservation<input name="rentalStartDate" type="date" defaultValue={editingLead.rentalStartDate} /></label>
+              <label>Fin réservation<input name="rentalEndDate" type="date" defaultValue={editingLead.rentalEndDate} /></label>
+
+              <label className="full">Prochaine action
+                <input name="nextAction" defaultValue={editingLead.nextAction} />
+              </label>
+
+              <div className="confirm-actions full">
+                <button className="ghost-button" type="button" onClick={() => setEditingLead(null)}>
+                  Annuler
+                </button>
+
+                <button className="primary-button" type="submit">
+                  Enregistrer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
