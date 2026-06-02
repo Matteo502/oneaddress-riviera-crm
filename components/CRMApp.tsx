@@ -812,6 +812,9 @@ function LeadsView({
   onDelete: (id: string) => void;
 }) {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [leadCategoryFilter, setLeadCategoryFilter] = useState<"Toutes" | Lead["category"]>("Toutes");
+  const [leadStatusFilter, setLeadStatusFilter] = useState<"Tous" | LeadStatus>("Tous");
+  const [leadPriorityFilter, setLeadPriorityFilter] = useState<"Toutes" | Lead["priority"]>("Toutes");
 
   function submitEdit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -849,6 +852,19 @@ function LeadsView({
       });
     }, 50);
   }
+
+  const visibleLeads = leads.filter((lead) => {
+    const categoryMatches = leadCategoryFilter === "Toutes" || lead.category === leadCategoryFilter;
+    const statusMatches = leadStatusFilter === "Tous" || lead.status === leadStatusFilter;
+    const priorityMatches = leadPriorityFilter === "Toutes" || lead.priority === leadPriorityFilter;
+
+    return categoryMatches && statusMatches && priorityMatches;
+  });
+
+  const filtersAreActive =
+    leadCategoryFilter !== "Toutes" ||
+    leadStatusFilter !== "Tous" ||
+    leadPriorityFilter !== "Toutes";
 
   return (
     <div className="stack">
@@ -907,11 +923,70 @@ function LeadsView({
         </form>
       </section>
 
+      <section className="card lead-filter-card">
+        <div>
+          <p className="eyebrow">Filtres rapides</p>
+          <h3>{visibleLeads.length} leads affichés</h3>
+        </div>
+
+        <div className="lead-filter-grid">
+          <label>Catégorie
+            <select
+              value={leadCategoryFilter}
+              onChange={(event) => setLeadCategoryFilter(event.target.value as "Toutes" | Lead["category"])}
+            >
+              <option value="Toutes">Toutes</option>
+              <option value="Villa">Villa</option>
+              <option value="Voiture">Voiture</option>
+              <option value="Bateau">Bateau</option>
+              <option value="Conciergerie">Conciergerie</option>
+            </select>
+          </label>
+
+          <label>Statut
+            <select
+              value={leadStatusFilter}
+              onChange={(event) => setLeadStatusFilter(event.target.value as "Tous" | LeadStatus)}
+            >
+              <option value="Tous">Tous</option>
+              {leadStatuses.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>Priorité
+            <select
+              value={leadPriorityFilter}
+              onChange={(event) => setLeadPriorityFilter(event.target.value as "Toutes" | Lead["priority"])}
+            >
+              <option value="Toutes">Toutes</option>
+              <option value="Basse">Basse</option>
+              <option value="Moyenne">Moyenne</option>
+              <option value="Haute">Haute</option>
+            </select>
+          </label>
+
+          <button
+            className="ghost-button"
+            type="button"
+            disabled={!filtersAreActive}
+            onClick={() => {
+              setLeadCategoryFilter("Toutes");
+              setLeadStatusFilter("Tous");
+              setLeadPriorityFilter("Toutes");
+            }}
+          >
+            Réinitialiser
+          </button>
+        </div>
+      </section>
+
       <section className="pipeline-grid">
         {leadStatuses.map((status) => {
-          const columnLeads = leads.filter((lead) => lead.status === status);
+          const columnLeads = visibleLeads.filter((lead) => lead.status === status);
 
-          return (
+  return (
             <div className="pipeline-column" key={status}>
               <div className="pipeline-title">
                 <strong>{status}</strong>
