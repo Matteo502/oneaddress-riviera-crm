@@ -507,7 +507,7 @@ td small,
 
 .form-grid.compact {
   grid-template-columns: repeat(4, minmax(140px, 1fr));
-  align-items: end;
+  align-items: flex-end;
 }
 
 .form-grid label {
@@ -1255,7 +1255,7 @@ td:last-child {
   display: flex;
   justify-content: space-between;
   gap: 20px;
-  align-items: end;
+  align-items: flex-end;
 }
 
 .lead-filter-card h3 {
@@ -1266,7 +1266,7 @@ td:last-child {
   display: grid;
   grid-template-columns: repeat(4, minmax(150px, 1fr));
   gap: 12px;
-  align-items: end;
+  align-items: flex-end;
   min-width: min(760px, 100%);
 }
 
@@ -1307,7 +1307,7 @@ td:last-child {
   display: flex;
   justify-content: space-between;
   gap: 20px;
-  align-items: end;
+  align-items: flex-end;
 }
 
 .asset-filter-card h3 {
@@ -1318,7 +1318,7 @@ td:last-child {
   display: grid;
   grid-template-columns: repeat(3, minmax(150px, 1fr));
   gap: 12px;
-  align-items: end;
+  align-items: flex-end;
   min-width: min(620px, 100%);
 }
 
@@ -1508,3 +1508,317 @@ td:last-child {
 }
 
 
+
+
+/* === UX CLEANUP / RESPIRATION CRM === */
+
+.page-shell,
+.main-content,
+.content-area {
+  min-width: 0;
+}
+
+.stack {
+  gap: clamp(22px, 3vw, 36px) !important;
+}
+
+.card,
+.form-card,
+.pipeline-column,
+.property-card {
+  overflow: hidden;
+}
+
+.card,
+.form-card {
+  padding: clamp(24px, 2.4vw, 34px) !important;
+}
+
+.section-heading,
+.compact-heading {
+  gap: 18px !important;
+  align-items: flex-start !important;
+}
+
+.section-heading h3,
+.form-card h3,
+.card h3 {
+  line-height: 1.08 !important;
+}
+
+.eyebrow {
+  margin-bottom: 8px !important;
+  line-height: 1.25 !important;
+  letter-spacing: 0.24em !important;
+}
+
+/* Formulaires plus respirants */
+.form-grid {
+  gap: 18px !important;
+}
+
+.form-grid.compact {
+  gap: 16px 18px !important;
+}
+
+.form-grid label,
+.lead-filter-grid label,
+.asset-filter-grid label {
+  gap: 9px !important;
+  line-height: 1.25 !important;
+}
+
+input,
+select,
+textarea {
+  min-height: 48px !important;
+  line-height: 1.35 !important;
+  padding: 13px 15px !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+textarea {
+  min-height: 108px !important;
+  resize: vertical;
+}
+
+/* Tables contacts : éviter les textes collés */
+.table-wrap {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+table {
+  width: 100%;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+th {
+  padding: 0 16px 14px 16px !important;
+  line-height: 1.25 !important;
+  white-space: nowrap;
+}
+
+td {
+  padding: 22px 16px !important;
+  line-height: 1.45 !important;
+  vertical-align: top !important;
+}
+
+td strong,
+td small,
+.muted-line {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+td strong {
+  margin-bottom: 6px;
+}
+
+td small,
+.muted-line {
+  line-height: 1.45 !important;
+}
+
+/* Actions discrètes mais lisibles */
+.contact-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px !important;
+  margin-top: 12px !important;
+}
+
+.contact-detail-button,
+.contact-edit-button,
+.contact-delete-button,
+.lead-detail-button,
+.lead-edit-button,
+.asset-edit-button,
+.task-edit-button {
+  line-height: 1.25 !important;
+  white-space: nowrap;
+}
+
+/* Leads : cartes moins serrées */
+.pipeline-grid {
+  gap: 18px !important;
+  align-items: flex-start !important;
+}
+
+.pipeline-column {
+  padding: 18px !important;
+}
+
+.pipeline-title {
+  margin-bottom: 16px !important;
+}
+
+.lead-card {
+  padding: 18px !important;
+  gap: 12px !important;
+}
+
+.lead-card strong,
+.lead-card span,
+.lead-card small,
+.lead-card p {
+  line-height: 1.4 !important;
+  overflow-wrap: anywhere;
+}
+
+.lead-footer {
+  gap: 10px !important;
+  align-items: flex-start !important;
+}
+
+.lead-card-actions {
+  margin-top: 10px !important;
+}
+
+/* Biens / voitures / bateaux */
+.property-grid {
+  gap: 22px !important;
+}
+
+.property-body {
+  padding: 24px !important;
+}
+
+.property-meta {
+  gap: 12px !important;
+}
+
+.property-meta div {
+  min-width: 0;
+  padding: 15px !important;
+}
+
+.property-meta dt {
+  line-height: 1.2 !important;
+}
+
+.property-meta dd {
+  line-height: 1.35 !important;
+  overflow-wrap: anywhere;
+}
+
+/* Tâches */
+.task-row,
+.attention-row,
+.mini-row {
+  gap: 16px !important;
+  padding: 18px !important;
+}
+
+.task-row strong,
+.task-row span,
+.task-row small,
+.attention-row strong,
+.attention-row span,
+.attention-row small,
+.mini-row strong,
+.mini-row span {
+  line-height: 1.42 !important;
+  overflow-wrap: anywhere;
+}
+
+/* Filtres : plus propres */
+.lead-filter-card,
+.asset-filter-card {
+  align-items: flex-end !important;
+  padding: 22px 24px !important;
+}
+
+.lead-filter-grid,
+.asset-filter-grid {
+  gap: 14px !important;
+}
+
+/* Modales / fiches détaillées */
+.confirm-backdrop {
+  padding: 32px !important;
+}
+
+.confirm-dialog {
+  max-height: 88vh !important;
+  overflow-y: auto !important;
+}
+
+.confirm-dialog,
+.edit-dialog,
+.contact-detail-dialog,
+.lead-detail-dialog {
+  padding: clamp(28px, 3vw, 42px) !important;
+}
+
+.confirm-actions {
+  gap: 14px !important;
+  flex-wrap: wrap;
+}
+
+.contact-detail-grid,
+.lead-detail-grid {
+  gap: 16px !important;
+}
+
+.contact-detail-grid div,
+.lead-detail-grid div {
+  padding: 16px !important;
+}
+
+.contact-related-section {
+  margin-top: 28px !important;
+}
+
+/* Boutons : éviter l'effet compact/collé */
+.primary-button,
+.secondary-button,
+.ghost-button,
+.danger-button {
+  min-height: 46px !important;
+  line-height: 1.2 !important;
+}
+
+/* Responsive propre */
+@media (max-width: 1180px) {
+  .two-columns,
+  .two-columns.wide-left {
+    grid-template-columns: 1fr !important;
+  }
+
+  .lead-filter-card,
+  .asset-filter-card {
+    align-items: stretch !important;
+  }
+}
+
+@media (max-width: 780px) {
+  .card,
+  .form-card,
+  .property-body,
+  .pipeline-column {
+    padding: 20px !important;
+  }
+
+  td,
+  th {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .confirm-backdrop {
+    padding: 18px !important;
+  }
+
+  .confirm-actions {
+    justify-content: stretch !important;
+  }
+
+  .confirm-actions button {
+    flex: 1 1 100%;
+  }
+}
