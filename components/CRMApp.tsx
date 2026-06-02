@@ -81,7 +81,7 @@ export default function CRMApp() {
   }, [data]);
 
   const filteredContacts = useMemo(() => {
-    return data.contacts.filter((contact) => searchMatch(query, [contact.name, contact.kind, contact.email, contact.phone, contact.city]));
+    return data.contacts.filter((contact) => searchMatch(query, [contact.name, contact.kind, contact.email, contact.phone, contact.city, contact.postalAddress ?? ""]));
   }, [data.contacts, query]);
 
   const filteredLeads = useMemo(() => {
@@ -126,6 +126,7 @@ export default function CRMApp() {
       email: String(form.get("email") ?? "").trim(),
       phone: String(form.get("phone") ?? "").trim(),
       city: String(form.get("city") ?? "").trim(),
+      postalAddress: String(form.get("postalAddress") ?? "").trim(),
       budget: safeNumber(form.get("budget")),
       source: String(form.get("source") ?? "").trim() || "Direct",
       notes: String(form.get("notes") ?? "").trim(),
@@ -427,7 +428,7 @@ function ContactsView({ contacts, onAdd, onDelete }: { contacts: Contact[]; onAd
               <tr>
                 <th>Nom</th>
                 <th>Type</th>
-                <th>Ville</th>
+                <th>Ville / adresse</th>
                 <th>Budget</th>
                 <th>Contact</th>
                 <th></th>
@@ -441,7 +442,10 @@ function ContactsView({ contacts, onAdd, onDelete }: { contacts: Contact[]; onAd
                     <small>{contact.source}</small>
                   </td>
                   <td><Badge>{contact.kind}</Badge></td>
-                  <td>{contact.city || "—"}</td>
+                  <td>
+                    <span className="muted-line">{contact.city || "—"}</span>
+                    <span className="muted-line">{contact.postalAddress || "Adresse non renseignée"}</span>
+                  </td>
                   <td>{contact.budget > 0 ? currency.format(contact.budget) : "—"}</td>
                   <td>
                     <span className="muted-line">{contact.email}</span>
@@ -464,6 +468,7 @@ function ContactsView({ contacts, onAdd, onDelete }: { contacts: Contact[]; onAd
           <label>Email<input name="email" type="email" placeholder="email@exemple.com" /></label>
           <label>Téléphone<input name="phone" placeholder="+33..." /></label>
           <label>Ville<input name="city" placeholder="Cannes" /></label>
+          <label>Adresse postale<input name="postalAddress" placeholder="12 Boulevard de la Croisette, 06400 Cannes" /></label>
           <label>Budget<input name="budget" type="number" min="0" placeholder="2500000" /></label>
           <label>Source<input name="source" placeholder="Site web, recommandation..." /></label>
           <label className="full">Notes<textarea name="notes" placeholder="Besoins, contexte, prochaines infos à retenir" /></label>

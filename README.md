@@ -5,7 +5,8 @@ Starter CRM Next.js prêt pour GitHub + Vercel.
 ## Fonctionnalités incluses
 
 - Dashboard avec indicateurs business
-- Contacts clients/propriétaires
+- Contacts
+- Adresse postale des contacts clients/propriétaires
 - Leads avec pipeline de vente
 - Biens immobiliers
 - Tâches commerciales

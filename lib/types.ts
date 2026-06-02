@@ -10,6 +10,7 @@ export type Contact = {
   email: string;
   phone: string;
   city: string;
+  postalAddress: string;
   budget: number;
   source: string;
   notes: string;
