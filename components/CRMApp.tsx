@@ -561,7 +561,15 @@ function ContactsView({
                     <button
                       className="contact-delete-button"
                       type="button"
-                      onClick={() => onDelete(contact.id)}
+                      onClick={() => {
+                        const confirmed = window.confirm(
+                          `Confirmer la suppression de "${contact.name}" ?\n\nCette action supprimera le contact de la base client.`
+                        );
+
+                        if (confirmed) {
+                          onDelete(contact.id);
+                        }
+                      }}
                       aria-label="Supprimer le contact"
                       title="Supprimer le contact"
                     >
