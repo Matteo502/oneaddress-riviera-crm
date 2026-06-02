@@ -544,7 +544,8 @@ function ContactsView({ contacts, onAdd, onDelete }: { contacts: Contact[]; onAd
                 <th>Budget</th>
                 <th>Contact</th>
                 <th></th>
-              </tr>
+                            <th>Actions</th>
+            </tr>
             </thead>
             <tbody>
               {contacts.map((contact) => (
