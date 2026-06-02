@@ -250,6 +250,19 @@ export default function CRMApp() {
     notify("Export CSV téléchargé.");
   }
 
+  function goToSection(tab: Tab, elementId?: string) {
+    setActiveTab(tab);
+
+    window.setTimeout(() => {
+      if (!elementId) return;
+
+      document.getElementById(elementId)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    }, 100);
+  }
+
   return () => window.clearTimeout(timer);
   }, [toast]);
 
@@ -582,6 +595,39 @@ export default function CRMApp() {
             <h2>{titleForTab(activeTab)}</h2>
           </div>
           <div className="topbar-actions">
+          <div className="quick-actions-bar">
+            <button className="quick-action-button" type="button" onClick={() => {
+              setActiveTab("contacts");
+              window.setTimeout(() => {
+                document.getElementById("quick-add-contact")?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start"
+                });
+              }, 100);
+            }}>+ Contact</button>
+            <button className="quick-action-button" type="button" onClick={() => {
+              setActiveTab("leads");
+              window.setTimeout(() => {
+                document.getElementById("quick-add-lead")?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start"
+                });
+              }, 100);
+            }}>+ Lead</button>
+            <button className="quick-action-button" type="button" onClick={() => {
+              setActiveTab("tasks");
+              window.setTimeout(() => {
+                document.getElementById("quick-add-task")?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start"
+                });
+              }, 100);
+            }}>+ Tâche</button>
+            <button className="quick-action-button secondary" type="button" onClick={() => setActiveTab("contacts")}>Contacts</button>
+            <button className="quick-action-button secondary" type="button" onClick={() => setActiveTab("leads")}>Leads</button>
+            <button className="quick-action-button secondary" type="button" onClick={() => setActiveTab("dashboard")}>Dashboard</button>
+          </div>
+
             <input
               className="search-input"
               value={query}
@@ -904,7 +950,7 @@ function ContactsView({
         </div>
       </section>
 
-      <section className="card form-card">
+      <section id="quick-add-contact" className="card form-card">
         <p className="eyebrow">Nouveau</p>
         <h3>Ajouter un contact</h3>
 
@@ -2260,7 +2306,7 @@ function TasksView({
         </div>
       </section>
 
-      <section className="card form-card">
+      <section id="quick-add-task" className="card form-card">
         <p className="eyebrow">Nouvelle</p>
         <h3>Ajouter une tâche</h3>
 
