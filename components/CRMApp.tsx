@@ -373,6 +373,14 @@ export default function CRMApp() {
           <PropertiesView properties={filteredProperties} onAdd={addProperty} onDelete={deleteProperty} />
         )}
 
+        {activeTab === "vehicles" && (
+          <VehiclesView vehicles={filteredVehicles} onAdd={addVehicle} onDelete={deleteVehicle} />
+        )}
+
+        {activeTab === "boats" && (
+          <BoatsView boats={filteredBoats} onAdd={addBoat} onDelete={deleteBoat} />
+        )}
+
         {activeTab === "tasks" && (
           <TasksView tasks={filteredTasks} onAdd={addTask} onStatusChange={updateTaskStatus} onDelete={deleteTask} />
         )}
