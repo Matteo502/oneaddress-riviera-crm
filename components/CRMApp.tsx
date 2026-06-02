@@ -696,16 +696,33 @@ function PropertiesView({ properties, onAdd, onDelete }: { properties: Property[
 }
 
 
-function VehiclesView({ vehicles, onAdd, onDelete }: { vehicles: Vehicle[]; onAdd: (event: React.FormEvent<HTMLFormElement>) => void; onDelete: (id: string) => void }) {
+
+function VehiclesView({
+  vehicles,
+  onAdd,
+  onDelete
+}: {
+  vehicles: Vehicle[];
+  onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
+  onDelete: (id: string) => void;
+}) {
   return (
     <div className="two-columns wide-left">
       <section className="property-grid">
+        {vehicles.length === 0 && (
+          <div className="empty-state">
+            <h3>Aucune voiture pour le moment</h3>
+            <p>Ajoutez une voiture avec le formulaire à droite.</p>
+          </div>
+        )}
+
         {vehicles.map((vehicle) => (
           <article className="property-card" key={vehicle.id}>
             <div className="property-visual">
               <span>{vehicle.brand || "Voiture"}</span>
               <button className="icon-button light" onClick={() => onDelete(vehicle.id)} aria-label="Supprimer">×</button>
             </div>
+
             <div className="property-body">
               <div className="section-heading compact-heading">
                 <div>
@@ -714,11 +731,24 @@ function VehiclesView({ vehicles, onAdd, onDelete }: { vehicles: Vehicle[]; onAd
                 </div>
                 <Badge>{vehicle.status}</Badge>
               </div>
+
               <dl className="property-meta">
-                <div><dt>Prix / jour</dt><dd>{currency.format(vehicle.price)}</dd></div>
-                <div><dt>Année</dt><dd>{vehicle.year || "—"}</dd></div>
-                <div><dt>Kilométrage</dt><dd>{vehicle.mileage ? `${vehicle.mileage.toLocaleString("fr-FR")} km` : "—"}</dd></div>
-                <div><dt>Owner</dt><dd>{vehicle.owner || "—"}</dd></div>
+                <div>
+                  <dt>Prix / jour</dt>
+                  <dd>{currency.format(vehicle.price)}</dd>
+                </div>
+                <div>
+                  <dt>Année</dt>
+                  <dd>{vehicle.year || "—"}</dd>
+                </div>
+                <div>
+                  <dt>Kilométrage</dt>
+                  <dd>{vehicle.mileage ? `${vehicle.mileage.toLocaleString("fr-FR")} km` : "—"}</dd>
+                </div>
+                <div>
+                  <dt>Owner</dt>
+                  <dd>{vehicle.owner || "—"}</dd>
+                </div>
               </dl>
             </div>
           </article>
@@ -728,13 +758,18 @@ function VehiclesView({ vehicles, onAdd, onDelete }: { vehicles: Vehicle[]; onAd
       <section className="card form-card">
         <p className="eyebrow">Nouveau</p>
         <h3>Ajouter une voiture</h3>
+
         <form className="form-grid" onSubmit={onAdd}>
           <label>Nom<input name="name" placeholder="Range Rover Autobiography" /></label>
           <label>Marque<input name="brand" placeholder="Land Rover" /></label>
           <label>Modèle<input name="model" placeholder="Range Rover" /></label>
           <label>Ville<input name="city" placeholder="Cannes" /></label>
           <label>Prix / jour<input name="price" type="number" min="0" placeholder="900" /></label>
-          <label>Statut<select name="status">{vehicleStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
+          <label>Statut
+            <select name="status">
+              {vehicleStatuses.map((status) => <option key={status}>{status}</option>)}
+            </select>
+          </label>
           <label>Propriétaire<input name="owner" placeholder="Nom owner" /></label>
           <label>Année<input name="year" type="number" min="1900" placeholder="2024" /></label>
           <label>Kilométrage<input name="mileage" type="number" min="0" placeholder="12000" /></label>
@@ -745,16 +780,32 @@ function VehiclesView({ vehicles, onAdd, onDelete }: { vehicles: Vehicle[]; onAd
   );
 }
 
-function BoatsView({ boats, onAdd, onDelete }: { boats: Boat[]; onAdd: (event: React.FormEvent<HTMLFormElement>) => void; onDelete: (id: string) => void }) {
+function BoatsView({
+  boats,
+  onAdd,
+  onDelete
+}: {
+  boats: Boat[];
+  onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
+  onDelete: (id: string) => void;
+}) {
   return (
     <div className="two-columns wide-left">
       <section className="property-grid">
+        {boats.length === 0 && (
+          <div className="empty-state">
+            <h3>Aucun bateau pour le moment</h3>
+            <p>Ajoutez un bateau avec le formulaire à droite.</p>
+          </div>
+        )}
+
         {boats.map((boat) => (
           <article className="property-card" key={boat.id}>
             <div className="property-visual">
               <span>{boat.type || "Bateau"}</span>
               <button className="icon-button light" onClick={() => onDelete(boat.id)} aria-label="Supprimer">×</button>
             </div>
+
             <div className="property-body">
               <div className="section-heading compact-heading">
                 <div>
@@ -763,11 +814,24 @@ function BoatsView({ boats, onAdd, onDelete }: { boats: Boat[]; onAdd: (event: R
                 </div>
                 <Badge>{boat.status}</Badge>
               </div>
+
               <dl className="property-meta">
-                <div><dt>Prix / jour</dt><dd>{currency.format(boat.price)}</dd></div>
-                <div><dt>Longueur</dt><dd>{boat.length ? `${boat.length} m` : "—"}</dd></div>
-                <div><dt>Année</dt><dd>{boat.year || "—"}</dd></div>
-                <div><dt>Owner</dt><dd>{boat.owner || "—"}</dd></div>
+                <div>
+                  <dt>Prix / jour</dt>
+                  <dd>{currency.format(boat.price)}</dd>
+                </div>
+                <div>
+                  <dt>Longueur</dt>
+                  <dd>{boat.length ? `${boat.length} m` : "—"}</dd>
+                </div>
+                <div>
+                  <dt>Année</dt>
+                  <dd>{boat.year || "—"}</dd>
+                </div>
+                <div>
+                  <dt>Owner</dt>
+                  <dd>{boat.owner || "—"}</dd>
+                </div>
               </dl>
             </div>
           </article>
@@ -777,12 +841,17 @@ function BoatsView({ boats, onAdd, onDelete }: { boats: Boat[]; onAdd: (event: R
       <section className="card form-card">
         <p className="eyebrow">Nouveau</p>
         <h3>Ajouter un bateau</h3>
+
         <form className="form-grid" onSubmit={onAdd}>
           <label>Nom<input name="name" placeholder="Sunseeker Manhattan 55" /></label>
           <label>Port<input name="port" placeholder="Cannes" /></label>
           <label>Type<input name="type" placeholder="Yacht, day boat..." /></label>
           <label>Prix / jour<input name="price" type="number" min="0" placeholder="4500" /></label>
-          <label>Statut<select name="status">{boatStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
+          <label>Statut
+            <select name="status">
+              {boatStatuses.map((status) => <option key={status}>{status}</option>)}
+            </select>
+          </label>
           <label>Propriétaire<input name="owner" placeholder="Nom owner" /></label>
           <label>Année<input name="year" type="number" min="1900" placeholder="2021" /></label>
           <label>Longueur m<input name="length" type="number" min="0" placeholder="17" /></label>
@@ -792,6 +861,7 @@ function BoatsView({ boats, onAdd, onDelete }: { boats: Boat[]; onAdd: (event: R
     </div>
   );
 }
+
 
 function TasksView({
   tasks,
