@@ -85,7 +85,7 @@ export default function CRMApp() {
   }, [data.contacts, query]);
 
   const filteredLeads = useMemo(() => {
-    return data.leads.filter((lead) => searchMatch(query, [lead.title, lead.contactName, lead.status, lead.nextAction]));
+    return data.leads.filter((lead) => searchMatch(query, [lead.category, lead.contactName, lead.status, lead.nextAction]));
   }, [data.leads, query]);
 
   const filteredProperties = useMemo(() => {
@@ -143,7 +143,7 @@ export default function CRMApp() {
     const form = new FormData(event.currentTarget);
     const lead: Lead = {
       id: makeId("l"),
-      title: String(form.get("title") ?? "").trim(),
+      category: String(form.get("category") ?? "Villa") as Lead["category"],
       contactName: String(form.get("contactName") ?? "").trim(),
       status: String(form.get("status") ?? "Nouveau") as LeadStatus,
       value: safeNumber(form.get("value")),
@@ -151,7 +151,7 @@ export default function CRMApp() {
       nextAction: String(form.get("nextAction") ?? "").trim(),
       dueDate: String(form.get("dueDate") ?? "")
     };
-    if (!lead.title) return notify("Ajoutez au minimum un titre de lead.", "warning");
+    if (!lead.contactName) return notify("Sélectionnez un contact pour ce lead.", "warning");
     setData((current) => ({ ...current, leads: [lead, ...current.leads] }));
     event.currentTarget.reset();
     notify("Lead ajouté au pipeline.");
@@ -287,7 +287,7 @@ export default function CRMApp() {
         )}
 
         {activeTab === "leads" && (
-          <LeadsView leads={filteredLeads} onAdd={addLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} />
+          <LeadsView leads={filteredLeads} contacts={data.contacts} onAdd={addLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} />
         )}
 
         {activeTab === "properties" && (
@@ -365,7 +365,7 @@ function Dashboard({
             {hotLeads.map((lead) => (
               <article className="mini-row" key={lead.id}>
                 <div>
-                  <strong>{lead.title}</strong>
+                  <strong>{lead.category}</strong>
                   <span>{lead.contactName} · {currency.format(lead.value)}</span>
                 </div>
                 <select value={lead.status} onChange={(event) => onLeadStatusChange(lead.id, event.target.value as LeadStatus)}>
@@ -481,11 +481,13 @@ function ContactsView({ contacts, onAdd, onDelete }: { contacts: Contact[]; onAd
 
 function LeadsView({
   leads,
+  contacts,
   onAdd,
   onStatusChange,
   onDelete
 }: {
   leads: Lead[];
+  contacts: Contact[];
   onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
   onStatusChange: (id: string, status: LeadStatus) => void;
   onDelete: (id: string) => void;
@@ -498,8 +500,25 @@ function LeadsView({
           <h3>Ajouter un lead</h3>
         </div>
         <form className="form-grid compact" onSubmit={onAdd}>
-          <label>Titre<input name="title" placeholder="Location villa été" /></label>
-          <label>Contact<input name="contactName" placeholder="Nom du client" /></label>
+          <label>Catégorie
+            <select name="category" defaultValue="Villa">
+              <option value="Villa">Villa</option>
+              <option value="Voiture">Voiture</option>
+              <option value="Bateau">Bateau</option>
+            </select>
+          </label>
+
+          <label>Contact
+            <select name="contactName" required>
+              <option value="">Sélectionner un contact</option>
+              {contacts.map((contact) => (
+                <option key={contact.id} value={contact.name}>
+                  {contact.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <label>Statut<select name="status">{leadStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
           <label>Valeur<input name="value" type="number" min="0" placeholder="180000" /></label>
           <label>Priorité<select name="priority"><option>Basse</option><option>Moyenne</option><option>Haute</option></select></label>
@@ -525,7 +544,7 @@ function LeadsView({
                       <Badge>{lead.priority}</Badge>
                       <button className="icon-button" onClick={() => onDelete(lead.id)} aria-label="Supprimer">×</button>
                     </div>
-                    <strong>{lead.title}</strong>
+                    <strong>{lead.category}</strong>
                     <span>{lead.contactName}</span>
                     <p>{lead.nextAction || "Aucune prochaine action"}</p>
                     <div className="lead-footer">
@@ -545,6 +564,7 @@ function LeadsView({
     </div>
   );
 }
+
 
 function PropertiesView({ properties, onAdd, onDelete }: { properties: Property[]; onAdd: (event: React.FormEvent<HTMLFormElement>) => void; onDelete: (id: string) => void }) {
   return (
@@ -636,7 +656,13 @@ function TasksView({
         <p className="eyebrow">Nouveau</p>
         <h3>Ajouter une tâche</h3>
         <form className="form-grid" onSubmit={onAdd}>
-          <label>Titre<input name="title" placeholder="Relancer client" /></label>
+          <label>Catégorie
+            <select name="category" defaultValue="Villa">
+              <option value="Villa">Villa</option>
+              <option value="Voiture">Voiture</option>
+              <option value="Bateau">Bateau</option>
+            </select>
+          </label>
           <label>Responsable<input name="owner" placeholder="Matteo" defaultValue="Matteo" /></label>
           <label>Statut<select name="status">{taskStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
           <label>Échéance<input name="dueDate" type="date" /></label>

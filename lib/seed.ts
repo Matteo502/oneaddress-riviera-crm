@@ -45,7 +45,7 @@ export const seedData: CRMData = {
   leads: [
     {
       id: "l-001",
-      title: "Location villa été - Cannes",
+      category: "Villa",
       contactName: "Claire Moreau",
       status: "Visite",
       value: 180000,
@@ -55,7 +55,7 @@ export const seedData: CRMData = {
     },
     {
       id: "l-002",
-      title: "Mandat gestion villa Cap-Ferrat",
+      category: "Villa",
       contactName: "Luca Ferri",
       status: "Négociation",
       value: 95000,
@@ -65,7 +65,7 @@ export const seedData: CRMData = {
     },
     {
       id: "l-003",
-      title: "Conciergerie événement privé",
+      category: "Villa",
       contactName: "Sophie Lambert",
       status: "Contacté",
       value: 22000,
@@ -112,7 +112,7 @@ export const seedData: CRMData = {
   tasks: [
     {
       id: "t-001",
-      title: "Relancer Claire avec sélection de villas",
+      title: "Préparer proposition villa",
       owner: "Matteo",
       status: "À faire",
       dueDate: "2026-06-05",
@@ -120,7 +120,7 @@ export const seedData: CRMData = {
     },
     {
       id: "t-002",
-      title: "Finaliser proposition mandat Cap-Ferrat",
+      title: "Préparer proposition villa",
       owner: "Matteo",
       status: "En cours",
       dueDate: "2026-06-04",
@@ -128,7 +128,7 @@ export const seedData: CRMData = {
     },
     {
       id: "t-003",
-      title: "Mettre à jour fiche Villa Azur",
+      title: "Préparer proposition villa",
       owner: "Admin",
       status: "À faire",
       dueDate: "2026-06-08",
