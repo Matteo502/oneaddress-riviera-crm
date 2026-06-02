@@ -1111,3 +1111,26 @@ td:last-child {
 }
 /* === ONE ADDRESS RIVIERA VISUAL IDENTITY END === */
 
+
+
+/* Action discrète pour supprimer un contact */
+.contact-delete-button {
+  display: inline-flex !important;
+  margin-top: 8px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: rgba(164, 71, 55, 0.72) !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  box-shadow: none !important;
+}
+
+.contact-delete-button:hover {
+  color: #a44737 !important;
+  text-decoration: underline !important;
+  transform: none !important;
+  filter: none !important;
+}

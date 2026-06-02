@@ -559,14 +559,13 @@ function ContactsView({
                     <small>{contact.source || "Source non renseignée"}</small>
 
                     <button
-                      className="icon-button"
+                      className="contact-delete-button"
                       type="button"
                       onClick={() => onDelete(contact.id)}
                       aria-label="Supprimer le contact"
                       title="Supprimer le contact"
-                      style={{ marginTop: 10 }}
                     >
-                      × Supprimer
+                      Supprimer
                     </button>
                   </td>
 
