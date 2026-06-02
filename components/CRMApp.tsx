@@ -843,7 +843,15 @@ function ContactsView({
                       <button
                         className="contact-detail-button"
                         type="button"
-                        onClick={() => setSelectedContact(contact)}
+                        onClick={() => {
+                          setSelectedContact(contact);
+                          setTimeout(() => {
+                            document.getElementById("contact-detail-panel")?.scrollIntoView({
+                              behavior: "smooth",
+                              block: "center"
+                            });
+                          }, 50);
+                        }}
                       >
                         Détails
                       </button>
@@ -928,7 +936,7 @@ function ContactsView({
 
       {selectedContact && (
         <div className="confirm-backdrop">
-          <div className="confirm-dialog contact-detail-dialog" role="dialog" aria-modal="true">
+          <div id="contact-detail-panel" className="confirm-dialog contact-detail-dialog" role="dialog" aria-modal="true">
             <p className="eyebrow">Fiche client</p>
             <h3>{selectedContact.name}</h3>
 
