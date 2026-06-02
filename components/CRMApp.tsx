@@ -608,7 +608,7 @@ export default function CRMApp() {
         )}
 
         {activeTab === "contacts" && (
-          <ContactsView contacts={filteredContacts} onAdd={addContact} onUpdate={updateContact} onDelete={deleteContact} />
+          <ContactsView contacts={filteredContacts} leads={data.leads} tasks={data.tasks} onAdd={addContact} onUpdate={updateContact} onDelete={deleteContact} />
         )}
 
         {activeTab === "leads" && (
@@ -749,16 +749,32 @@ function StatCard({ label, value, caption }: { label: string; value: string; cap
 
 function ContactsView({
   contacts,
+  leads,
+  tasks,
   onAdd,
   onUpdate,
   onDelete
 }: {
   contacts: Contact[];
+  leads: Lead[];
+  tasks: Task[];
   onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
   onUpdate: (contact: Contact) => void;
   onDelete: (id: string) => void;
 }) {
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+
+  function getContactLeads(contact: Contact) {
+    return leads.filter((lead) => lead.contactName === contact.name);
+  }
+
+  function getContactTasks(contact: Contact) {
+    const contactLeads = getContactLeads(contact);
+    const leadIds = new Set(contactLeads.map((lead) => lead.id));
+
+    return tasks.filter((task) => leadIds.has(task.linkedTo));
+  }
 
   function submitEdit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -784,6 +800,18 @@ function ContactsView({
 
     onUpdate(updatedContact);
     setEditingContact(null);
+    setSelectedContact(updatedContact);
+  }
+
+  function openEdit(contact: Contact) {
+    setEditingContact(contact);
+
+    setTimeout(() => {
+      document.getElementById("contact-edit-panel")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }, 50);
   }
 
   return (
@@ -813,17 +841,17 @@ function ContactsView({
 
                     <div className="contact-row-actions">
                       <button
+                        className="contact-detail-button"
+                        type="button"
+                        onClick={() => setSelectedContact(contact)}
+                      >
+                        Détails
+                      </button>
+
+                      <button
                         className="contact-edit-button"
                         type="button"
-                        onClick={() => {
-                          setEditingContact(contact);
-                          setTimeout(() => {
-                            document.getElementById("contact-edit-panel")?.scrollIntoView({
-                              behavior: "smooth",
-                              block: "center"
-                            });
-                          }, 50);
-                        }}
+                        onClick={() => openEdit(contact)}
                       >
                         Modifier
                       </button>
@@ -897,6 +925,111 @@ function ContactsView({
           <button className="primary-button" type="submit">Ajouter</button>
         </form>
       </section>
+
+      {selectedContact && (
+        <div className="confirm-backdrop">
+          <div className="confirm-dialog contact-detail-dialog" role="dialog" aria-modal="true">
+            <p className="eyebrow">Fiche client</p>
+            <h3>{selectedContact.name}</h3>
+
+            <div className="contact-detail-grid">
+              <div>
+                <span>Type</span>
+                <strong>{selectedContact.kind}</strong>
+              </div>
+
+              <div>
+                <span>Budget</span>
+                <strong>{selectedContact.budget ? currency.format(selectedContact.budget) : "Non renseigné"}</strong>
+              </div>
+
+              <div>
+                <span>Email</span>
+                <strong>{selectedContact.email || "Non renseigné"}</strong>
+              </div>
+
+              <div>
+                <span>Téléphone</span>
+                <strong>{selectedContact.phone || "Non renseigné"}</strong>
+              </div>
+
+              <div>
+                <span>Ville</span>
+                <strong>{selectedContact.city || "Non renseignée"}</strong>
+              </div>
+
+              <div>
+                <span>Source</span>
+                <strong>{selectedContact.source || "Non renseignée"}</strong>
+              </div>
+
+              <div className="full">
+                <span>Adresse postale</span>
+                <strong>{selectedContact.postalAddress || "Non renseignée"}</strong>
+              </div>
+
+              <div className="full">
+                <span>Notes client</span>
+                <p>{selectedContact.notes || "Aucune note pour ce contact."}</p>
+              </div>
+            </div>
+
+            <div className="contact-related-section">
+              <p className="eyebrow">Leads liés</p>
+
+              <div className="list-stack">
+                {getContactLeads(selectedContact).length === 0 && (
+                  <p className="muted-line">Aucun lead lié à ce contact.</p>
+                )}
+
+                {getContactLeads(selectedContact).map((lead) => (
+                  <article className="mini-row" key={lead.id}>
+                    <div>
+                      <strong>{lead.category} • {lead.status}</strong>
+                      <span>{lead.nextAction || "Aucune prochaine action"}</span>
+                    </div>
+                    <Badge>{lead.priority}</Badge>
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            <div className="contact-related-section">
+              <p className="eyebrow">Tâches liées</p>
+
+              <div className="list-stack">
+                {getContactTasks(selectedContact).length === 0 && (
+                  <p className="muted-line">Aucune tâche liée aux leads de ce contact.</p>
+                )}
+
+                {getContactTasks(selectedContact).map((task) => (
+                  <article className="mini-row" key={task.id}>
+                    <div>
+                      <strong>{task.title}</strong>
+                      <span>{task.owner || "Responsable non renseigné"} · {task.dueDate || "Sans échéance"}</span>
+                    </div>
+                    <Badge>{task.status}</Badge>
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            <div className="confirm-actions">
+              <button className="ghost-button" type="button" onClick={() => setSelectedContact(null)}>
+                Fermer
+              </button>
+
+              <button
+                className="primary-button"
+                type="button"
+                onClick={() => openEdit(selectedContact)}
+              >
+                Modifier
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {editingContact && (
         <div className="confirm-backdrop">
