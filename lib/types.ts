@@ -27,6 +27,7 @@ export type Lead = {
   value: number;
   priority: "Basse" | "Moyenne" | "Haute";
   nextAction: string;
+  notes: string;
   dueDate: string;
   rentalStartDate: string;
   rentalEndDate: string;
