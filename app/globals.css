@@ -1198,3 +1198,25 @@ td:last-child {
   color: #011d30 !important;
   text-decoration: underline !important;
 }
+
+
+/* Action discrète modifier biens / voitures / bateaux */
+.asset-edit-button {
+  display: inline-flex !important;
+  width: fit-content !important;
+  margin-top: 14px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: rgba(1, 29, 48, 0.68) !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  box-shadow: none !important;
+}
+
+.asset-edit-button:hover {
+  color: #011d30 !important;
+  text-decoration: underline !important;
+}
