@@ -69,6 +69,138 @@ function formatReservationPeriod(start?: string, end?: string) {
   return "Dates de réservation non renseignées";
 }
 
+
+function csvEscape(value: unknown) {
+  const stringValue = String(value ?? "");
+  const escaped = stringValue.replace(/"/g, '""');
+
+  if (escaped.includes(",") || escaped.includes("\n") || escaped.includes('"')) {
+    return `"${escaped}"`;
+  }
+
+  return escaped;
+}
+
+function toCsv(headers: string[], rows: unknown[][]) {
+  return [
+    headers.map(csvEscape).join(","),
+    ...rows.map((row) => row.map(csvEscape).join(","))
+  ].join("\n");
+}
+
+function downloadTextFile(filename: string, content: string, type = "text/plain") {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+
+  URL.revokeObjectURL(url);
+}
+
+function exportCRMAsCsv(data: CRMData) {
+  const sections = [
+    {
+      title: "CONTACTS",
+      headers: ["Nom", "Type", "Email", "Téléphone", "Ville", "Adresse postale", "Budget", "Source", "Notes"],
+      rows: data.contacts.map((contact) => [
+        contact.name,
+        contact.kind,
+        contact.email,
+        contact.phone,
+        contact.city,
+        contact.postalAddress,
+        contact.budget,
+        contact.source,
+        contact.notes
+      ])
+    },
+    {
+      title: "LEADS",
+      headers: ["Catégorie", "Contact", "Statut", "Valeur", "Priorité", "Échéance réponse", "Début réservation", "Fin réservation", "Prochaine action", "Notes"],
+      rows: data.leads.map((lead) => [
+        lead.category,
+        lead.contactName,
+        lead.status,
+        lead.value,
+        lead.priority,
+        lead.dueDate,
+        lead.rentalStartDate,
+        lead.rentalEndDate,
+        lead.nextAction,
+        lead.notes ?? ""
+      ])
+    },
+    {
+      title: "BIENS",
+      headers: ["Nom", "Ville", "Type", "Prix", "Statut", "Propriétaire", "Chambres", "Surface"],
+      rows: data.properties.map((property) => [
+        (property as { name?: string; title?: string }).name ?? (property as { name?: string; title?: string }).title ?? "",
+        property.city,
+        "type" in property ? property.type : "",
+        property.price,
+        property.status,
+        property.owner,
+        property.bedrooms,
+        property.surface
+      ])
+    },
+    {
+      title: "VOITURES",
+      headers: ["Nom", "Marque", "Modèle", "Ville", "Prix / jour", "Statut", "Propriétaire", "Année", "Kilométrage"],
+      rows: (data.vehicles ?? []).map((vehicle) => [
+        vehicle.name,
+        vehicle.brand,
+        vehicle.model,
+        vehicle.city,
+        vehicle.price,
+        vehicle.status,
+        vehicle.owner,
+        vehicle.year,
+        vehicle.mileage
+      ])
+    },
+    {
+      title: "BATEAUX",
+      headers: ["Nom", "Port", "Type", "Prix / jour", "Statut", "Propriétaire", "Année", "Longueur"],
+      rows: (data.boats ?? []).map((boat) => [
+        boat.name,
+        boat.port,
+        boat.type,
+        boat.price,
+        boat.status,
+        boat.owner,
+        boat.year,
+        boat.length
+      ])
+    },
+    {
+      title: "TÂCHES",
+      headers: ["Titre", "Responsable", "Statut", "Échéance", "Lead lié"],
+      rows: data.tasks.map((task) => [
+        task.title,
+        task.owner,
+        task.status,
+        task.dueDate,
+        task.linkedTo
+      ])
+    }
+  ];
+
+  const content = sections
+    .map((section) => [
+      section.title,
+      toCsv(section.headers, section.rows)
+    ].join("\n"))
+    .join("\n\n");
+
+  const date = new Date().toISOString().slice(0, 10);
+  downloadTextFile(`oneaddress-riviera-crm-${date}.csv`, content, "text/csv;charset=utf-8");
+}
+
+
 export default function CRMApp() {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [query, setQuery] = useState("");
@@ -113,7 +245,12 @@ export default function CRMApp() {
   useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(null), 2600);
-    return () => window.clearTimeout(timer);
+    function handleExportCsv() {
+    exportCRMAsCsv(data);
+    notify("Export CSV téléchargé.");
+  }
+
+  return () => window.clearTimeout(timer);
   }, [toast]);
 
   const stats = useMemo(() => {
@@ -453,7 +590,11 @@ export default function CRMApp() {
               aria-label="Recherche"
             />
             <button className="secondary-button" onClick={exportJson}>Exporter</button>
-            <button className="ghost-button" onClick={resetDemo}>Reset démo</button>
+            <button className="secondary-button" onClick={() => {
+            exportCRMAsCsv(data);
+            notify("Export CSV téléchargé.");
+          }}>Exporter CSV</button>
+          <button className="ghost-button" onClick={resetDemo}>Reset démo</button>
           </div>
         </header>
 
