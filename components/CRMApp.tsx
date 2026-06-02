@@ -1129,6 +1129,8 @@ function PropertiesView({
   onDelete: (id: string) => void;
 }) {
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [propertyStatusFilter, setPropertyStatusFilter] = useState<"Tous" | PropertyStatus>("Tous");
+  const [propertyCityFilter, setPropertyCityFilter] = useState("");
 
   function submitEdit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1165,10 +1167,61 @@ function PropertiesView({
     }, 50);
   }
 
+  const visibleProperties = properties.filter((property) => {
+    const statusMatches = propertyStatusFilter === "Tous" || property.status === propertyStatusFilter;
+    const cityMatches = property.city.toLowerCase().includes(propertyCityFilter.toLowerCase().trim());
+
+    return statusMatches && cityMatches;
+  });
+
   return (
     <div className="two-columns wide-left">
       <section className="property-grid">
-        {properties.map((property) => (
+        <div className="card asset-filter-card">
+          <div>
+            <p className="eyebrow">Filtres biens</p>
+            <h3>{visibleProperties.length} biens affichés</h3>
+          </div>
+
+          <div className="asset-filter-grid">
+            <label>Statut
+              <select
+                value={propertyStatusFilter}
+                onChange={(event) => setPropertyStatusFilter(event.target.value as "Tous" | PropertyStatus)}
+              >
+                <option value="Tous">Tous</option>
+                {propertyStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
+              </select>
+            </label>
+
+            <label>Ville
+              <input
+                value={propertyCityFilter}
+                onChange={(event) => setPropertyCityFilter(event.target.value)}
+                placeholder="Cannes, Nice..."
+              />
+            </label>
+
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => {
+                setPropertyStatusFilter("Tous");
+                setPropertyCityFilter("");
+              }}
+            >
+              Réinitialiser
+            </button>
+          </div>
+        </div>
+
+        {visibleProperties.length === 0 && (
+          <div className="empty-state">
+            <h3>Aucun bien trouvé</h3>
+            <p>Modifiez vos filtres pour afficher plus de résultats.</p>
+          </div>
+        )}
+        {visibleProperties.map((property) => (
           <article className="property-card" key={property.id}>
             <div className="property-visual">
               <span>{property.city || "Bien"}</span>
@@ -1286,6 +1339,8 @@ function VehiclesView({
   onDelete: (id: string) => void;
 }) {
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [vehicleStatusFilter, setVehicleStatusFilter] = useState<"Tous" | VehicleStatus>("Tous");
+  const [vehicleCityFilter, setVehicleCityFilter] = useState("");
 
   function submitEdit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1324,17 +1379,61 @@ function VehiclesView({
     }, 50);
   }
 
+  const visibleVehicles = vehicles.filter((vehicle) => {
+    const statusMatches = vehicleStatusFilter === "Tous" || vehicle.status === vehicleStatusFilter;
+    const cityMatches = vehicle.city.toLowerCase().includes(vehicleCityFilter.toLowerCase().trim());
+
+    return statusMatches && cityMatches;
+  });
+
   return (
     <div className="two-columns wide-left">
       <section className="property-grid">
-        {vehicles.length === 0 && (
+        <div className="card asset-filter-card">
+          <div>
+            <p className="eyebrow">Filtres voitures</p>
+            <h3>{visibleVehicles.length} voitures affichées</h3>
+          </div>
+
+          <div className="asset-filter-grid">
+            <label>Statut
+              <select
+                value={vehicleStatusFilter}
+                onChange={(event) => setVehicleStatusFilter(event.target.value as "Tous" | VehicleStatus)}
+              >
+                <option value="Tous">Tous</option>
+                {vehicleStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
+              </select>
+            </label>
+
+            <label>Ville
+              <input
+                value={vehicleCityFilter}
+                onChange={(event) => setVehicleCityFilter(event.target.value)}
+                placeholder="Cannes, Monaco..."
+              />
+            </label>
+
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => {
+                setVehicleStatusFilter("Tous");
+                setVehicleCityFilter("");
+              }}
+            >
+              Réinitialiser
+            </button>
+          </div>
+        </div>
+        {visibleVehicles.length === 0 && (
           <div className="empty-state">
             <h3>Aucune voiture pour le moment</h3>
             <p>Ajoutez une voiture avec le formulaire à droite.</p>
           </div>
         )}
 
-        {vehicles.map((vehicle) => (
+        {visibleVehicles.map((vehicle) => (
           <article className="property-card" key={vehicle.id}>
             <div className="property-visual">
               <span>{vehicle.brand || "Voiture"}</span>
@@ -1456,6 +1555,8 @@ function BoatsView({
   onDelete: (id: string) => void;
 }) {
   const [editingBoat, setEditingBoat] = useState<Boat | null>(null);
+  const [boatStatusFilter, setBoatStatusFilter] = useState<"Tous" | BoatStatus>("Tous");
+  const [boatPortFilter, setBoatPortFilter] = useState("");
 
   function submitEdit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1493,17 +1594,61 @@ function BoatsView({
     }, 50);
   }
 
+  const visibleBoats = boats.filter((boat) => {
+    const statusMatches = boatStatusFilter === "Tous" || boat.status === boatStatusFilter;
+    const portMatches = boat.port.toLowerCase().includes(boatPortFilter.toLowerCase().trim());
+
+    return statusMatches && portMatches;
+  });
+
   return (
     <div className="two-columns wide-left">
       <section className="property-grid">
-        {boats.length === 0 && (
+        <div className="card asset-filter-card">
+          <div>
+            <p className="eyebrow">Filtres bateaux</p>
+            <h3>{visibleBoats.length} bateaux affichés</h3>
+          </div>
+
+          <div className="asset-filter-grid">
+            <label>Statut
+              <select
+                value={boatStatusFilter}
+                onChange={(event) => setBoatStatusFilter(event.target.value as "Tous" | BoatStatus)}
+              >
+                <option value="Tous">Tous</option>
+                {boatStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
+              </select>
+            </label>
+
+            <label>Port
+              <input
+                value={boatPortFilter}
+                onChange={(event) => setBoatPortFilter(event.target.value)}
+                placeholder="Cannes, Antibes..."
+              />
+            </label>
+
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => {
+                setBoatStatusFilter("Tous");
+                setBoatPortFilter("");
+              }}
+            >
+              Réinitialiser
+            </button>
+          </div>
+        </div>
+        {visibleBoats.length === 0 && (
           <div className="empty-state">
             <h3>Aucun bateau pour le moment</h3>
             <p>Ajoutez un bateau avec le formulaire à droite.</p>
           </div>
         )}
 
-        {boats.map((boat) => (
+        {visibleBoats.map((boat) => (
           <article className="property-card" key={boat.id}>
             <div className="property-visual">
               <span>{boat.type || "Bateau"}</span>

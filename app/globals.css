@@ -1248,3 +1248,101 @@ td:last-child {
   color: #011d30 !important;
   text-decoration: underline !important;
 }
+
+
+/* Filtres rapides leads */
+.lead-filter-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: end;
+}
+
+.lead-filter-card h3 {
+  margin-bottom: 0;
+}
+
+.lead-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 12px;
+  align-items: end;
+  min-width: min(760px, 100%);
+}
+
+.lead-filter-grid label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.lead-filter-grid button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1180px) {
+  .lead-filter-card {
+    display: grid;
+  }
+
+  .lead-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
+  }
+}
+
+@media (max-width: 780px) {
+  .lead-filter-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Filtres rapides biens / voitures / bateaux */
+.asset-filter-card {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: end;
+}
+
+.asset-filter-card h3 {
+  margin-bottom: 0;
+}
+
+.asset-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 12px;
+  align-items: end;
+  min-width: min(620px, 100%);
+}
+
+.asset-filter-grid label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+@media (max-width: 1180px) {
+  .asset-filter-card {
+    display: grid;
+  }
+
+  .asset-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
+  }
+}
+
+@media (max-width: 780px) {
+  .asset-filter-grid {
+    grid-template-columns: 1fr;
+  }
+}
