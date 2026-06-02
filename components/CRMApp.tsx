@@ -603,7 +603,15 @@ function ContactsView({
                       <button
                         className="contact-edit-button"
                         type="button"
-                        onClick={() => setEditingContact(contact)}
+                        onClick={() => {
+                          setEditingContact(contact);
+                          setTimeout(() => {
+                            document.getElementById("contact-edit-panel")?.scrollIntoView({
+                              behavior: "smooth",
+                              block: "center"
+                            });
+                          }, 50);
+                        }}
                       >
                         Modifier
                       </button>
@@ -680,7 +688,7 @@ function ContactsView({
 
       {editingContact && (
         <div className="confirm-backdrop">
-          <div className="confirm-dialog edit-dialog" role="dialog" aria-modal="true">
+          <div id="contact-edit-panel" className="confirm-dialog edit-dialog" role="dialog" aria-modal="true">
             <p className="eyebrow">Modification</p>
             <h3>Modifier le contact</h3>
 
