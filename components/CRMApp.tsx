@@ -19,7 +19,7 @@ import type {
 } from "@/lib/types";
 
 const STORAGE_KEY = "oneaddress-riviera-crm-v1";
-const leadStatuses: LeadStatus[] = ["Nouveau", "Contacté", "Visite", "Négociation", "Gagné", "Perdu"];
+const leadStatuses: LeadStatus[] = ["Nouveau", "Contacté", "Devis", "Négociation", "Gagné", "Perdu"];
 const propertyStatuses: PropertyStatus[] = ["Disponible", "Mandat en cours", "Loué", "Vendu"];
 const vehicleStatuses: VehicleStatus[] = ["Disponible", "En location", "En maintenance", "Vendu"];
 const boatStatuses: BoatStatus[] = ["Disponible", "En charter", "En maintenance", "Vendu"];
@@ -74,6 +74,16 @@ export default function CRMApp() {
   const [query, setQuery] = useState("");
   const [data, setData] = useState<CRMData>(seedData);
   const [toast, setToast] = useState<Toast | null>(null);
+
+  // MIGRATION_VISITE_TO_DEVIS
+  useEffect(() => {
+    setData((current) => ({
+      ...current,
+      leads: current.leads.map((lead) =>
+        lead.status === ("Visite" as LeadStatus) ? { ...lead, status: "Devis" as LeadStatus } : lead
+      )
+    }));
+  }, []);
 
   useEffect(() => {
     try {

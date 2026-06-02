@@ -1,5 +1,5 @@
 export type ContactKind = "Client" | "Propriétaire" | "Partenaire";
-export type LeadStatus = "Nouveau" | "Contacté" | "Visite" | "Négociation" | "Gagné" | "Perdu";
+export type LeadStatus = "Nouveau" | "Contacté" | "Devis" | "Négociation" | "Gagné" | "Perdu";
 export type PropertyStatus = "Disponible" | "Mandat en cours" | "Loué" | "Vendu";
 export type VehicleStatus = "Disponible" | "En location" | "En maintenance" | "Vendu";
 export type BoatStatus = "Disponible" | "En charter" | "En maintenance" | "Vendu";

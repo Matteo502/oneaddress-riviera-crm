@@ -47,7 +47,7 @@ export const seedData: CRMData = {
       id: "l-001",
       category: "Villa",
       contactName: "Claire Moreau",
-      status: "Visite",
+      status: "Devis",
       value: 180000,
       priority: "Haute",
       nextAction: "Envoyer 3 biens shortlistés",
