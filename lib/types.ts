@@ -28,6 +28,8 @@ export type Lead = {
   priority: "Basse" | "Moyenne" | "Haute";
   nextAction: string;
   dueDate: string;
+  rentalStartDate: string;
+  rentalEndDate: string;
 };
 
 export type Property = {
