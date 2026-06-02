@@ -524,16 +524,21 @@ function StatCard({ label, value, caption }: { label: string; value: string; cap
   );
 }
 
-function ContactsView({ contacts, onAdd, onDelete }: { contacts: Contact[]; onAdd: (event: React.FormEvent<HTMLFormElement>) => void; onDelete: (id: string) => void }) {
+function ContactsView({
+  contacts,
+  onAdd,
+  onDelete
+}: {
+  contacts: Contact[];
+  onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
+  onDelete: (id: string) => void;
+}) {
   return (
     <div className="two-columns wide-left">
       <section className="card">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Base client</p>
-            <h3>{contacts.length} contacts</h3>
-          </div>
-        </div>
+        <p className="eyebrow">Base client</p>
+        <h3>{contacts.length} contacts</h3>
+
         <div className="table-wrap">
           <table>
             <thead>
@@ -543,28 +548,43 @@ function ContactsView({ contacts, onAdd, onDelete }: { contacts: Contact[]; onAd
                 <th>Ville / adresse</th>
                 <th>Budget</th>
                 <th>Contact</th>
-                <th></th>
-                            <th>Actions</th>
-            </tr>
+              </tr>
             </thead>
+
             <tbody>
               {contacts.map((contact) => (
                 <tr key={contact.id}>
                   <td>
                     <strong>{contact.name}</strong>
-                    <small>{contact.source}</small>
+                    <small>{contact.source || "Source non renseignée"}</small>
+
+                    <button
+                      className="icon-button"
+                      type="button"
+                      onClick={() => onDelete(contact.id)}
+                      aria-label="Supprimer le contact"
+                      title="Supprimer le contact"
+                      style={{ marginTop: 10 }}
+                    >
+                      × Supprimer
+                    </button>
                   </td>
-                  <td><Badge>{contact.kind}</Badge></td>
+
+                  <td>
+                    <Badge>{contact.kind}</Badge>
+                  </td>
+
                   <td>
                     <span className="muted-line">{contact.city || "—"}</span>
                     <span className="muted-line">{contact.postalAddress || "Adresse non renseignée"}</span>
                   </td>
-                  <td>{contact.budget > 0 ? currency.format(contact.budget) : "—"}</td>
+
+                  <td>{contact.budget ? currency.format(contact.budget) : "—"}</td>
+
                   <td>
-                    <span className="muted-line">{contact.email}</span>
-                    <span className="muted-line">{contact.phone}</span>
+                    <span className="muted-line">{contact.email || "—"}</span>
+                    <span className="muted-line">{contact.phone || "—"}</span>
                   </td>
-                  <td><button className="icon-button" onClick={() => onDelete(contact.id)} aria-label="Supprimer">×</button></td>
                 </tr>
               ))}
             </tbody>
@@ -575,22 +595,36 @@ function ContactsView({ contacts, onAdd, onDelete }: { contacts: Contact[]; onAd
       <section className="card form-card">
         <p className="eyebrow">Nouveau</p>
         <h3>Ajouter un contact</h3>
+
         <form className="form-grid" onSubmit={onAdd}>
           <label>Nom<input name="name" placeholder="Nom complet" /></label>
-          <label>Type<select name="kind">{contactKinds.map((kind) => <option key={kind}>{kind}</option>)}</select></label>
-          <label>Email<input name="email" type="email" placeholder="email@exemple.com" /></label>
+
+          <label>Type
+            <select name="kind">
+              <option>Client</option>
+              <option>Propriétaire</option>
+              <option>Partenaire</option>
+            </select>
+          </label>
+
+          <label>Email<input name="email" type="email" placeholder="email@example.com" /></label>
           <label>Téléphone<input name="phone" placeholder="+33..." /></label>
           <label>Ville<input name="city" placeholder="Cannes" /></label>
           <label>Adresse postale<input name="postalAddress" placeholder="12 Boulevard de la Croisette, 06400 Cannes" /></label>
           <label>Budget<input name="budget" type="number" min="0" placeholder="2500000" /></label>
           <label>Source<input name="source" placeholder="Site web, recommandation..." /></label>
-          <label className="full">Notes<textarea name="notes" placeholder="Besoins, contexte, prochaines infos à retenir" /></label>
+
+          <label className="full">Notes
+            <textarea name="notes" placeholder="Besoins, contexte, prochaines infos à retenir" />
+          </label>
+
           <button className="primary-button" type="submit">Ajouter</button>
         </form>
       </section>
     </div>
   );
 }
+
 
 function LeadsView({
   leads,
