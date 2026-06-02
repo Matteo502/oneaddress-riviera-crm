@@ -175,7 +175,9 @@ export default function CRMApp() {
       value: safeNumber(form.get("value")),
       priority: String(form.get("priority") ?? "Moyenne") as Lead["priority"],
       nextAction: String(form.get("nextAction") ?? "").trim(),
-      dueDate: String(form.get("dueDate") ?? "")
+      dueDate: String(form.get("dueDate") ?? ""),
+      rentalStartDate: String(form.get("rentalStartDate") ?? ""),
+      rentalEndDate: String(form.get("rentalEndDate") ?? "")
     };
     if (!lead.contactName) return notify("Sélectionnez un contact pour ce lead.", "warning");
     setData((current) => ({ ...current, leads: [lead, ...current.leads] }));

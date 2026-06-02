@@ -51,7 +51,7 @@ export const seedData: CRMData = {
       value: 180000,
       priority: "Haute",
       nextAction: "Envoyer 3 biens shortlistés",
-      dueDate: "2026-06-05"
+      dueDate: "2026-06-05",
       rentalStartDate: "2026-07-01",
       rentalEndDate: "2026-07-07",
     },
@@ -63,7 +63,7 @@ export const seedData: CRMData = {
       value: 95000,
       priority: "Haute",
       nextAction: "Préparer proposition de mandat",
-      dueDate: "2026-06-04"
+      dueDate: "2026-06-04",
       rentalStartDate: "2026-07-01",
       rentalEndDate: "2026-07-07",
     },
@@ -75,7 +75,7 @@ export const seedData: CRMData = {
       value: 22000,
       priority: "Moyenne",
       nextAction: "Planifier appel découverte",
-      dueDate: "2026-06-07"
+      dueDate: "2026-06-07",
       rentalStartDate: "2026-07-01",
       rentalEndDate: "2026-07-07",
     }
