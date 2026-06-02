@@ -594,6 +594,7 @@ function LeadsView({
               <option value="Villa">Villa</option>
               <option value="Voiture">Voiture</option>
               <option value="Bateau">Bateau</option>
+              <option value="Conciergerie">Conciergerie</option>
             </select>
           </label>
 
@@ -918,6 +919,7 @@ function TasksView({
               <option value="Villa">Villa</option>
               <option value="Voiture">Voiture</option>
               <option value="Bateau">Bateau</option>
+              <option value="Conciergerie">Conciergerie</option>
             </select>
           </label>
           <label>Responsable<input name="owner" placeholder="Matteo" defaultValue="Matteo" /></label>

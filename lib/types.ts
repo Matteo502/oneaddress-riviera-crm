@@ -21,7 +21,7 @@ export type Contact = {
 
 export type Lead = {
   id: string;
-  category: "Villa" | "Voiture" | "Bateau";
+  category: "Villa" | "Voiture" | "Bateau" | "Conciergerie";
   contactName: string;
   status: LeadStatus;
   value: number;
