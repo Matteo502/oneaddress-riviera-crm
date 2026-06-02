@@ -10,6 +10,10 @@ import type {
   LeadStatus,
   Property,
   PropertyStatus,
+  Vehicle,
+  VehicleStatus,
+  Boat,
+  BoatStatus,
   Task,
   TaskStatus
 } from "@/lib/types";
@@ -17,10 +21,12 @@ import type {
 const STORAGE_KEY = "oneaddress-riviera-crm-v1";
 const leadStatuses: LeadStatus[] = ["Nouveau", "Contacté", "Visite", "Négociation", "Gagné", "Perdu"];
 const propertyStatuses: PropertyStatus[] = ["Disponible", "Mandat en cours", "Loué", "Vendu"];
+const vehicleStatuses: VehicleStatus[] = ["Disponible", "En location", "En maintenance", "Vendu"];
+const boatStatuses: BoatStatus[] = ["Disponible", "En charter", "En maintenance", "Vendu"];
 const taskStatuses: TaskStatus[] = ["À faire", "En cours", "Terminé"];
 const contactKinds: ContactKind[] = ["Client", "Propriétaire", "Partenaire"];
 
-type Tab = "dashboard" | "contacts" | "leads" | "properties" | "tasks";
+type Tab = "dashboard" | "contacts" | "leads" | "properties" | "vehicles" | "boats" | "tasks";
 
 type Toast = {
   message: string;
@@ -54,7 +60,19 @@ export default function CRMApp() {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) setData(JSON.parse(raw) as CRMData);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<CRMData>;
+        setData({
+          ...seedData,
+          ...parsed,
+          contacts: parsed.contacts ?? seedData.contacts,
+          leads: parsed.leads ?? seedData.leads,
+          properties: parsed.properties ?? seedData.properties,
+          vehicles: parsed.vehicles ?? seedData.vehicles,
+          boats: parsed.boats ?? seedData.boats,
+          tasks: parsed.tasks ?? seedData.tasks
+        });
+      }
     } catch {
       setToast({ message: "Impossible de lire la sauvegarde locale.", tone: "warning" });
     }
@@ -91,6 +109,14 @@ export default function CRMApp() {
   const filteredProperties = useMemo(() => {
     return data.properties.filter((property) => searchMatch(query, [property.name, property.city, property.type, property.owner, property.status]));
   }, [data.properties, query]);
+
+  const filteredVehicles = useMemo(() => {
+    return (data.vehicles ?? []).filter((vehicle) => searchMatch(query, [vehicle.name, vehicle.brand, vehicle.model, vehicle.city, vehicle.owner, vehicle.status]));
+  }, [data.vehicles, query]);
+
+  const filteredBoats = useMemo(() => {
+    return (data.boats ?? []).filter((boat) => searchMatch(query, [boat.name, boat.port, boat.type, boat.owner, boat.status]));
+  }, [data.boats, query]);
 
   const filteredTasks = useMemo(() => {
     return data.tasks.filter((task) => searchMatch(query, [task.title, task.owner, task.status, task.linkedTo]));
@@ -177,6 +203,47 @@ export default function CRMApp() {
     notify("Bien ajouté.");
   }
 
+  function addVehicle(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const vehicle: Vehicle = {
+      id: makeId("v"),
+      name: String(form.get("name") ?? "").trim(),
+      brand: String(form.get("brand") ?? "").trim(),
+      model: String(form.get("model") ?? "").trim(),
+      city: String(form.get("city") ?? "").trim(),
+      price: safeNumber(form.get("price")),
+      status: String(form.get("status") ?? "Disponible") as VehicleStatus,
+      owner: String(form.get("owner") ?? "").trim(),
+      year: safeNumber(form.get("year")),
+      mileage: safeNumber(form.get("mileage"))
+    };
+    if (!vehicle.name) return notify("Ajoutez au minimum un nom de voiture.", "warning");
+    setData((current) => ({ ...current, vehicles: [vehicle, ...(current.vehicles ?? [])] }));
+    event.currentTarget.reset();
+    notify("Voiture ajoutée.");
+  }
+
+  function addBoat(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const boat: Boat = {
+      id: makeId("b"),
+      name: String(form.get("name") ?? "").trim(),
+      port: String(form.get("port") ?? "").trim(),
+      type: String(form.get("type") ?? "Yacht").trim(),
+      price: safeNumber(form.get("price")),
+      status: String(form.get("status") ?? "Disponible") as BoatStatus,
+      owner: String(form.get("owner") ?? "").trim(),
+      year: safeNumber(form.get("year")),
+      length: safeNumber(form.get("length"))
+    };
+    if (!boat.name) return notify("Ajoutez au minimum un nom de bateau.", "warning");
+    setData((current) => ({ ...current, boats: [boat, ...(current.boats ?? [])] }));
+    event.currentTarget.reset();
+    notify("Bateau ajouté.");
+  }
+
   function addTask(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -223,6 +290,16 @@ export default function CRMApp() {
     notify("Bien supprimé.");
   }
 
+  function deleteVehicle(id: string) {
+    setData((current) => ({ ...current, vehicles: (current.vehicles ?? []).filter((vehicle) => vehicle.id !== id) }));
+    notify("Voiture supprimée.");
+  }
+
+  function deleteBoat(id: string) {
+    setData((current) => ({ ...current, boats: (current.boats ?? []).filter((boat) => boat.id !== id) }));
+    notify("Bateau supprimé.");
+  }
+
   function deleteTask(id: string) {
     setData((current) => ({ ...current, tasks: current.tasks.filter((task) => task.id !== id) }));
     notify("Tâche supprimée.");
@@ -244,6 +321,8 @@ export default function CRMApp() {
           <NavButton label="Contacts" icon="◎" active={activeTab === "contacts"} onClick={() => setActiveTab("contacts")} />
           <NavButton label="Leads" icon="▣" active={activeTab === "leads"} onClick={() => setActiveTab("leads")} />
           <NavButton label="Biens" icon="⌂" active={activeTab === "properties"} onClick={() => setActiveTab("properties")} />
+          <NavButton label="Voitures" icon="◇" active={activeTab === "vehicles"} onClick={() => setActiveTab("vehicles")} />
+          <NavButton label="Bateaux" icon="≈" active={activeTab === "boats"} onClick={() => setActiveTab("boats")} />
           <NavButton label="Tâches" icon="✓" active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} />
         </nav>
 
@@ -319,6 +398,8 @@ function titleForTab(tab: Tab) {
     contacts: "Contacts",
     leads: "Pipeline leads",
     properties: "Biens & mandats",
+    vehicles: "Voitures",
+    boats: "Bateaux",
     tasks: "Tâches"
   };
   return titles[tab];
@@ -607,6 +688,104 @@ function PropertiesView({ properties, onAdd, onDelete }: { properties: Property[
           <label>Propriétaire<input name="owner" placeholder="Nom owner" /></label>
           <label>Chambres<input name="bedrooms" type="number" min="0" /></label>
           <label>Surface m²<input name="surface" type="number" min="0" /></label>
+          <button className="primary-button" type="submit">Ajouter</button>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+
+function VehiclesView({ vehicles, onAdd, onDelete }: { vehicles: Vehicle[]; onAdd: (event: React.FormEvent<HTMLFormElement>) => void; onDelete: (id: string) => void }) {
+  return (
+    <div className="two-columns wide-left">
+      <section className="property-grid">
+        {vehicles.map((vehicle) => (
+          <article className="property-card" key={vehicle.id}>
+            <div className="property-visual">
+              <span>{vehicle.brand || "Voiture"}</span>
+              <button className="icon-button light" onClick={() => onDelete(vehicle.id)} aria-label="Supprimer">×</button>
+            </div>
+            <div className="property-body">
+              <div className="section-heading compact-heading">
+                <div>
+                  <h3>{vehicle.name}</h3>
+                  <p>{vehicle.city || "Ville non renseignée"}</p>
+                </div>
+                <Badge>{vehicle.status}</Badge>
+              </div>
+              <dl className="property-meta">
+                <div><dt>Prix / jour</dt><dd>{currency.format(vehicle.price)}</dd></div>
+                <div><dt>Année</dt><dd>{vehicle.year || "—"}</dd></div>
+                <div><dt>Kilométrage</dt><dd>{vehicle.mileage ? `${vehicle.mileage.toLocaleString("fr-FR")} km` : "—"}</dd></div>
+                <div><dt>Owner</dt><dd>{vehicle.owner || "—"}</dd></div>
+              </dl>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section className="card form-card">
+        <p className="eyebrow">Nouveau</p>
+        <h3>Ajouter une voiture</h3>
+        <form className="form-grid" onSubmit={onAdd}>
+          <label>Nom<input name="name" placeholder="Range Rover Autobiography" /></label>
+          <label>Marque<input name="brand" placeholder="Land Rover" /></label>
+          <label>Modèle<input name="model" placeholder="Range Rover" /></label>
+          <label>Ville<input name="city" placeholder="Cannes" /></label>
+          <label>Prix / jour<input name="price" type="number" min="0" placeholder="900" /></label>
+          <label>Statut<select name="status">{vehicleStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
+          <label>Propriétaire<input name="owner" placeholder="Nom owner" /></label>
+          <label>Année<input name="year" type="number" min="1900" placeholder="2024" /></label>
+          <label>Kilométrage<input name="mileage" type="number" min="0" placeholder="12000" /></label>
+          <button className="primary-button" type="submit">Ajouter</button>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+function BoatsView({ boats, onAdd, onDelete }: { boats: Boat[]; onAdd: (event: React.FormEvent<HTMLFormElement>) => void; onDelete: (id: string) => void }) {
+  return (
+    <div className="two-columns wide-left">
+      <section className="property-grid">
+        {boats.map((boat) => (
+          <article className="property-card" key={boat.id}>
+            <div className="property-visual">
+              <span>{boat.type || "Bateau"}</span>
+              <button className="icon-button light" onClick={() => onDelete(boat.id)} aria-label="Supprimer">×</button>
+            </div>
+            <div className="property-body">
+              <div className="section-heading compact-heading">
+                <div>
+                  <h3>{boat.name}</h3>
+                  <p>{boat.port || "Port non renseigné"}</p>
+                </div>
+                <Badge>{boat.status}</Badge>
+              </div>
+              <dl className="property-meta">
+                <div><dt>Prix / jour</dt><dd>{currency.format(boat.price)}</dd></div>
+                <div><dt>Longueur</dt><dd>{boat.length ? `${boat.length} m` : "—"}</dd></div>
+                <div><dt>Année</dt><dd>{boat.year || "—"}</dd></div>
+                <div><dt>Owner</dt><dd>{boat.owner || "—"}</dd></div>
+              </dl>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section className="card form-card">
+        <p className="eyebrow">Nouveau</p>
+        <h3>Ajouter un bateau</h3>
+        <form className="form-grid" onSubmit={onAdd}>
+          <label>Nom<input name="name" placeholder="Sunseeker Manhattan 55" /></label>
+          <label>Port<input name="port" placeholder="Cannes" /></label>
+          <label>Type<input name="type" placeholder="Yacht, day boat..." /></label>
+          <label>Prix / jour<input name="price" type="number" min="0" placeholder="4500" /></label>
+          <label>Statut<select name="status">{boatStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
+          <label>Propriétaire<input name="owner" placeholder="Nom owner" /></label>
+          <label>Année<input name="year" type="number" min="1900" placeholder="2021" /></label>
+          <label>Longueur m<input name="length" type="number" min="0" placeholder="17" /></label>
           <button className="primary-button" type="submit">Ajouter</button>
         </form>
       </section>

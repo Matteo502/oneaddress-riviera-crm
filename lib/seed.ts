@@ -109,6 +109,79 @@ export const seedData: CRMData = {
       surface: 680
     }
   ],
+  vehicles: [
+    {
+      id: "v-001",
+      name: "Range Rover Autobiography",
+      brand: "Land Rover",
+      model: "Range Rover Autobiography",
+      city: "Cannes",
+      price: 900,
+      status: "Disponible",
+      owner: "OneAddress Riviera",
+      year: 2024,
+      mileage: 12000
+    },
+    {
+      id: "v-002",
+      name: "Mercedes Classe V",
+      brand: "Mercedes-Benz",
+      model: "Classe V",
+      city: "Nice",
+      price: 650,
+      status: "En location",
+      owner: "Partenaire chauffeur",
+      year: 2023,
+      mileage: 28000
+    },
+    {
+      id: "v-003",
+      name: "Porsche 911 Carrera Cabriolet",
+      brand: "Porsche",
+      model: "911 Carrera Cabriolet",
+      city: "Monaco",
+      price: 1200,
+      status: "Disponible",
+      owner: "Privé",
+      year: 2022,
+      mileage: 18000
+    }
+  ],
+  boats: [
+    {
+      id: "b-001",
+      name: "Sunseeker Manhattan 55",
+      port: "Cannes",
+      type: "Yacht",
+      price: 4500,
+      status: "Disponible",
+      owner: "Partenaire nautique",
+      year: 2021,
+      length: 17
+    },
+    {
+      id: "b-002",
+      name: "Riva Aquariva Super",
+      port: "Saint-Jean-Cap-Ferrat",
+      type: "Day boat",
+      price: 2800,
+      status: "En charter",
+      owner: "Privé",
+      year: 2020,
+      length: 10
+    },
+    {
+      id: "b-003",
+      name: "Princess V50",
+      port: "Antibes",
+      type: "Yacht sport",
+      price: 3900,
+      status: "Disponible",
+      owner: "Broker partenaire",
+      year: 2019,
+      length: 16
+    }
+  ],
   tasks: [
     {
       id: "t-001",
