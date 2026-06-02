@@ -137,8 +137,13 @@ export default function CRMApp() {
   }, [data.boats, query]);
 
   const filteredTasks = useMemo(() => {
-    return data.tasks.filter((task) => searchMatch(query, [task.title, task.owner, task.status, task.linkedTo]));
-  }, [data.tasks, query]);
+    return data.tasks.filter((task) => {
+      const linkedLead = data.leads.find((lead) => lead.id === task.linkedTo);
+      const linkedLeadLabel = linkedLead ? `${linkedLead.category} ${linkedLead.contactName}` : task.linkedTo;
+
+      return searchMatch(query, [task.title, task.owner, task.status, linkedLeadLabel]);
+    });
+  }, [data.tasks, data.leads, query]);
 
   function notify(message: string, tone: Toast["tone"] = "success") {
     setToast({ message, tone });
@@ -335,6 +340,17 @@ export default function CRMApp() {
     }));
   }
 
+  function updateTask(updatedTask: Task) {
+    setData((current) => ({
+      ...current,
+      tasks: current.tasks.map((task) =>
+        task.id === updatedTask.id ? updatedTask : task
+      )
+    }));
+
+    notify("Tâche mise à jour.");
+  }
+
   function updateTaskStatus(id: string, status: TaskStatus) {
     setData((current) => ({
       ...current,
@@ -460,7 +476,7 @@ export default function CRMApp() {
         )}
 
         {activeTab === "tasks" && (
-          <TasksView tasks={filteredTasks} onAdd={addTask} onStatusChange={updateTaskStatus} onDelete={deleteTask} />
+          <TasksView tasks={filteredTasks} leads={data.leads} onAdd={addTask} onUpdate={updateTask} onStatusChange={updateTaskStatus} onDelete={deleteTask} />
         )}
       </section>
 
@@ -1523,36 +1539,120 @@ function BoatsView({
 
 function TasksView({
   tasks,
+  leads,
   onAdd,
+  onUpdate,
   onStatusChange,
   onDelete
 }: {
   tasks: Task[];
+  leads: Lead[];
   onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
+  onUpdate: (task: Task) => void;
   onStatusChange: (id: string, status: TaskStatus) => void;
   onDelete: (id: string) => void;
 }) {
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  function getLinkedLeadLabel(linkedTo: string) {
+    if (!linkedTo) return "Aucun lead lié";
+
+    const lead = leads.find((item) => item.id === linkedTo);
+
+    if (!lead) return linkedTo;
+
+    return `${lead.category} • ${lead.contactName}`;
+  }
+
+  function submitEdit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!editingTask) return;
+
+    const form = new FormData(event.currentTarget);
+
+    const updatedTask: Task = {
+      ...editingTask,
+      title: String(form.get("title") ?? "").trim(),
+      owner: String(form.get("owner") ?? "").trim(),
+      status: String(form.get("status") ?? "À faire") as TaskStatus,
+      dueDate: String(form.get("dueDate") ?? ""),
+      linkedTo: String(form.get("linkedTo") ?? "").trim()
+    };
+
+    if (!updatedTask.title) return;
+
+    onUpdate(updatedTask);
+    setEditingTask(null);
+  }
+
+  function openEdit(task: Task) {
+    setEditingTask(task);
+
+    setTimeout(() => {
+      document.getElementById("task-edit-panel")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }, 50);
+  }
+
   return (
     <div className="two-columns wide-left">
       <section className="card">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Actions</p>
+            <p className="eyebrow">Suivi</p>
             <h3>{tasks.length} tâches</h3>
           </div>
         </div>
+
         <div className="list-stack">
+          {tasks.length === 0 && (
+            <div className="empty-state">
+              <h3>Aucune tâche pour le moment</h3>
+              <p>Ajoutez une tâche avec le formulaire à droite.</p>
+            </div>
+          )}
+
           {tasks.map((task) => (
-            <article className={`task-row ${task.status === "Terminé" ? "done" : ""}`} key={task.id}>
+            <article
+              className={`task-row ${task.status === "Terminé" ? "done" : ""}`}
+              key={task.id}
+            >
               <div>
                 <strong>{task.title}</strong>
-                <span>{task.owner} · {task.linkedTo || "Non lié"} · {task.dueDate || "Sans date"}</span>
+                <span>{getLinkedLeadLabel(task.linkedTo)}</span>
+                <small>{task.owner || "Responsable non renseigné"} • {task.dueDate || "Sans échéance"}</small>
+
+                <button
+                  className="task-edit-button"
+                  type="button"
+                  onClick={() => openEdit(task)}
+                >
+                  Modifier
+                </button>
               </div>
-              <div className="row-actions">
+
+              <div className="task-actions">
                 <select value={task.status} onChange={(event) => onStatusChange(task.id, event.target.value as TaskStatus)}>
                   {taskStatuses.map((status) => <option key={status}>{status}</option>)}
                 </select>
-                <button className="icon-button" onClick={() => onDelete(task.id)} aria-label="Supprimer">×</button>
+
+                <button
+                  className="icon-button"
+                  type="button"
+                  onClick={() => {
+                    const confirmed = window.confirm(`Supprimer la tâche "${task.title}" ?`);
+
+                    if (confirmed) {
+                      onDelete(task.id);
+                    }
+                  }}
+                  aria-label="Supprimer"
+                >
+                  ×
+                </button>
               </div>
             </article>
           ))}
@@ -1560,27 +1660,82 @@ function TasksView({
       </section>
 
       <section className="card form-card">
-        <p className="eyebrow">Nouveau</p>
+        <p className="eyebrow">Nouvelle</p>
         <h3>Ajouter une tâche</h3>
+
         <form className="form-grid" onSubmit={onAdd}>
-          <label>Catégorie
-            <select name="category" defaultValue="Villa">
-              <option value="Villa">Villa</option>
-              <option value="Voiture">Voiture</option>
-              <option value="Bateau">Bateau</option>
-              <option value="Conciergerie">Conciergerie</option>
+          <label>Titre<input name="title" placeholder="Envoyer proposition" /></label>
+          <label>Responsable<input name="owner" placeholder="Matteo" /></label>
+
+          <label>Statut
+            <select name="status">
+              {taskStatuses.map((status) => <option key={status}>{status}</option>)}
             </select>
           </label>
-          <label>Responsable<input name="owner" placeholder="Matteo" defaultValue="Matteo" /></label>
-          <label>Statut<select name="status">{taskStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
+
           <label>Échéance<input name="dueDate" type="date" /></label>
-          <label className="full">Lié à<input name="linkedTo" placeholder="Lead, bien, contact..." /></label>
+
+          <label className="full">Lead lié
+            <select name="linkedTo" defaultValue="">
+              <option value="">Aucun lead lié</option>
+              {leads.map((lead) => (
+                <option key={lead.id} value={lead.id}>
+                  {lead.category} • {lead.contactName}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <button className="primary-button" type="submit">Ajouter</button>
         </form>
       </section>
+
+      {editingTask && (
+        <div className="confirm-backdrop">
+          <div id="task-edit-panel" className="confirm-dialog edit-dialog" role="dialog" aria-modal="true">
+            <p className="eyebrow">Modification</p>
+            <h3>Modifier la tâche</h3>
+
+            <form className="form-grid" onSubmit={submitEdit}>
+              <label>Titre<input name="title" defaultValue={editingTask.title} /></label>
+              <label>Responsable<input name="owner" defaultValue={editingTask.owner} /></label>
+
+              <label>Statut
+                <select name="status" defaultValue={editingTask.status}>
+                  {taskStatuses.map((status) => <option key={status}>{status}</option>)}
+                </select>
+              </label>
+
+              <label>Échéance<input name="dueDate" type="date" defaultValue={editingTask.dueDate} /></label>
+
+              <label className="full">Lead lié
+                <select name="linkedTo" defaultValue={editingTask.linkedTo}>
+                  <option value="">Aucun lead lié</option>
+                  {leads.map((lead) => (
+                    <option key={lead.id} value={lead.id}>
+                      {lead.category} • {lead.contactName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="confirm-actions full">
+                <button className="ghost-button" type="button" onClick={() => setEditingTask(null)}>
+                  Annuler
+                </button>
+
+                <button className="primary-button" type="submit">
+                  Enregistrer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 function Badge({ children }: { children: React.ReactNode }) {
   return <span className="badge">{children}</span>;
