@@ -211,7 +211,8 @@ export default function CRMApp() {
       nextAction: String(form.get("nextAction") ?? "").trim(),
       dueDate: String(form.get("dueDate") ?? ""),
       rentalStartDate: String(form.get("rentalStartDate") ?? ""),
-      rentalEndDate: String(form.get("rentalEndDate") ?? "")
+      rentalEndDate: String(form.get("rentalEndDate") ?? ""),
+      notes: String(form.get("notes") ?? "").trim()
     };
 
     if (!lead.contactName) return notify("Sélectionnez un contact pour ce lead.", "warning");
@@ -822,6 +823,7 @@ function LeadsView({
   onDelete: (id: string) => void;
 }) {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [leadCategoryFilter, setLeadCategoryFilter] = useState<"Toutes" | Lead["category"]>("Toutes");
   const [leadStatusFilter, setLeadStatusFilter] = useState<"Tous" | LeadStatus>("Tous");
   const [leadPriorityFilter, setLeadPriorityFilter] = useState<"Toutes" | Lead["priority"]>("Toutes");
@@ -843,7 +845,8 @@ function LeadsView({
       dueDate: String(form.get("dueDate") ?? ""),
       rentalStartDate: String(form.get("rentalStartDate") ?? ""),
       rentalEndDate: String(form.get("rentalEndDate") ?? ""),
-      nextAction: String(form.get("nextAction") ?? "").trim()
+      nextAction: String(form.get("nextAction") ?? "").trim(),
+      notes: String(form.get("notes") ?? "").trim()
     };
 
     if (!updatedLead.contactName) return;
@@ -929,6 +932,10 @@ function LeadsView({
             <input name="nextAction" placeholder="Appeler, envoyer proposition..." />
           </label>
 
+          <label className="full">Notes internes
+            <textarea name="notes" placeholder="Préférences client, contraintes, détails importants..." />
+          </label>
+
           <button className="primary-button" type="submit">Ajouter</button>
         </form>
       </section>
@@ -996,7 +1003,7 @@ function LeadsView({
         {leadStatuses.map((status) => {
           const columnLeads = visibleLeads.filter((lead) => lead.status === status);
 
-  return (
+          return (
             <div className="pipeline-column" key={status}>
               <div className="pipeline-title">
                 <strong>{status}</strong>
@@ -1032,6 +1039,10 @@ function LeadsView({
 
                     <p>{lead.nextAction || "Aucune prochaine action"}</p>
 
+                    {lead.notes && (
+                      <p className="lead-note-preview">{lead.notes}</p>
+                    )}
+
                     <div className="lead-footer">
                       <b>{currency.format(lead.value)}</b>
                       <small>
@@ -1043,13 +1054,23 @@ function LeadsView({
                       {leadStatuses.map((option) => <option key={option}>{option}</option>)}
                     </select>
 
-                    <button
-                      className="lead-edit-button"
-                      type="button"
-                      onClick={() => openEdit(lead)}
-                    >
-                      Modifier
-                    </button>
+                    <div className="lead-card-actions">
+                      <button
+                        className="lead-detail-button"
+                        type="button"
+                        onClick={() => setSelectedLead(lead)}
+                      >
+                        Détails
+                      </button>
+
+                      <button
+                        className="lead-edit-button"
+                        type="button"
+                        onClick={() => openEdit(lead)}
+                      >
+                        Modifier
+                      </button>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -1057,6 +1078,70 @@ function LeadsView({
           );
         })}
       </section>
+
+      {selectedLead && (
+        <div className="confirm-backdrop">
+          <div className="confirm-dialog lead-detail-dialog" role="dialog" aria-modal="true">
+            <p className="eyebrow">Fiche lead</p>
+            <h3>{selectedLead.category} • {selectedLead.contactName}</h3>
+
+            <div className="lead-detail-grid">
+              <div>
+                <span>Statut</span>
+                <strong>{selectedLead.status}</strong>
+              </div>
+
+              <div>
+                <span>Priorité</span>
+                <strong>{selectedLead.priority}</strong>
+              </div>
+
+              <div>
+                <span>Valeur</span>
+                <strong>{currency.format(selectedLead.value)}</strong>
+              </div>
+
+              <div>
+                <span>Échéance réponse</span>
+                <strong>{selectedLead.dueDate ? formatDateFR(selectedLead.dueDate) : "Non renseignée"}</strong>
+              </div>
+
+              <div className="full">
+                <span>Date de réservation</span>
+                <strong>{formatReservationPeriod(selectedLead.rentalStartDate, selectedLead.rentalEndDate)}</strong>
+              </div>
+
+              <div className="full">
+                <span>Prochaine action</span>
+                <strong>{selectedLead.nextAction || "Aucune prochaine action"}</strong>
+              </div>
+
+              <div className="full">
+                <span>Notes internes</span>
+                <p>{selectedLead.notes || "Aucune note interne pour le moment."}</p>
+              </div>
+            </div>
+
+            <div className="confirm-actions">
+              <button className="ghost-button" type="button" onClick={() => setSelectedLead(null)}>
+                Fermer
+              </button>
+
+              <button
+                className="primary-button"
+                type="button"
+                onClick={() => {
+                  const lead = selectedLead;
+                  setSelectedLead(null);
+                  openEdit(lead);
+                }}
+              >
+                Modifier
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {editingLead && (
         <div className="confirm-backdrop">
@@ -1107,6 +1192,10 @@ function LeadsView({
 
               <label className="full">Prochaine action
                 <input name="nextAction" defaultValue={editingLead.nextAction} />
+              </label>
+
+              <label className="full">Notes internes
+                <textarea name="notes" defaultValue={editingLead.notes ?? ""} />
               </label>
 
               <div className="confirm-actions full">
