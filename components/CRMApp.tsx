@@ -185,6 +185,7 @@ export default function CRMApp() {
   function addLead(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+
     const lead: Lead = {
       id: makeId("l"),
       category: String(form.get("category") ?? "Villa") as Lead["category"],
@@ -195,9 +196,11 @@ export default function CRMApp() {
       nextAction: String(form.get("nextAction") ?? "").trim(),
       dueDate: String(form.get("dueDate") ?? ""),
       rentalStartDate: String(form.get("rentalStartDate") ?? ""),
-      rentalEndDate: String(form.get("rentalEndDate") ?? "") String(form.get("rentalStartDate") ?? ""), String(form.get("rentalEndDate") ?? "")
+      rentalEndDate: String(form.get("rentalEndDate") ?? "")
     };
+
     if (!lead.contactName) return notify("Sélectionnez un contact pour ce lead.", "warning");
+
     setData((current) => ({ ...current, leads: [lead, ...current.leads] }));
     event.currentTarget.reset();
     notify("Lead ajouté au pipeline.");
