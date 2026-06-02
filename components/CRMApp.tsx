@@ -298,6 +298,17 @@ export default function CRMApp() {
     }));
   }
 
+  function updateContact(updatedContact: Contact) {
+    setData((current) => ({
+      ...current,
+      contacts: current.contacts.map((contact) =>
+        contact.id === updatedContact.id ? updatedContact : contact
+      )
+    }));
+
+    notify("Contact mis à jour.");
+  }
+
   function deleteContact(id: string) {
     setData((current) => ({ ...current, contacts: current.contacts.filter((contact) => contact.id !== id) }));
     notify("Contact supprimé.");
@@ -385,7 +396,7 @@ export default function CRMApp() {
         )}
 
         {activeTab === "contacts" && (
-          <ContactsView contacts={filteredContacts} onAdd={addContact} onDelete={deleteContact} />
+          <ContactsView contacts={filteredContacts} onAdd={addContact} onUpdate={updateContact} onDelete={deleteContact} />
         )}
 
         {activeTab === "leads" && (
@@ -527,12 +538,42 @@ function StatCard({ label, value, caption }: { label: string; value: string; cap
 function ContactsView({
   contacts,
   onAdd,
+  onUpdate,
   onDelete
 }: {
   contacts: Contact[];
   onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
+  onUpdate: (contact: Contact) => void;
   onDelete: (id: string) => void;
 }) {
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+
+  function submitEdit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!editingContact) return;
+
+    const form = new FormData(event.currentTarget);
+
+    const updatedContact: Contact = {
+      ...editingContact,
+      name: String(form.get("name") ?? "").trim(),
+      kind: String(form.get("kind") ?? "Client") as Contact["kind"],
+      email: String(form.get("email") ?? "").trim(),
+      phone: String(form.get("phone") ?? "").trim(),
+      city: String(form.get("city") ?? "").trim(),
+      postalAddress: String(form.get("postalAddress") ?? "").trim(),
+      budget: safeNumber(form.get("budget")),
+      source: String(form.get("source") ?? "").trim(),
+      notes: String(form.get("notes") ?? "").trim()
+    };
+
+    if (!updatedContact.name) return;
+
+    onUpdate(updatedContact);
+    setEditingContact(null);
+  }
+
   return (
     <div className="two-columns wide-left">
       <section className="card">
@@ -558,23 +599,31 @@ function ContactsView({
                     <strong>{contact.name}</strong>
                     <small>{contact.source || "Source non renseignée"}</small>
 
-                    <button
-                      className="contact-delete-button"
-                      type="button"
-                      onClick={() => {
-                        const confirmed = window.confirm(
-                          `Confirmer la suppression de "${contact.name}" ?\n\nCette action supprimera le contact de la base client.`
-                        );
+                    <div className="contact-row-actions">
+                      <button
+                        className="contact-edit-button"
+                        type="button"
+                        onClick={() => setEditingContact(contact)}
+                      >
+                        Modifier
+                      </button>
 
-                        if (confirmed) {
-                          onDelete(contact.id);
-                        }
-                      }}
-                      aria-label="Supprimer le contact"
-                      title="Supprimer le contact"
-                    >
-                      Supprimer
-                    </button>
+                      <button
+                        className="contact-delete-button"
+                        type="button"
+                        onClick={() => {
+                          const confirmed = window.confirm(
+                            `Confirmer la suppression de "${contact.name}" ?\n\nCette action supprimera le contact de la base client.`
+                          );
+
+                          if (confirmed) {
+                            onDelete(contact.id);
+                          }
+                        }}
+                      >
+                        Supprimer
+                      </button>
+                    </div>
                   </td>
 
                   <td>
@@ -628,6 +677,52 @@ function ContactsView({
           <button className="primary-button" type="submit">Ajouter</button>
         </form>
       </section>
+
+      {editingContact && (
+        <div className="confirm-backdrop">
+          <div className="confirm-dialog edit-dialog" role="dialog" aria-modal="true">
+            <p className="eyebrow">Modification</p>
+            <h3>Modifier le contact</h3>
+
+            <form className="form-grid" onSubmit={submitEdit}>
+              <label>Nom<input name="name" defaultValue={editingContact.name} /></label>
+
+              <label>Type
+                <select name="kind" defaultValue={editingContact.kind}>
+                  <option>Client</option>
+                  <option>Propriétaire</option>
+                  <option>Partenaire</option>
+                </select>
+              </label>
+
+              <label>Email<input name="email" type="email" defaultValue={editingContact.email} /></label>
+              <label>Téléphone<input name="phone" defaultValue={editingContact.phone} /></label>
+              <label>Ville<input name="city" defaultValue={editingContact.city} /></label>
+              <label>Adresse postale<input name="postalAddress" defaultValue={editingContact.postalAddress} /></label>
+              <label>Budget<input name="budget" type="number" min="0" defaultValue={editingContact.budget || ""} /></label>
+              <label>Source<input name="source" defaultValue={editingContact.source} /></label>
+
+              <label className="full">Notes
+                <textarea name="notes" defaultValue={editingContact.notes} />
+              </label>
+
+              <div className="confirm-actions full">
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={() => setEditingContact(null)}
+                >
+                  Annuler
+                </button>
+
+                <button className="primary-button" type="submit">
+                  Enregistrer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

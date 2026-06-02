@@ -1134,3 +1134,46 @@ td:last-child {
   transform: none !important;
   filter: none !important;
 }
+
+
+/* Actions contact */
+.contact-row-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.contact-edit-button,
+.contact-delete-button {
+  display: inline-flex !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  box-shadow: none !important;
+}
+
+.contact-edit-button {
+  color: rgba(1, 29, 48, 0.68) !important;
+}
+
+.contact-edit-button:hover {
+  color: #011d30 !important;
+  text-decoration: underline !important;
+}
+
+.contact-delete-button {
+  color: rgba(164, 71, 55, 0.68) !important;
+}
+
+.contact-delete-button:hover {
+  color: #a44737 !important;
+  text-decoration: underline !important;
+}
+
+.edit-dialog {
+  width: min(760px, 100%) !important;
+}
