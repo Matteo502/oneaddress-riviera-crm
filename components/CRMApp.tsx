@@ -51,6 +51,24 @@ function safeNumber(value: FormDataEntryValue | null) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+
+function formatDateFR(value?: string) {
+  if (!value) return "";
+  const date = new Date(`${value}T00:00:00`);
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  }).format(date);
+}
+
+function formatReservationPeriod(start?: string, end?: string) {
+  if (start && end) return `Réservation du ${formatDateFR(start)} au ${formatDateFR(end)}`;
+  if (start) return `Réservation à partir du ${formatDateFR(start)}`;
+  if (end) return `Réservation jusqu'au ${formatDateFR(end)}`;
+  return "Dates de réservation non renseignées";
+}
+
 export default function CRMApp() {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [query, setQuery] = useState("");
@@ -103,7 +121,7 @@ export default function CRMApp() {
   }, [data.contacts, query]);
 
   const filteredLeads = useMemo(() => {
-    return data.leads.filter((lead) => searchMatch(query, [lead.category, lead.contactName, lead.status, lead.nextAction]));
+    return data.leads.filter((lead) => searchMatch(query, [lead.category, lead.contactName, lead.status, lead.nextAction, lead.rentalStartDate, lead.rentalEndDate]));
   }, [data.leads, query]);
 
   const filteredProperties = useMemo(() => {
@@ -177,7 +195,7 @@ export default function CRMApp() {
       nextAction: String(form.get("nextAction") ?? "").trim(),
       dueDate: String(form.get("dueDate") ?? ""),
       rentalStartDate: String(form.get("rentalStartDate") ?? ""),
-      rentalEndDate: String(form.get("rentalEndDate") ?? "")
+      rentalEndDate: String(form.get("rentalEndDate") ?? "") String(form.get("rentalStartDate") ?? ""), String(form.get("rentalEndDate") ?? "")
     };
     if (!lead.contactName) return notify("Sélectionnez un contact pour ce lead.", "warning");
     setData((current) => ({ ...current, leads: [lead, ...current.leads] }));
@@ -615,6 +633,8 @@ function LeadsView({
           <label>Valeur<input name="value" type="number" min="0" placeholder="180000" /></label>
           <label>Priorité<select name="priority"><option>Basse</option><option>Moyenne</option><option>Haute</option></select></label>
           <label>Échéance<input name="dueDate" type="date" /></label>
+          <label>Début réservation<input name="rentalStartDate" type="date" /></label>
+          <label>Fin réservation<input name="rentalEndDate" type="date" /></label>
           <label className="full">Prochaine action<input name="nextAction" placeholder="Appeler, envoyer proposition..." /></label>
           <button className="primary-button" type="submit">Ajouter</button>
         </form>
@@ -638,10 +658,11 @@ function LeadsView({
                     </div>
                     <strong>{lead.category}</strong>
                     <span>{lead.contactName}</span>
+                    <small>{formatReservationPeriod(lead.rentalStartDate, lead.rentalEndDate)}</small>
                     <p>{lead.nextAction || "Aucune prochaine action"}</p>
                     <div className="lead-footer">
                       <b>{currency.format(lead.value)}</b>
-                      <small>{lead.dueDate || "Sans date"}</small>
+                      <small>{lead.dueDate ? `Échéance réponse ${formatDateFR(lead.dueDate)}` : "Échéance réponse non renseignée"}</small>
                     </div>
                     <select value={lead.status} onChange={(event) => onStatusChange(lead.id, event.target.value as LeadStatus)}>
                       {leadStatuses.map((option) => <option key={option}>{option}</option>)}
