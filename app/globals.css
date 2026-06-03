@@ -1822,3 +1822,31 @@ td small,
     flex: 1 1 100%;
   }
 }
+
+
+/* Centrage propre des cartes dans le pipeline leads */
+.pipeline-column .list-stack {
+  align-items: center !important;
+}
+
+.pipeline-column .lead-card {
+  width: min(100%, 260px) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  box-sizing: border-box !important;
+}
+
+.pipeline-column .lead-card-actions {
+  display: flex !important;
+  justify-content: center !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+}
+
+.pipeline-column .lead-footer {
+  align-items: flex-start !important;
+}
+
+.pipeline-column select {
+  width: 100% !important;
+}
