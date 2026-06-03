@@ -1150,6 +1150,7 @@ function titleForTab(tab: Tab) {
     dashboard: "Vue d'ensemble",
     contacts: "Contacts",
     leads: "Pipeline leads",
+    quotes: "Devis",
     properties: "Biens & mandats",
     vehicles: "Voitures",
     boats: "Bateaux",
