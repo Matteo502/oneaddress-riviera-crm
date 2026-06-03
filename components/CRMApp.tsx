@@ -1016,7 +1016,7 @@ export default function CRMApp() {
             exportCRMAsCsv(data);
             notify("Export CSV téléchargé.");
           }}>Exporter CSV</button>
-          <button className="ghost-button" onClick={() => {
+          <button className="filter-reset-button ghost-button" onClick={() => {
               const confirmed = window.confirm("Réinitialiser les données de démonstration ? Cette action remplacera les données locales actuelles.");
               if (!confirmed) return;
               setData(seedData);
@@ -1852,7 +1852,7 @@ function LeadsView({
           </label>
 
           <button
-            className="ghost-button"
+            className="filter-reset-button ghost-button"
             type="button"
             disabled={!filtersAreActive}
             onClick={() => {
@@ -2231,7 +2231,7 @@ function PropertiesView({
               <input value={propertyCityFilter} onChange={(event) => setPropertyCityFilter(event.target.value)} placeholder="Cannes, Nice..." />
             </label>
 
-            <button className="ghost-button" type="button" onClick={() => {
+            <button className="filter-reset-button ghost-button" type="button" onClick={() => {
               setPropertyStatusFilter("Tous");
               setPropertyCityFilter("");
             }}>
@@ -2481,7 +2481,7 @@ function VehiclesView({
               <input value={vehicleCityFilter} onChange={(event) => setVehicleCityFilter(event.target.value)} placeholder="Cannes, Monaco..." />
             </label>
 
-            <button className="ghost-button" type="button" onClick={() => {
+            <button className="filter-reset-button ghost-button" type="button" onClick={() => {
               setVehicleStatusFilter("Tous");
               setVehicleCityFilter("");
             }}>
@@ -2724,7 +2724,7 @@ function BoatsView({
               <input value={boatPortFilter} onChange={(event) => setBoatPortFilter(event.target.value)} placeholder="Cannes, Antibes..." />
             </label>
 
-            <button className="ghost-button" type="button" onClick={() => {
+            <button className="filter-reset-button ghost-button" type="button" onClick={() => {
               setBoatStatusFilter("Tous");
               setBoatPortFilter("");
             }}>

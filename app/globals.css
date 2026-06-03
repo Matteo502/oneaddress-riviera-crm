@@ -2306,3 +2306,36 @@ aside {
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   }
 }
+
+
+/* Bouton Réinitialiser : empêche le débordement dans les filtres */
+.filter-reset-button {
+  flex: 0 0 165px !important;
+  width: 165px !important;
+  min-width: 165px !important;
+  max-width: 165px !important;
+  padding-inline: 10px !important;
+  font-size: 0.68rem !important;
+  letter-spacing: 0.16em !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+}
+
+.card:has(.filter-reset-button),
+section:has(.filter-reset-button) {
+  overflow: hidden !important;
+}
+
+.card:has(.filter-reset-button) select,
+section:has(.filter-reset-button) select {
+  min-width: 0 !important;
+}
+
+@media (max-width: 1250px) {
+  .filter-reset-button {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
