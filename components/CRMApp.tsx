@@ -1951,9 +1951,7 @@ function LeadsView({
               setLeadDueFilter("Tous");
               setLeadActionFilter("Tous");
             }}
-          >
-            Réinitialiser
-          </button>
+          >Reset</button>
         </div>
       </section>
 
@@ -2322,9 +2320,7 @@ function PropertiesView({
             <button className="lead-reset-button filter-reset-button ghost-button" type="button" onClick={() => {
               setPropertyStatusFilter("Tous");
               setPropertyCityFilter("");
-            }}>
-              Réinitialiser
-            </button>
+            }}>Reset</button>
           </div>
         </div>
 
@@ -2572,9 +2568,7 @@ function VehiclesView({
             <button className="lead-reset-button filter-reset-button ghost-button" type="button" onClick={() => {
               setVehicleStatusFilter("Tous");
               setVehicleCityFilter("");
-            }}>
-              Réinitialiser
-            </button>
+            }}>Reset</button>
           </div>
         </div>
 
@@ -2815,9 +2809,7 @@ function BoatsView({
             <button className="lead-reset-button filter-reset-button ghost-button" type="button" onClick={() => {
               setBoatStatusFilter("Tous");
               setBoatPortFilter("");
-            }}>
-              Réinitialiser
-            </button>
+            }}>Reset</button>
           </div>
         </div>
 
