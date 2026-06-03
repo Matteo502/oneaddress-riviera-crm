@@ -2526,3 +2526,58 @@ td small,
 .import-json-button input {
   display: none;
 }
+
+
+/* FIX BOUTONS ACTION CARTES CRM */
+.lead-card-actions,
+.quote-actions,
+.asset-card-actions,
+.contact-row-actions,
+.task-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.lead-card-actions button,
+.quote-actions button,
+.asset-card-actions button,
+.contact-row-actions button,
+.task-card-actions button {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  font-size: 0.68rem;
+  letter-spacing: 0.11em;
+  white-space: nowrap;
+}
+
+.compact-pipeline .lead-card-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.compact-pipeline .lead-card-actions button {
+  width: 100%;
+}
+
+.quote-actions {
+  justify-content: flex-end;
+}
+
+@media (max-width: 760px) {
+  .lead-card-actions button,
+  .quote-actions button,
+  .asset-card-actions button,
+  .contact-row-actions button,
+  .task-card-actions button {
+    width: 100%;
+  }
+
+  .quote-actions {
+    justify-content: flex-start;
+  }
+}
