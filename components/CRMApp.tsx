@@ -26,7 +26,7 @@ const boatStatuses: BoatStatus[] = ["Disponible", "En charter", "En maintenance"
 const taskStatuses: TaskStatus[] = ["À faire", "En cours", "Terminé"];
 const contactKinds: ContactKind[] = ["Client", "Propriétaire", "Partenaire"];
 
-type Tab = "dashboard" | "contacts" | "leads" | "properties" | "vehicles" | "boats" | "tasks" | "quotes";
+type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "properties" | "vehicles" | "boats";
 
 type Toast = {
   message: string;
@@ -1150,11 +1150,11 @@ function titleForTab(tab: Tab) {
     dashboard: "Vue d'ensemble",
     contacts: "Contacts",
     leads: "Pipeline leads",
+    tasks: "Tâches",
     quotes: "Devis",
-    properties: "Biens & mandats",
+    properties: "Biens",
     vehicles: "Voitures",
-    boats: "Bateaux",
-    tasks: "Tâches"
+    boats: "Bateaux"
   };
   return titles[tab];
 }
