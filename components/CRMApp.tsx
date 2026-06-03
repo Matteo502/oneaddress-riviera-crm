@@ -1016,6 +1016,14 @@ function ContactsView({
                       </button>
 
                       <button
+                        className="contact-detail-button"
+                        type="button"
+                        onClick={() => onCreateTask(contact.name)}
+                      >
+                        Tâche
+                      </button>
+
+                      <button
                         className="contact-edit-button"
                         type="button"
                         onClick={() => openEdit(contact)}
