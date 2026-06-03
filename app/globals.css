@@ -2255,3 +2255,91 @@ td small,
     grid-template-columns: 1fr !important;
   }
 }
+
+
+/* Cartes Leads : informations plus lisibles dans les colonnes compactes */
+.lead-card-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.lead-main-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lead-main-info strong {
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+.lead-main-info span {
+  color: #69716f;
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+.lead-compact-details {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.lead-compact-details div {
+  border-top: 1px solid rgba(216, 199, 166, 0.65);
+  padding-top: 10px;
+}
+
+.lead-compact-details dt {
+  color: #a9813f;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.lead-compact-details dd {
+  margin: 4px 0 0;
+  color: #5f6765;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.lead-kpis {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.lead-kpis div {
+  border: 1px solid rgba(216, 199, 166, 0.75);
+  padding: 10px;
+}
+
+.lead-kpis small {
+  display: block;
+  color: #a9813f;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.lead-kpis b,
+.lead-kpis em {
+  display: block;
+  color: #011d30;
+  font-size: 0.95rem;
+  font-style: normal;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.compact-pipeline .lead-card select {
+  margin-top: 12px;
+}
