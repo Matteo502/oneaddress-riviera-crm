@@ -1752,67 +1752,93 @@ function LeadsView({
           <h3>Ajouter un lead</h3>
         </div>
 
-        <form className="form-grid compact" onSubmit={onAdd}>
-          <label>Catégorie
-            <select name="category" defaultValue="Villa">
-              <option value="Villa">Villa</option>
-              <option value="Voiture">Voiture</option>
-              <option value="Bateau">Bateau</option>
-              <option value="Conciergerie">Conciergerie</option>
-            </select>
-          </label>
+        <form className="lead-smart-form" onSubmit={onAdd}>
+          <fieldset className="lead-form-block">
+            <legend>1 · Client & demande</legend>
 
-          <label>Contact
-            <select name="contactName" required defaultValue={preselectedContactName || ""}>
-              <option value="">Sélectionner un contact</option>
-              {contacts.map((contact) => (
-                <option key={contact.id} value={contact.name}>
-                  {contact.name}
-                </option>
-              ))}
-            </select>
-          </label>
+            <label>Catégorie
+              <select name="category" defaultValue="Villa">
+                <option value="Villa">Villa</option>
+                <option value="Voiture">Voiture</option>
+                <option value="Bateau">Bateau</option>
+                <option value="Conciergerie">Conciergerie</option>
+              </select>
+            </label>
 
-          <label>Actif proposé
-            <select name="assetKey" defaultValue="">
-              <option value="">Aucun actif lié</option>
-              {assetOptions.map((asset) => (
-                <option key={`${asset.type}:${asset.id}`} value={`${asset.type}:${asset.id}`}>
-                  {asset.label}
-                </option>
-              ))}
-            </select>
-          </label>
+            <label>Contact
+              <select name="contactName" required defaultValue={preselectedContactName || ""}>
+                <option value="">Sélectionner un contact</option>
+                {contacts.map((contact) => (
+                  <option key={contact.id} value={contact.name}>
+                    {contact.name}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <label>Statut
-            <select name="status">
-              {leadStatuses.map((status) => <option key={status}>{status}</option>)}
-            </select>
-          </label>
+            <label>Actif proposé
+              <select name="assetKey" defaultValue="">
+                <option value="">Aucun actif lié</option>
+                {assetOptions.map((asset) => (
+                  <option key={`${asset.type}:${asset.id}`} value={`${asset.type}:${asset.id}`}>
+                    {asset.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </fieldset>
 
-          <label>Valeur<input name="value" type="number" min="0" placeholder="180000" /></label>
+          <fieldset className="lead-form-block">
+            <legend>2 · Planning & budget</legend>
 
-          <label>Priorité
-            <select name="priority">
-              <option>Basse</option>
-              <option>Moyenne</option>
-              <option>Haute</option>
-            </select>
-          </label>
+            <label>Début réservation
+              <input name="rentalStartDate" type="date" />
+            </label>
 
-          <label>Échéance<input name="dueDate" type="date" /></label>
-          <label>Début réservation<input name="rentalStartDate" type="date" /></label>
-          <label>Fin réservation<input name="rentalEndDate" type="date" /></label>
+            <label>Fin réservation
+              <input name="rentalEndDate" type="date" />
+            </label>
 
-          <label className="full">Prochaine action
-            <input name="nextAction" placeholder="Appeler, envoyer proposition..." />
-          </label>
+            <label>Valeur
+              <input name="value" type="number" min="0" placeholder="2500" />
+            </label>
+          </fieldset>
 
-          <label className="full">Notes internes
-            <textarea name="notes" placeholder="Préférences client, contraintes, détails importants..." />
-          </label>
+          <fieldset className="lead-form-block">
+            <legend>3 · Suivi commercial</legend>
 
-          <button className="primary-button" type="submit">Ajouter</button>
+            <label>Statut
+              <select name="status" defaultValue="Nouveau">
+                {leadStatuses.map((status) => (
+                  <option key={status}>{status}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>Priorité
+              <select name="priority" defaultValue="Moyenne">
+                <option>Basse</option>
+                <option>Moyenne</option>
+                <option>Haute</option>
+              </select>
+            </label>
+
+            <label>Échéance réponse
+              <input name="dueDate" type="date" />
+            </label>
+
+            <label className="full">Prochaine action
+              <input name="nextAction" placeholder="Appeler, envoyer proposition, relancer..." />
+            </label>
+
+            <label className="full">Notes internes
+              <textarea name="notes" placeholder="Préférences client, contraintes, détails importants..." />
+            </label>
+          </fieldset>
+
+          <div className="lead-form-actions">
+            <button className="primary-button" type="submit">Ajouter le lead</button>
+          </div>
         </form>
       </section>
 
