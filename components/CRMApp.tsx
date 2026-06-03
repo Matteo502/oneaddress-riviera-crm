@@ -543,7 +543,7 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
                 </div>
 
                 <div className="quote-actions">
-                  <button className="stable-reset-button primary-button" type="button" onClick={() => openQuotePdf(quote)}>
+                  <button className="primary-button" type="button" onClick={() => openQuotePdf(quote)}>
                     Générer PDF
                   </button>
 
@@ -1911,7 +1911,7 @@ function LeadsView({
           return (
             <div className={`pipeline-column ${isCollapsed ? "is-collapsed" : ""}`} key={status}>
               <button
-                className="stable-reset-button pipeline-title pipeline-toggle"
+                className="pipeline-title pipeline-toggle"
                 type="button"
                 onClick={() => toggleLeadColumn(status)}
                 aria-expanded={!isCollapsed}
@@ -2287,7 +2287,7 @@ function PropertiesView({
               <span>{property.city || "Bien"}</span>
 
               <button
-                className="stable-reset-button icon-button light"
+                className="icon-button light"
                 onClick={() => {
                   const confirmed = window.confirm(`Supprimer "${property.name}" ?`);
                   if (confirmed) onDelete(property.id);
@@ -2535,7 +2535,7 @@ function VehiclesView({
           <article className="property-card" key={vehicle.id}>
             <div className="property-visual">
               <span>{vehicle.brand || "Voiture"}</span>
-              <button className="stable-reset-button icon-button light" onClick={() => {
+              <button className="icon-button light" onClick={() => {
                 const confirmed = window.confirm(`Supprimer "${vehicle.name}" ?`);
                 if (confirmed) onDelete(vehicle.id);
               }} aria-label="Supprimer">×</button>
