@@ -630,7 +630,7 @@ export default function CRMApp() {
         )}
 
         {activeTab === "leads" && (
-          <LeadsView leads={filteredLeads} contacts={data.contacts} preselectedContactName={leadDraftContactName} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} onCreateTask={(lead: Lead) => {
+          <LeadsView leads={filteredLeads} contacts={data.contacts} tasks={data.tasks} preselectedContactName={leadDraftContactName} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} onCreateTask={(lead: Lead) => {
                   setTaskDraftLeadId(lead.id);
                   setTaskDraftTitle(lead.nextAction || `Relancer ${lead.contactName}`);
                   setActiveTab("tasks");
@@ -1137,6 +1137,7 @@ function ContactsView({
 function LeadsView({
   leads,
   contacts,
+  tasks,
   preselectedContactName,
   onAdd,
   onUpdate,
@@ -1146,6 +1147,7 @@ function LeadsView({
 }: {
   leads: Lead[];
   contacts: Contact[];
+  tasks: Task[];
   preselectedContactName?: string;
   onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
   onUpdate: (lead: Lead) => void;
@@ -1184,6 +1186,10 @@ function LeadsView({
 
     onUpdate(updatedLead);
     setEditingLead(null);
+  }
+
+  function getLeadTasks(lead: Lead) {
+    return tasks.filter((task) => task.linkedTo === lead.id);
   }
 
   function openEdit(lead: Lead) {
@@ -1458,6 +1464,30 @@ function LeadsView({
               <div className="full">
                 <span>Notes internes</span>
                 <p>{selectedLead.notes || "Aucune note interne pour le moment."}</p>
+              </div>
+            </div>
+
+            <div className="lead-related-section">
+              <p className="eyebrow">Tâches liées à ce lead</p>
+
+              <div className="list-stack">
+                {getLeadTasks(selectedLead).length === 0 && (
+                  <p className="muted-line">Aucune tâche liée pour le moment.</p>
+                )}
+
+                {getLeadTasks(selectedLead).map((task) => (
+                  <article className="mini-row" key={task.id}>
+                    <div>
+                      <strong>{task.title}</strong>
+                      <span>
+                        {task.owner || "Responsable non renseigné"}
+                        {" · "}
+                        {task.dueDate ? `Échéance ${formatDateFR(task.dueDate)}` : "Sans échéance"}
+                      </span>
+                    </div>
+                    <Badge>{task.status}</Badge>
+                  </article>
+                ))}
               </div>
             </div>
 
