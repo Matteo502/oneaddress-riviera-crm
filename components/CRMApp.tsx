@@ -260,6 +260,39 @@ function exportCRMAsCsv(data: CRMData) {
 }
 
 
+
+function parseAssetKey(value: FormDataEntryValue | null): {
+  assetType: "" | "Property" | "Vehicle" | "Boat";
+  assetId: string;
+} {
+  const rawValue = String(value ?? "");
+
+  if (!rawValue.includes(":")) {
+    return { assetType: "", assetId: "" };
+  }
+
+  const [rawAssetType, assetId = ""] = rawValue.split(":");
+
+  if (rawAssetType === "Property") {
+    return { assetType: "Property", assetId };
+  }
+
+  if (rawAssetType === "Vehicle") {
+    return { assetType: "Vehicle", assetId };
+  }
+
+  if (rawAssetType === "Boat") {
+    return { assetType: "Boat", assetId };
+  }
+
+  return { assetType: "", assetId: "" };
+}
+
+function getPropertyDisplayName(property: Property) {
+  const flexibleProperty = property as Property & { name?: string; title?: string };
+  return flexibleProperty.name ?? flexibleProperty.title ?? "Bien sans nom";
+}
+
 export default function CRMApp() {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [leadDraftContactName, setLeadDraftContactName] = useState("");
@@ -399,11 +432,14 @@ export default function CRMApp() {
   function addLead(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const assetSelection = parseAssetKey(form.get("assetKey"));
 
     const lead: Lead = {
       id: makeId("l"),
       category: String(form.get("category") ?? "Villa") as Lead["category"],
       contactName: String(form.get("contactName") ?? "").trim(),
+      assetType: assetSelection.assetType,
+      assetId: assetSelection.assetId,
       status: String(form.get("status") ?? "Nouveau") as LeadStatus,
       value: safeNumber(form.get("value")),
       priority: String(form.get("priority") ?? "Moyenne") as Lead["priority"],
@@ -689,7 +725,7 @@ export default function CRMApp() {
         )}
 
         {activeTab === "leads" && (
-          <LeadsView leads={filteredLeads} contacts={data.contacts} tasks={data.tasks} preselectedContactName={leadDraftContactName} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} onCreateTask={(lead: Lead) => {
+          <LeadsView leads={filteredLeads} contacts={data.contacts} tasks={data.tasks} properties={data.properties} vehicles={data.vehicles ?? []} boats={data.boats ?? []} preselectedContactName={leadDraftContactName} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} onCreateTask={(lead: Lead) => {
                   setTaskDraftLeadId(lead.id);
                   setTaskDraftTitle(lead.nextAction || `Relancer ${lead.contactName}`);
                   setActiveTab("tasks");
@@ -1197,6 +1233,9 @@ function LeadsView({
   leads,
   contacts,
   tasks,
+  properties,
+  vehicles,
+  boats,
   preselectedContactName,
   onAdd,
   onUpdate,
@@ -1207,6 +1246,9 @@ function LeadsView({
   leads: Lead[];
   contacts: Contact[];
   tasks: Task[];
+  properties: Property[];
+  vehicles: Vehicle[];
+  boats: Boat[];
   preselectedContactName?: string;
   onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
   onUpdate: (lead: Lead) => void;
@@ -1222,12 +1264,37 @@ function LeadsView({
   const [leadDueFilter, setLeadDueFilter] = useState<"Tous" | "En retard" | "Aujourd'hui" | "À venir" | "Sans échéance">("Tous");
   const [leadActionFilter, setLeadActionFilter] = useState<"Tous" | "Sans prochaine action">("Tous");
 
+  const assetOptions = [
+    ...properties.map((property) => ({
+      id: property.id,
+      type: "Property" as const,
+      label: `Villa / Bien • ${getPropertyDisplayName(property)}`
+    })),
+    ...vehicles.map((vehicle) => ({
+      id: vehicle.id,
+      type: "Vehicle" as const,
+      label: `Voiture • ${vehicle.name}`
+    })),
+    ...boats.map((boat) => ({
+      id: boat.id,
+      type: "Boat" as const,
+      label: `Bateau • ${boat.name}`
+    }))
+  ];
+
+  function getLeadAssetLabel(lead: Lead) {
+    if (!lead.assetType || !lead.assetId) return "";
+
+    return assetOptions.find((asset) => asset.type === lead.assetType && asset.id === lead.assetId)?.label ?? "";
+  }
+
   function submitEdit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!editingLead) return;
 
     const form = new FormData(event.currentTarget);
+    const assetSelection = parseAssetKey(form.get("assetKey"));
 
     const updatedLead: Lead = {
       ...editingLead,
@@ -1316,6 +1383,17 @@ function LeadsView({
               {contacts.map((contact) => (
                 <option key={contact.id} value={contact.name}>
                   {contact.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>Actif proposé
+            <select name="assetKey" defaultValue="">
+              <option value="">Aucun actif lié</option>
+              {assetOptions.map((asset) => (
+                <option key={`${asset.type}:${asset.id}`} value={`${asset.type}:${asset.id}`}>
+                  {asset.label}
                 </option>
               ))}
             </select>
@@ -1451,6 +1529,9 @@ function LeadsView({
                     <strong>{lead.category}</strong>
                     <span>{lead.contactName}</span>
                     <small>{formatReservationPeriod(lead.rentalStartDate, lead.rentalEndDate)}</small>
+                    {getLeadAssetLabel(lead) && (
+                      <small className="asset-linked-line">{getLeadAssetLabel(lead)}</small>
+                    )}
 
                     <p>{lead.nextAction || "Aucune prochaine action"}</p>
 
@@ -1624,6 +1705,20 @@ function LeadsView({
                   {contacts.map((contact) => (
                     <option key={contact.id} value={contact.name}>
                       {contact.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>Actif proposé
+                <select
+                  name="assetKey"
+                  defaultValue={editingLead.assetType && editingLead.assetId ? `${editingLead.assetType}:${editingLead.assetId}` : ""}
+                >
+                  <option value="">Aucun actif lié</option>
+                  {assetOptions.map((asset) => (
+                    <option key={`${asset.type}:${asset.id}`} value={`${asset.type}:${asset.id}`}>
+                      {asset.label}
                     </option>
                   ))}
                 </select>
