@@ -968,6 +968,56 @@ export default function CRMApp() {
     notify("Tâche supprimée.");
   }
 
+
+  function handleImportJson(event: React.ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+
+    if (!file) return;
+
+    const confirmed = window.confirm(
+      "Importer ce fichier JSON va remplacer/compléter les données actuelles du CRM. Continuer ?"
+    );
+
+    if (!confirmed) {
+      input.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result));
+
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+          throw new Error("Format JSON invalide.");
+        }
+
+        const knownKeys = ["contacts", "leads", "properties", "vehicles", "boats", "tasks", "quotes"];
+        const hasKnownData = knownKeys.some((key) => Array.isArray((parsed as Record<string, unknown>)[key]));
+
+        if (!hasKnownData) {
+          throw new Error("Ce fichier ne ressemble pas à une sauvegarde CRM.");
+        }
+
+        const nextData = {
+          ...data,
+          ...(parsed as Partial<CRMData>)
+        } as CRMData;
+
+        setData(nextData);
+        window.alert("Import JSON réussi.");
+      } catch (error) {
+        window.alert("Import impossible : le fichier JSON n’est pas valide.");
+      } finally {
+        input.value = "";
+      }
+    };
+
+    reader.readAsText(file);
+  }
+
   return (
     <main className="crm-shell">
       <aside className="sidebar">
@@ -1012,6 +1062,10 @@ export default function CRMApp() {
               aria-label="Recherche"
             />
             <button className="secondary-button" onClick={exportJson}>Backup JSON</button>
+            <label className="ghost-button import-json-button">
+              Importer JSON
+              <input type="file" accept="application/json,.json" onChange={handleImportJson} />
+            </label>
             <button className="secondary-button" onClick={() => {
             exportCRMAsCsv(data);
             notify("Export CSV téléchargé.");

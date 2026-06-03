@@ -2485,3 +2485,44 @@ td small,
     grid-template-columns: 1fr !important;
   }
 }
+
+
+/* FIX BOUTON REINITIALISER ACTIFS */
+.asset-reset-button {
+  min-width: 120px !important;
+  width: auto !important;
+  max-width: none !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+  font-size: 0.58rem !important;
+  letter-spacing: 0.045em !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+.asset-filter-grid .asset-reset-button,
+.lead-filter-grid .asset-reset-button {
+  justify-self: start !important;
+}
+
+@media (max-width: 900px) {
+  .asset-reset-button {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+
+/* Import JSON button */
+.import-json-button {
+  cursor: pointer;
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.import-json-button input {
+  display: none;
+}
