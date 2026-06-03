@@ -746,15 +746,15 @@ export default function CRMApp() {
         )}
 
         {activeTab === "properties" && (
-          <PropertiesView properties={filteredProperties} onAdd={addProperty} onUpdate={updateProperty} onDelete={deleteProperty} />
+          <PropertiesView properties={filteredProperties} leads={data.leads} onAdd={addProperty} onUpdate={updateProperty} onDelete={deleteProperty} />
         )}
 
         {activeTab === "vehicles" && (
-          <VehiclesView vehicles={filteredVehicles} onAdd={addVehicle} onUpdate={updateVehicle} onDelete={deleteVehicle} />
+          <VehiclesView vehicles={filteredVehicles} leads={data.leads} onAdd={addVehicle} onUpdate={updateVehicle} onDelete={deleteVehicle} />
         )}
 
         {activeTab === "boats" && (
-          <BoatsView boats={filteredBoats} onAdd={addBoat} onUpdate={updateBoat} onDelete={deleteBoat} />
+          <BoatsView boats={filteredBoats} leads={data.leads} onAdd={addBoat} onUpdate={updateBoat} onDelete={deleteBoat} />
         )}
 
         {activeTab === "tasks" && (
@@ -906,6 +906,18 @@ function ContactsView({
     const leadIds = new Set(contactLeads.map((lead) => lead.id));
 
     return tasks.filter((task) => leadIds.has(task.linkedTo));
+  }
+
+  function getPropertyLeads(property: Property) {
+    return leads.filter((lead) => lead.assetType === "Property" && lead.assetId === property.id);
+  }
+
+  function getVehicleLeads(vehicle: Vehicle) {
+    return leads.filter((lead) => lead.assetType === "Vehicle" && lead.assetId === vehicle.id);
+  }
+
+  function getBoatLeads(boat: Boat) {
+    return leads.filter((lead) => lead.assetType === "Boat" && lead.assetId === boat.id);
   }
 
   function submitEdit(event: React.FormEvent<HTMLFormElement>) {
@@ -1776,11 +1788,13 @@ function LeadsView({
 
 function PropertiesView({
   properties,
+  leads,
   onAdd,
   onUpdate,
   onDelete
 }: {
   properties: Property[];
+  leads: Lead[];
   onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
   onUpdate: (property: Property) => void;
   onDelete: (id: string) => void;
@@ -1795,6 +1809,10 @@ function PropertiesView({
     const cityMatches = property.city.toLowerCase().includes(propertyCityFilter.toLowerCase().trim());
     return statusMatches && cityMatches;
   });
+
+  function getPropertyLeads(property: Property) {
+    return leads.filter((lead) => lead.assetType === "Property" && lead.assetId === property.id);
+  }
 
   function submitEdit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1955,6 +1973,26 @@ function PropertiesView({
               <div className="full"><span>Notes internes</span><p>{selectedProperty.notes || "Aucune note interne."}</p></div>
             </div>
 
+            <div className="asset-related-section">
+              <p className="eyebrow">Leads liés à ce bien</p>
+
+              <div className="list-stack">
+                {getPropertyLeads(selectedProperty).length === 0 && (
+                  <p className="muted-line">Aucun lead lié à ce bien.</p>
+                )}
+
+                {getPropertyLeads(selectedProperty).map((lead) => (
+                  <article className="mini-row" key={lead.id}>
+                    <div>
+                      <strong>{lead.contactName}</strong>
+                      <span>{lead.status} · {currency.format(lead.value)}</span>
+                    </div>
+                    <Badge>{lead.priority}</Badge>
+                  </article>
+                ))}
+              </div>
+            </div>
+
             <div className="confirm-actions">
               <button className="ghost-button" type="button" onClick={() => setSelectedProperty(null)}>Fermer</button>
               <button className="primary-button" type="button" onClick={() => openEdit(selectedProperty)}>Modifier</button>
@@ -2002,11 +2040,13 @@ function PropertiesView({
 
 function VehiclesView({
   vehicles,
+  leads,
   onAdd,
   onUpdate,
   onDelete
 }: {
   vehicles: Vehicle[];
+  leads: Lead[];
   onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
   onUpdate: (vehicle: Vehicle) => void;
   onDelete: (id: string) => void;
@@ -2021,6 +2061,10 @@ function VehiclesView({
     const cityMatches = vehicle.city.toLowerCase().includes(vehicleCityFilter.toLowerCase().trim());
     return statusMatches && cityMatches;
   });
+
+  function getVehicleLeads(vehicle: Vehicle) {
+    return leads.filter((lead) => lead.assetType === "Vehicle" && lead.assetId === vehicle.id);
+  }
 
   function submitEdit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -2171,6 +2215,26 @@ function VehiclesView({
               <div className="full"><span>Notes internes</span><p>{selectedVehicle.notes || "Aucune note interne."}</p></div>
             </div>
 
+            <div className="asset-related-section">
+              <p className="eyebrow">Leads liés à cette voiture</p>
+
+              <div className="list-stack">
+                {getVehicleLeads(selectedVehicle).length === 0 && (
+                  <p className="muted-line">Aucun lead lié à cette voiture.</p>
+                )}
+
+                {getVehicleLeads(selectedVehicle).map((lead) => (
+                  <article className="mini-row" key={lead.id}>
+                    <div>
+                      <strong>{lead.contactName}</strong>
+                      <span>{lead.status} · {currency.format(lead.value)}</span>
+                    </div>
+                    <Badge>{lead.priority}</Badge>
+                  </article>
+                ))}
+              </div>
+            </div>
+
             <div className="confirm-actions">
               <button className="ghost-button" type="button" onClick={() => setSelectedVehicle(null)}>Fermer</button>
               <button className="primary-button" type="button" onClick={() => openEdit(selectedVehicle)}>Modifier</button>
@@ -2220,11 +2284,13 @@ function VehiclesView({
 
 function BoatsView({
   boats,
+  leads,
   onAdd,
   onUpdate,
   onDelete
 }: {
   boats: Boat[];
+  leads: Lead[];
   onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
   onUpdate: (boat: Boat) => void;
   onDelete: (id: string) => void;
@@ -2239,6 +2305,10 @@ function BoatsView({
     const portMatches = boat.port.toLowerCase().includes(boatPortFilter.toLowerCase().trim());
     return statusMatches && portMatches;
   });
+
+  function getBoatLeads(boat: Boat) {
+    return leads.filter((lead) => lead.assetType === "Boat" && lead.assetId === boat.id);
+  }
 
   function submitEdit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -2384,6 +2454,26 @@ function BoatsView({
               <div><span>Année</span><strong>{selectedBoat.year || "—"}</strong></div>
               <div><span>Longueur</span><strong>{selectedBoat.length ? `${selectedBoat.length} m` : "—"}</strong></div>
               <div className="full"><span>Notes internes</span><p>{selectedBoat.notes || "Aucune note interne."}</p></div>
+            </div>
+
+            <div className="asset-related-section">
+              <p className="eyebrow">Leads liés à ce bateau</p>
+
+              <div className="list-stack">
+                {getBoatLeads(selectedBoat).length === 0 && (
+                  <p className="muted-line">Aucun lead lié à ce bateau.</p>
+                )}
+
+                {getBoatLeads(selectedBoat).map((lead) => (
+                  <article className="mini-row" key={lead.id}>
+                    <div>
+                      <strong>{lead.contactName}</strong>
+                      <span>{lead.status} · {currency.format(lead.value)}</span>
+                    </div>
+                    <Badge>{lead.priority}</Badge>
+                  </article>
+                ))}
+              </div>
             </div>
 
             <div className="confirm-actions">
