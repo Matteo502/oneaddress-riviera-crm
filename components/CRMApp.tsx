@@ -347,6 +347,22 @@ function formatQuotePrice(value: number) {
   }).format(Number.isFinite(value) ? value : 0);
 }
 
+function getQuoteDurationDays(quote: QuoteRequest) {
+  if (!quote.startDate || !quote.endDate) return 1;
+
+  const start = new Date(`${quote.startDate}T00:00:00`);
+  const end = new Date(`${quote.endDate}T00:00:00`);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 1;
+
+  const diff = Math.round((end.getTime() - start.getTime()) / 86400000);
+  return Math.max(diff, 1);
+}
+
+function getQuoteTotal(quote: QuoteRequest) {
+  return getQuoteDurationDays(quote) * (Number.isFinite(quote.unitPrice) ? quote.unitPrice : 0);
+}
+
 function openQuotePdf(quote: QuoteRequest) {
   const popup = window.open("", "_blank", "width=900,height=1100");
 
@@ -356,6 +372,8 @@ function openQuotePdf(quote: QuoteRequest) {
   }
 
   const categories = quote.categories.length ? quote.categories.join(", ") : "Non renseigné";
+  const durationDays = getQuoteDurationDays(quote);
+  const total = getQuoteTotal(quote);
 
   popup.document.open();
   popup.document.write(`<!doctype html>
@@ -455,9 +473,11 @@ function openQuotePdf(quote: QuoteRequest) {
       <tr><th>Catégorie(s)</th><td>${escapeQuoteHtml(categories)}</td></tr>
       <tr><th>Dates demandées</th><td>Du ${formatQuoteDate(quote.startDate)} au ${formatQuoteDate(quote.endDate)}</td></tr>
       <tr><th>Prix unitaire</th><td>${formatQuotePrice(quote.unitPrice)}</td></tr>
+      <tr><th>Durée</th><td>${durationDays} jour${durationDays > 1 ? "s" : ""}</td></tr>
+      <tr><th>Total indicatif</th><td>${formatQuotePrice(total)}</td></tr>
     </table>
 
-    <div class="total">Total indicatif : ${formatQuotePrice(quote.unitPrice)}</div>
+    <div class="total">Total indicatif : ${formatQuotePrice(total)}</div>
 
     ${quote.notes ? `<p class="notes">${escapeQuoteHtml(quote.notes)}</p>` : ""}
 
@@ -538,7 +558,8 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
                   <p className="eyebrow">{quote.categories.join(" · ")}</p>
                   <h3>{quote.clientName}</h3>
                   <p>Du {formatQuoteDate(quote.startDate)} au {formatQuoteDate(quote.endDate)}</p>
-                  <strong>{formatQuotePrice(quote.unitPrice)}</strong>
+                  <strong>{formatQuotePrice(getQuoteTotal(quote))}</strong>
+                  <small>{getQuoteDurationDays(quote)} jour{getQuoteDurationDays(quote) > 1 ? "s" : ""} × {formatQuotePrice(quote.unitPrice)}</small>
                   {quote.notes && <p>{quote.notes}</p>}
                 </div>
 
