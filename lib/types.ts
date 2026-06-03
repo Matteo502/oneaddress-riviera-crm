@@ -23,6 +23,8 @@ export type Lead = {
   id: string;
   category: "Villa" | "Voiture" | "Bateau" | "Conciergerie";
   contactName: string;
+  assetType?: "" | "Property" | "Vehicle" | "Boat";
+  assetId?: string;
   status: LeadStatus;
   value: number;
   priority: "Basse" | "Moyenne" | "Haute";
