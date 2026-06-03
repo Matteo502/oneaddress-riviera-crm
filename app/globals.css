@@ -2114,3 +2114,148 @@ td small,
     justify-content: flex-start;
   }
 }
+
+
+/* Navigation / lisibilité / boutons mieux cadrés */
+* {
+  box-sizing: border-box;
+}
+
+button,
+.primary-button,
+.secondary-button,
+.ghost-button,
+.danger-link {
+  min-height: 46px;
+  max-width: 100%;
+  padding: 0 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  line-height: 1;
+  text-align: center;
+}
+
+button {
+  overflow: visible;
+}
+
+.primary-button,
+.secondary-button,
+.ghost-button {
+  min-width: max-content;
+}
+
+.danger-link {
+  min-height: 36px;
+  padding: 0 10px;
+}
+
+.topbar-actions,
+.header-actions,
+.hero-actions,
+.form-actions,
+.card-actions,
+.quick-actions-bar,
+.quote-actions,
+.filter-row,
+.filters,
+.pipeline-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.topbar-actions button,
+.header-actions button,
+.hero-actions button {
+  flex-shrink: 0;
+}
+
+.card,
+.form-card,
+.quote-card,
+.property-card,
+.vehicle-card,
+.boat-card,
+.lead-card,
+.task-card {
+  overflow: visible;
+}
+
+.form-grid {
+  gap: 20px;
+}
+
+.form-grid label,
+.form-grid fieldset {
+  min-width: 0;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  min-height: 48px;
+}
+
+textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.section-heading {
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.list-stack {
+  gap: 18px;
+}
+
+.sidebar,
+aside {
+  overflow-y: auto;
+}
+
+.nav-button {
+  min-height: 58px;
+}
+
+@media (max-width: 1100px) {
+  .topbar-actions,
+  .header-actions,
+  .hero-actions {
+    justify-content: flex-start;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .ghost-button {
+    width: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  button,
+  .primary-button,
+  .secondary-button,
+  .ghost-button {
+    width: 100%;
+  }
+
+  .topbar-actions,
+  .header-actions,
+  .hero-actions,
+  .form-actions,
+  .card-actions,
+  .quote-actions,
+  .filter-row,
+  .filters,
+  .pipeline-filters {
+    width: 100%;
+  }
+}

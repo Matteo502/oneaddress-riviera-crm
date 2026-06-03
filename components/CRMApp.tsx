@@ -622,6 +622,11 @@ export default function CRMApp() {
   const [data, setData] = useState<CRMData>(seedData);
   const [toast, setToast] = useState<Toast | null>(null);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [activeTab]);
+
+
   // MIGRATION_VISITE_TO_DEVIS
   useEffect(() => {
     setData((current) => ({
