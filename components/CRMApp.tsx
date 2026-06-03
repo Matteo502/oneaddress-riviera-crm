@@ -306,6 +306,7 @@ type ActivityEntry = {
   label: string;
 };
 
+const HISTORY_ENABLED = false;
 const ACTIVITY_KEY = "oneaddress-riviera-crm-history";
 
 function makeActivity(action: string, category: string, label: string): ActivityEntry {
@@ -319,6 +320,8 @@ function makeActivity(action: string, category: string, label: string): Activity
 }
 
 function ActivityHistory({ entries }: { entries?: ActivityEntry[] }) {
+  if (!HISTORY_ENABLED) return null;
+
   const safeEntries = Array.isArray(entries) ? entries : [];
   const latest = safeEntries.slice(0, 12);
 
@@ -342,14 +345,7 @@ function ActivityHistory({ entries }: { entries?: ActivityEntry[] }) {
                 <strong>{entry.action} · {entry.category}</strong>
                 <span>{entry.label}</span>
               </div>
-              <time>
-                {entry.at ? new Date(entry.at).toLocaleString("fr-FR", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  hour: "2-digit",
-                  minute: "2-digit"
-                }) : "—"}
-              </time>
+              <time>{entry.at ? new Date(entry.at).toLocaleString("fr-FR") : "—"}</time>
             </article>
           ))}
         </div>
@@ -414,24 +410,7 @@ export default function CRMApp() {
 
 
   function logActivity(action: string, category: string, label: string) {
-    try {
-      const entry = makeActivity(action, category, label);
-
-      setActivityHistory((current) => {
-        const safeCurrent = Array.isArray(current) ? current : [];
-        const next = [entry, ...safeCurrent].slice(0, 80);
-
-        try {
-          window.localStorage.setItem(ACTIVITY_KEY, JSON.stringify(next));
-        } catch {
-          // Ne jamais bloquer le CRM pour un problème d'historique local.
-        }
-
-        return next;
-      });
-    } catch {
-      // Ne jamais bloquer le CRM pour un problème d'historique.
-    }
+    if (!HISTORY_ENABLED) return;
   }
 
 
@@ -450,8 +429,9 @@ export default function CRMApp() {
   }, []);
 
 
-  // Détection simple historique
+  // Détection simple historique désactivée temporairement
   useEffect(() => {
+    if (!HISTORY_ENABLED) return;
     const previous = previousDataRef.current;
 
     if (!previous) {
