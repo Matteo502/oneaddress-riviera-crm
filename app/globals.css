@@ -1986,3 +1986,12 @@ td small,
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Actif lié dans les leads */
+.asset-linked-line {
+  color: #011d30 !important;
+  font-weight: 800 !important;
+  border-left: 2px solid rgba(169, 129, 63, 0.42);
+  padding-left: 8px;
+}
