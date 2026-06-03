@@ -111,7 +111,9 @@ function sortByUrgency<T extends { dueDate: string; priority?: string; value?: n
     const priorityDiff = priorityWeight(a.priority) - priorityWeight(b.priority);
     if (priorityDiff !== 0) return priorityDiff;
 
-    return (b.value ?? 0) - (a.value ?? 0);
+    
+
+  return (b.value ?? 0) - (a.value ?? 0);
   });
 }
 
@@ -695,7 +697,12 @@ export default function CRMApp() {
             exportCRMAsCsv(data);
             notify("Export CSV téléchargé.");
           }}>Exporter CSV</button>
-          <button className="ghost-button" onClick={resetDemo}>Reset démo</button>
+          <button className="ghost-button" onClick={() => {
+              const confirmed = window.confirm("Réinitialiser les données de démonstration ? Cette action remplacera les données locales actuelles.");
+              if (!confirmed) return;
+              setData(seedData);
+              notify("Données de démonstration réinitialisées.");
+            }}>Reset démo</button>
           </div>
         </header>
 
