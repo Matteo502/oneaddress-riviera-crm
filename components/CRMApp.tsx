@@ -1386,7 +1386,7 @@ function LeadsView({
     const dueStatus = getDueStatus(lead.dueDate);
 
     const categoryMatches = leadCategoryFilter === "Toutes" || lead.category === leadCategoryFilter;
-    const statusMatches = leadStatusFilter === "Tous" || lead.status === leadStatusFilter;
+    const statusMatches = leadStatusFilter === "Tous" ? lead.status !== "Perdu" : lead.status === leadStatusFilter;
     const priorityMatches = leadPriorityFilter === "Toutes" || lead.priority === leadPriorityFilter;
 
     const dueMatches =
