@@ -43,6 +43,7 @@ export type Property = {
   owner: string;
   bedrooms: number;
   surface: number;
+  notes?: string;
 };
 
 export type Vehicle = {
@@ -56,6 +57,7 @@ export type Vehicle = {
   owner: string;
   year: number;
   mileage: number;
+  notes?: string;
 };
 
 export type Boat = {
@@ -68,6 +70,7 @@ export type Boat = {
   owner: string;
   year: number;
   length: number;
+  notes?: string;
 };
 
 

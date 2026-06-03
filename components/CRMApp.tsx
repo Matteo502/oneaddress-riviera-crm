@@ -1687,12 +1687,18 @@ function PropertiesView({
   onDelete: (id: string) => void;
 }) {
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [propertyStatusFilter, setPropertyStatusFilter] = useState<"Tous" | PropertyStatus>("Tous");
   const [propertyCityFilter, setPropertyCityFilter] = useState("");
 
+  const visibleProperties = properties.filter((property) => {
+    const statusMatches = propertyStatusFilter === "Tous" || property.status === propertyStatusFilter;
+    const cityMatches = property.city.toLowerCase().includes(propertyCityFilter.toLowerCase().trim());
+    return statusMatches && cityMatches;
+  });
+
   function submitEdit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     if (!editingProperty) return;
 
     const form = new FormData(event.currentTarget);
@@ -1705,13 +1711,15 @@ function PropertiesView({
       status: String(form.get("status") ?? "Disponible") as PropertyStatus,
       owner: String(form.get("owner") ?? "").trim(),
       bedrooms: safeNumber(form.get("bedrooms")),
-      surface: safeNumber(form.get("surface"))
+      surface: safeNumber(form.get("surface")),
+      notes: String(form.get("notes") ?? "").trim()
     };
 
     if (!updatedProperty.name) return;
 
     onUpdate(updatedProperty);
     setEditingProperty(null);
+    setSelectedProperty(updatedProperty);
   }
 
   function openEdit(property: Property) {
@@ -1725,13 +1733,6 @@ function PropertiesView({
     }, 50);
   }
 
-  const visibleProperties = properties.filter((property) => {
-    const statusMatches = propertyStatusFilter === "Tous" || property.status === propertyStatusFilter;
-    const cityMatches = property.city.toLowerCase().includes(propertyCityFilter.toLowerCase().trim());
-
-    return statusMatches && cityMatches;
-  });
-
   return (
     <div className="two-columns wide-left">
       <section className="property-grid">
@@ -1743,31 +1744,20 @@ function PropertiesView({
 
           <div className="asset-filter-grid">
             <label>Statut
-              <select
-                value={propertyStatusFilter}
-                onChange={(event) => setPropertyStatusFilter(event.target.value as "Tous" | PropertyStatus)}
-              >
+              <select value={propertyStatusFilter} onChange={(event) => setPropertyStatusFilter(event.target.value as "Tous" | PropertyStatus)}>
                 <option value="Tous">Tous</option>
                 {propertyStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
               </select>
             </label>
 
             <label>Ville
-              <input
-                value={propertyCityFilter}
-                onChange={(event) => setPropertyCityFilter(event.target.value)}
-                placeholder="Cannes, Nice..."
-              />
+              <input value={propertyCityFilter} onChange={(event) => setPropertyCityFilter(event.target.value)} placeholder="Cannes, Nice..." />
             </label>
 
-            <button
-              className="ghost-button"
-              type="button"
-              onClick={() => {
-                setPropertyStatusFilter("Tous");
-                setPropertyCityFilter("");
-              }}
-            >
+            <button className="ghost-button" type="button" onClick={() => {
+              setPropertyStatusFilter("Tous");
+              setPropertyCityFilter("");
+            }}>
               Réinitialiser
             </button>
           </div>
@@ -1779,6 +1769,7 @@ function PropertiesView({
             <p>Modifiez vos filtres pour afficher plus de résultats.</p>
           </div>
         )}
+
         {visibleProperties.map((property) => (
           <article className="property-card" key={property.id}>
             <div className="property-visual">
@@ -1788,10 +1779,7 @@ function PropertiesView({
                 className="icon-button light"
                 onClick={() => {
                   const confirmed = window.confirm(`Supprimer "${property.name}" ?`);
-
-                  if (confirmed) {
-                    onDelete(property.id);
-                  }
+                  if (confirmed) onDelete(property.id);
                 }}
                 aria-label="Supprimer"
               >
@@ -1805,7 +1793,6 @@ function PropertiesView({
                   <h3>{property.name}</h3>
                   <p>{property.city || "Ville non renseignée"}</p>
                 </div>
-
                 <Badge>{property.status}</Badge>
               </div>
 
@@ -1816,9 +1803,15 @@ function PropertiesView({
                 <div><dt>Owner</dt><dd>{property.owner || "—"}</dd></div>
               </dl>
 
-              <button className="asset-edit-button" type="button" onClick={() => openEdit(property)}>
-                Modifier
-              </button>
+              <div className="asset-card-actions">
+                <button className="asset-detail-button" type="button" onClick={() => setSelectedProperty(property)}>
+                  Détails
+                </button>
+
+                <button className="asset-edit-button" type="button" onClick={() => openEdit(property)}>
+                  Modifier
+                </button>
+              </div>
             </div>
           </article>
         ))}
@@ -1847,6 +1840,30 @@ function PropertiesView({
         </form>
       </section>
 
+      {selectedProperty && (
+        <div className="confirm-backdrop">
+          <div className="confirm-dialog asset-detail-dialog" role="dialog" aria-modal="true">
+            <p className="eyebrow">Fiche bien</p>
+            <h3>{selectedProperty.name}</h3>
+
+            <div className="asset-detail-grid">
+              <div><span>Statut</span><strong>{selectedProperty.status}</strong></div>
+              <div><span>Ville</span><strong>{selectedProperty.city || "Non renseignée"}</strong></div>
+              <div><span>Prix</span><strong>{currency.format(selectedProperty.price)}</strong></div>
+              <div><span>Owner</span><strong>{selectedProperty.owner || "Non renseigné"}</strong></div>
+              <div><span>Chambres</span><strong>{selectedProperty.bedrooms || "—"}</strong></div>
+              <div><span>Surface</span><strong>{selectedProperty.surface ? `${selectedProperty.surface} m²` : "—"}</strong></div>
+              <div className="full"><span>Notes internes</span><p>{selectedProperty.notes || "Aucune note interne."}</p></div>
+            </div>
+
+            <div className="confirm-actions">
+              <button className="ghost-button" type="button" onClick={() => setSelectedProperty(null)}>Fermer</button>
+              <button className="primary-button" type="button" onClick={() => openEdit(selectedProperty)}>Modifier</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {editingProperty && (
         <div className="confirm-backdrop">
           <div id="property-edit-panel" className="confirm-dialog edit-dialog" role="dialog" aria-modal="true">
@@ -1868,14 +1885,13 @@ function PropertiesView({
               <label>Chambres<input name="bedrooms" type="number" min="0" defaultValue={editingProperty.bedrooms || ""} /></label>
               <label>Surface m²<input name="surface" type="number" min="0" defaultValue={editingProperty.surface || ""} /></label>
 
-              <div className="confirm-actions full">
-                <button className="ghost-button" type="button" onClick={() => setEditingProperty(null)}>
-                  Annuler
-                </button>
+              <label className="full">Notes internes
+                <textarea name="notes" defaultValue={editingProperty.notes ?? ""} />
+              </label>
 
-                <button className="primary-button" type="submit">
-                  Enregistrer
-                </button>
+              <div className="confirm-actions full">
+                <button className="ghost-button" type="button" onClick={() => setEditingProperty(null)}>Annuler</button>
+                <button className="primary-button" type="submit">Enregistrer</button>
               </div>
             </form>
           </div>
@@ -1897,12 +1913,18 @@ function VehiclesView({
   onDelete: (id: string) => void;
 }) {
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [vehicleStatusFilter, setVehicleStatusFilter] = useState<"Tous" | VehicleStatus>("Tous");
   const [vehicleCityFilter, setVehicleCityFilter] = useState("");
 
+  const visibleVehicles = vehicles.filter((vehicle) => {
+    const statusMatches = vehicleStatusFilter === "Tous" || vehicle.status === vehicleStatusFilter;
+    const cityMatches = vehicle.city.toLowerCase().includes(vehicleCityFilter.toLowerCase().trim());
+    return statusMatches && cityMatches;
+  });
+
   function submitEdit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     if (!editingVehicle) return;
 
     const form = new FormData(event.currentTarget);
@@ -1917,32 +1939,23 @@ function VehiclesView({
       status: String(form.get("status") ?? "Disponible") as VehicleStatus,
       owner: String(form.get("owner") ?? "").trim(),
       year: safeNumber(form.get("year")),
-      mileage: safeNumber(form.get("mileage"))
+      mileage: safeNumber(form.get("mileage")),
+      notes: String(form.get("notes") ?? "").trim()
     };
 
     if (!updatedVehicle.name) return;
 
     onUpdate(updatedVehicle);
     setEditingVehicle(null);
+    setSelectedVehicle(updatedVehicle);
   }
 
   function openEdit(vehicle: Vehicle) {
     setEditingVehicle(vehicle);
-
     setTimeout(() => {
-      document.getElementById("vehicle-edit-panel")?.scrollIntoView({
-        behavior: "smooth",
-        block: "center"
-      });
+      document.getElementById("vehicle-edit-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 50);
   }
-
-  const visibleVehicles = vehicles.filter((vehicle) => {
-    const statusMatches = vehicleStatusFilter === "Tous" || vehicle.status === vehicleStatusFilter;
-    const cityMatches = vehicle.city.toLowerCase().includes(vehicleCityFilter.toLowerCase().trim());
-
-    return statusMatches && cityMatches;
-  });
 
   return (
     <div className="two-columns wide-left">
@@ -1955,39 +1968,29 @@ function VehiclesView({
 
           <div className="asset-filter-grid">
             <label>Statut
-              <select
-                value={vehicleStatusFilter}
-                onChange={(event) => setVehicleStatusFilter(event.target.value as "Tous" | VehicleStatus)}
-              >
+              <select value={vehicleStatusFilter} onChange={(event) => setVehicleStatusFilter(event.target.value as "Tous" | VehicleStatus)}>
                 <option value="Tous">Tous</option>
                 {vehicleStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
               </select>
             </label>
 
             <label>Ville
-              <input
-                value={vehicleCityFilter}
-                onChange={(event) => setVehicleCityFilter(event.target.value)}
-                placeholder="Cannes, Monaco..."
-              />
+              <input value={vehicleCityFilter} onChange={(event) => setVehicleCityFilter(event.target.value)} placeholder="Cannes, Monaco..." />
             </label>
 
-            <button
-              className="ghost-button"
-              type="button"
-              onClick={() => {
-                setVehicleStatusFilter("Tous");
-                setVehicleCityFilter("");
-              }}
-            >
+            <button className="ghost-button" type="button" onClick={() => {
+              setVehicleStatusFilter("Tous");
+              setVehicleCityFilter("");
+            }}>
               Réinitialiser
             </button>
           </div>
         </div>
+
         {visibleVehicles.length === 0 && (
           <div className="empty-state">
-            <h3>Aucune voiture pour le moment</h3>
-            <p>Ajoutez une voiture avec le formulaire à droite.</p>
+            <h3>Aucune voiture trouvée</h3>
+            <p>Modifiez vos filtres pour afficher plus de résultats.</p>
           </div>
         )}
 
@@ -1995,20 +1998,10 @@ function VehiclesView({
           <article className="property-card" key={vehicle.id}>
             <div className="property-visual">
               <span>{vehicle.brand || "Voiture"}</span>
-
-              <button
-                className="icon-button light"
-                onClick={() => {
-                  const confirmed = window.confirm(`Supprimer "${vehicle.name}" ?`);
-
-                  if (confirmed) {
-                    onDelete(vehicle.id);
-                  }
-                }}
-                aria-label="Supprimer"
-              >
-                ×
-              </button>
+              <button className="icon-button light" onClick={() => {
+                const confirmed = window.confirm(`Supprimer "${vehicle.name}" ?`);
+                if (confirmed) onDelete(vehicle.id);
+              }} aria-label="Supprimer">×</button>
             </div>
 
             <div className="property-body">
@@ -2017,7 +2010,6 @@ function VehiclesView({
                   <h3>{vehicle.name}</h3>
                   <p>{vehicle.city || "Ville non renseignée"}</p>
                 </div>
-
                 <Badge>{vehicle.status}</Badge>
               </div>
 
@@ -2028,9 +2020,10 @@ function VehiclesView({
                 <div><dt>Owner</dt><dd>{vehicle.owner || "—"}</dd></div>
               </dl>
 
-              <button className="asset-edit-button" type="button" onClick={() => openEdit(vehicle)}>
-                Modifier
-              </button>
+              <div className="asset-card-actions">
+                <button className="asset-detail-button" type="button" onClick={() => setSelectedVehicle(vehicle)}>Détails</button>
+                <button className="asset-edit-button" type="button" onClick={() => openEdit(vehicle)}>Modifier</button>
+              </div>
             </div>
           </article>
         ))}
@@ -2061,6 +2054,32 @@ function VehiclesView({
         </form>
       </section>
 
+      {selectedVehicle && (
+        <div className="confirm-backdrop">
+          <div className="confirm-dialog asset-detail-dialog" role="dialog" aria-modal="true">
+            <p className="eyebrow">Fiche voiture</p>
+            <h3>{selectedVehicle.name}</h3>
+
+            <div className="asset-detail-grid">
+              <div><span>Marque</span><strong>{selectedVehicle.brand || "—"}</strong></div>
+              <div><span>Modèle</span><strong>{selectedVehicle.model || "—"}</strong></div>
+              <div><span>Statut</span><strong>{selectedVehicle.status}</strong></div>
+              <div><span>Ville</span><strong>{selectedVehicle.city || "—"}</strong></div>
+              <div><span>Prix / jour</span><strong>{currency.format(selectedVehicle.price)}</strong></div>
+              <div><span>Owner</span><strong>{selectedVehicle.owner || "—"}</strong></div>
+              <div><span>Année</span><strong>{selectedVehicle.year || "—"}</strong></div>
+              <div><span>Kilométrage</span><strong>{selectedVehicle.mileage ? `${selectedVehicle.mileage.toLocaleString("fr-FR")} km` : "—"}</strong></div>
+              <div className="full"><span>Notes internes</span><p>{selectedVehicle.notes || "Aucune note interne."}</p></div>
+            </div>
+
+            <div className="confirm-actions">
+              <button className="ghost-button" type="button" onClick={() => setSelectedVehicle(null)}>Fermer</button>
+              <button className="primary-button" type="button" onClick={() => openEdit(selectedVehicle)}>Modifier</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {editingVehicle && (
         <div className="confirm-backdrop">
           <div id="vehicle-edit-panel" className="confirm-dialog edit-dialog" role="dialog" aria-modal="true">
@@ -2084,14 +2103,13 @@ function VehiclesView({
               <label>Année<input name="year" type="number" min="1900" defaultValue={editingVehicle.year || ""} /></label>
               <label>Kilométrage<input name="mileage" type="number" min="0" defaultValue={editingVehicle.mileage || ""} /></label>
 
-              <div className="confirm-actions full">
-                <button className="ghost-button" type="button" onClick={() => setEditingVehicle(null)}>
-                  Annuler
-                </button>
+              <label className="full">Notes internes
+                <textarea name="notes" defaultValue={editingVehicle.notes ?? ""} />
+              </label>
 
-                <button className="primary-button" type="submit">
-                  Enregistrer
-                </button>
+              <div className="confirm-actions full">
+                <button className="ghost-button" type="button" onClick={() => setEditingVehicle(null)}>Annuler</button>
+                <button className="primary-button" type="submit">Enregistrer</button>
               </div>
             </form>
           </div>
@@ -2113,12 +2131,18 @@ function BoatsView({
   onDelete: (id: string) => void;
 }) {
   const [editingBoat, setEditingBoat] = useState<Boat | null>(null);
+  const [selectedBoat, setSelectedBoat] = useState<Boat | null>(null);
   const [boatStatusFilter, setBoatStatusFilter] = useState<"Tous" | BoatStatus>("Tous");
   const [boatPortFilter, setBoatPortFilter] = useState("");
 
+  const visibleBoats = boats.filter((boat) => {
+    const statusMatches = boatStatusFilter === "Tous" || boat.status === boatStatusFilter;
+    const portMatches = boat.port.toLowerCase().includes(boatPortFilter.toLowerCase().trim());
+    return statusMatches && portMatches;
+  });
+
   function submitEdit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     if (!editingBoat) return;
 
     const form = new FormData(event.currentTarget);
@@ -2132,32 +2156,23 @@ function BoatsView({
       status: String(form.get("status") ?? "Disponible") as BoatStatus,
       owner: String(form.get("owner") ?? "").trim(),
       year: safeNumber(form.get("year")),
-      length: safeNumber(form.get("length"))
+      length: safeNumber(form.get("length")),
+      notes: String(form.get("notes") ?? "").trim()
     };
 
     if (!updatedBoat.name) return;
 
     onUpdate(updatedBoat);
     setEditingBoat(null);
+    setSelectedBoat(updatedBoat);
   }
 
   function openEdit(boat: Boat) {
     setEditingBoat(boat);
-
     setTimeout(() => {
-      document.getElementById("boat-edit-panel")?.scrollIntoView({
-        behavior: "smooth",
-        block: "center"
-      });
+      document.getElementById("boat-edit-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 50);
   }
-
-  const visibleBoats = boats.filter((boat) => {
-    const statusMatches = boatStatusFilter === "Tous" || boat.status === boatStatusFilter;
-    const portMatches = boat.port.toLowerCase().includes(boatPortFilter.toLowerCase().trim());
-
-    return statusMatches && portMatches;
-  });
 
   return (
     <div className="two-columns wide-left">
@@ -2170,39 +2185,29 @@ function BoatsView({
 
           <div className="asset-filter-grid">
             <label>Statut
-              <select
-                value={boatStatusFilter}
-                onChange={(event) => setBoatStatusFilter(event.target.value as "Tous" | BoatStatus)}
-              >
+              <select value={boatStatusFilter} onChange={(event) => setBoatStatusFilter(event.target.value as "Tous" | BoatStatus)}>
                 <option value="Tous">Tous</option>
                 {boatStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
               </select>
             </label>
 
             <label>Port
-              <input
-                value={boatPortFilter}
-                onChange={(event) => setBoatPortFilter(event.target.value)}
-                placeholder="Cannes, Antibes..."
-              />
+              <input value={boatPortFilter} onChange={(event) => setBoatPortFilter(event.target.value)} placeholder="Cannes, Antibes..." />
             </label>
 
-            <button
-              className="ghost-button"
-              type="button"
-              onClick={() => {
-                setBoatStatusFilter("Tous");
-                setBoatPortFilter("");
-              }}
-            >
+            <button className="ghost-button" type="button" onClick={() => {
+              setBoatStatusFilter("Tous");
+              setBoatPortFilter("");
+            }}>
               Réinitialiser
             </button>
           </div>
         </div>
+
         {visibleBoats.length === 0 && (
           <div className="empty-state">
-            <h3>Aucun bateau pour le moment</h3>
-            <p>Ajoutez un bateau avec le formulaire à droite.</p>
+            <h3>Aucun bateau trouvé</h3>
+            <p>Modifiez vos filtres pour afficher plus de résultats.</p>
           </div>
         )}
 
@@ -2210,20 +2215,10 @@ function BoatsView({
           <article className="property-card" key={boat.id}>
             <div className="property-visual">
               <span>{boat.type || "Bateau"}</span>
-
-              <button
-                className="icon-button light"
-                onClick={() => {
-                  const confirmed = window.confirm(`Supprimer "${boat.name}" ?`);
-
-                  if (confirmed) {
-                    onDelete(boat.id);
-                  }
-                }}
-                aria-label="Supprimer"
-              >
-                ×
-              </button>
+              <button className="icon-button light" onClick={() => {
+                const confirmed = window.confirm(`Supprimer "${boat.name}" ?`);
+                if (confirmed) onDelete(boat.id);
+              }} aria-label="Supprimer">×</button>
             </div>
 
             <div className="property-body">
@@ -2232,7 +2227,6 @@ function BoatsView({
                   <h3>{boat.name}</h3>
                   <p>{boat.port || "Port non renseigné"}</p>
                 </div>
-
                 <Badge>{boat.status}</Badge>
               </div>
 
@@ -2243,9 +2237,10 @@ function BoatsView({
                 <div><dt>Owner</dt><dd>{boat.owner || "—"}</dd></div>
               </dl>
 
-              <button className="asset-edit-button" type="button" onClick={() => openEdit(boat)}>
-                Modifier
-              </button>
+              <div className="asset-card-actions">
+                <button className="asset-detail-button" type="button" onClick={() => setSelectedBoat(boat)}>Détails</button>
+                <button className="asset-edit-button" type="button" onClick={() => openEdit(boat)}>Modifier</button>
+              </div>
             </div>
           </article>
         ))}
@@ -2275,6 +2270,31 @@ function BoatsView({
         </form>
       </section>
 
+      {selectedBoat && (
+        <div className="confirm-backdrop">
+          <div className="confirm-dialog asset-detail-dialog" role="dialog" aria-modal="true">
+            <p className="eyebrow">Fiche bateau</p>
+            <h3>{selectedBoat.name}</h3>
+
+            <div className="asset-detail-grid">
+              <div><span>Type</span><strong>{selectedBoat.type || "—"}</strong></div>
+              <div><span>Port</span><strong>{selectedBoat.port || "—"}</strong></div>
+              <div><span>Statut</span><strong>{selectedBoat.status}</strong></div>
+              <div><span>Prix / jour</span><strong>{currency.format(selectedBoat.price)}</strong></div>
+              <div><span>Owner</span><strong>{selectedBoat.owner || "—"}</strong></div>
+              <div><span>Année</span><strong>{selectedBoat.year || "—"}</strong></div>
+              <div><span>Longueur</span><strong>{selectedBoat.length ? `${selectedBoat.length} m` : "—"}</strong></div>
+              <div className="full"><span>Notes internes</span><p>{selectedBoat.notes || "Aucune note interne."}</p></div>
+            </div>
+
+            <div className="confirm-actions">
+              <button className="ghost-button" type="button" onClick={() => setSelectedBoat(null)}>Fermer</button>
+              <button className="primary-button" type="button" onClick={() => openEdit(selectedBoat)}>Modifier</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {editingBoat && (
         <div className="confirm-backdrop">
           <div id="boat-edit-panel" className="confirm-dialog edit-dialog" role="dialog" aria-modal="true">
@@ -2297,14 +2317,13 @@ function BoatsView({
               <label>Année<input name="year" type="number" min="1900" defaultValue={editingBoat.year || ""} /></label>
               <label>Longueur m<input name="length" type="number" min="0" defaultValue={editingBoat.length || ""} /></label>
 
-              <div className="confirm-actions full">
-                <button className="ghost-button" type="button" onClick={() => setEditingBoat(null)}>
-                  Annuler
-                </button>
+              <label className="full">Notes internes
+                <textarea name="notes" defaultValue={editingBoat.notes ?? ""} />
+              </label>
 
-                <button className="primary-button" type="submit">
-                  Enregistrer
-                </button>
+              <div className="confirm-actions full">
+                <button className="ghost-button" type="button" onClick={() => setEditingBoat(null)}>Annuler</button>
+                <button className="primary-button" type="submit">Enregistrer</button>
               </div>
             </form>
           </div>
