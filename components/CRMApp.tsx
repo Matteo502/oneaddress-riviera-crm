@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { seedData } from "@/lib/seed";
 import type {
   CRMData,
@@ -298,66 +298,8 @@ function getPropertyDisplayName(property: Property) {
 }
 
 
-type ActivityEntry = {
-  id: string;
-  at: string;
-  action: string;
-  category: string;
-  label: string;
-};
-
-const HISTORY_ENABLED = false;
-const ACTIVITY_KEY = "oneaddress-riviera-crm-history";
-
-function makeActivity(action: string, category: string, label: string): ActivityEntry {
-  return {
-    id: `activity-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    at: new Date().toISOString(),
-    action,
-    category,
-    label
-  };
-}
-
-function ActivityHistory({ entries }: { entries?: ActivityEntry[] }) {
-  if (!HISTORY_ENABLED) return null;
-
-  const safeEntries = Array.isArray(entries) ? entries : [];
-  const latest = safeEntries.slice(0, 12);
-
-  return (
-    <section className="card activity-history-card">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Historique</p>
-          <h3>Dernières actions</h3>
-        </div>
-        <span className="history-count">{safeEntries.length}</span>
-      </div>
-
-      {latest.length === 0 ? (
-        <p className="muted-line">Aucune action enregistrée pour le moment.</p>
-      ) : (
-        <div className="activity-list">
-          {latest.map((entry) => (
-            <article className="activity-item" key={entry.id}>
-              <div>
-                <strong>{entry.action} · {entry.category}</strong>
-                <span>{entry.label}</span>
-              </div>
-              <time>{entry.at ? new Date(entry.at).toLocaleString("fr-FR") : "—"}</time>
-            </article>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
 export default function CRMApp() {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
-  const [activityHistory, setActivityHistory] = useState<ActivityEntry[]>([]);
-  const previousDataRef = useRef<CRMData | null>(null);
   const [leadDraftContactName, setLeadDraftContactName] = useState("");
   const [taskDraftLeadId, setTaskDraftLeadId] = useState("");
   const [taskDraftTitle, setTaskDraftTitle] = useState("");
@@ -399,72 +341,11 @@ export default function CRMApp() {
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, [data]);
-
   useEffect(() => {
     if (!toast) return;
+
     const timer = window.setTimeout(() => setToast(null), 2600);
-    function handleExportCsv() {
-    exportCRMAsCsv(data);
-    notify("Export CSV téléchargé.");
-  }
-
-
-  function logActivity(action: string, category: string, label: string) {
-    if (!HISTORY_ENABLED) return;
-  }
-
-
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(ACTIVITY_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setActivityHistory(Array.isArray(parsed) ? parsed.slice(0, 80) : []);
-      }
-    } catch {
-      setActivityHistory([]);
-    }
-
-    previousDataRef.current = data;
-  }, []);
-
-
-  // Détection simple historique désactivée temporairement
-  useEffect(() => {
-    if (!HISTORY_ENABLED) return;
-    const previous = previousDataRef.current;
-
-    if (!previous) {
-      previousDataRef.current = data;
-      return;
-    }
-
-    const checks = [
-      ["Contact", previous.contacts.length, data.contacts.length],
-      ["Lead", previous.leads.length, data.leads.length],
-      ["Bien", previous.properties.length, data.properties.length],
-      ["Voiture", previous.vehicles?.length ?? 0, data.vehicles?.length ?? 0],
-      ["Bateau", previous.boats?.length ?? 0, data.boats?.length ?? 0],
-      ["Tâche", previous.tasks.length, data.tasks.length]
-    ] as const;
-
-    checks.forEach(([category, before, after]) => {
-      if (after > before) logActivity("Ajout", category, `${after - before} nouvel élément`);
-      if (after < before) logActivity("Suppression", category, `${before - after} élément supprimé`);
-    });
-
-    if (JSON.stringify(previous.leads) !== JSON.stringify(data.leads) && previous.leads.length === data.leads.length) {
-      logActivity("Modification", "Lead", "Lead mis à jour");
-    }
-
-    if (JSON.stringify(previous.tasks) !== JSON.stringify(data.tasks) && previous.tasks.length === data.tasks.length) {
-      logActivity("Modification", "Tâche", "Tâche mise à jour");
-    }
-
-    previousDataRef.current = data;
-  }, [data]);
-
-  return () => window.clearTimeout(timer);
+    return () => window.clearTimeout(timer);
   }, [toast]);
 
   const stats = useMemo(() => {
@@ -823,7 +704,7 @@ export default function CRMApp() {
             stats={stats}
             data={data}
             onLeadStatusChange={updateLeadStatus}
-            onTaskStatusChange={updateTaskStatus} activityHistory={activityHistory} />
+            onTaskStatusChange={updateTaskStatus} />
         )}
 
         {activeTab === "contacts" && (
@@ -923,7 +804,6 @@ function searchMatch(query: string, fields: Array<string | number>) {
 }
 
 function Dashboard({
-  activityHistory,
   stats,
   data,
   onLeadStatusChange,
@@ -931,7 +811,6 @@ function Dashboard({
 }: {
   stats: { pipeline: number; won: number; openTasks: number; availableProperties: number };
   data: CRMData;
-  activityHistory?: ActivityEntry[];
   onLeadStatusChange: (id: string, status: LeadStatus) => void;
   onTaskStatusChange: (id: string, status: TaskStatus) => void;
 }) {
@@ -951,7 +830,6 @@ function Dashboard({
         <section className="card">
           <div className="section-heading">
             <div>
-              <ActivityHistory entries={activityHistory ?? []} />
 
       <p className="eyebrow">Priorité</p>
               <h3>Leads chauds</h3>
