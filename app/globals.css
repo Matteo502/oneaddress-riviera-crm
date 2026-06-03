@@ -2339,3 +2339,85 @@ section:has(.filter-reset-button) select {
     max-width: 100% !important;
   }
 }
+
+
+/* Pipeline Leads : colonnes visibles, compactes, sans scroll horizontal */
+.kanban-board,
+.pipeline-board,
+.leads-board {
+  width: 100%;
+  max-width: 100%;
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(135px, 1fr)) !important;
+  gap: 14px !important;
+  overflow-x: hidden !important;
+}
+
+.kanban-column,
+.pipeline-column,
+.lead-column {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+.kanban-column h3,
+.pipeline-column h3,
+.lead-column h3 {
+  font-size: 0.78rem !important;
+  letter-spacing: 0.18em !important;
+  white-space: nowrap !important;
+}
+
+.lead-card,
+.pipeline-card,
+.kanban-card {
+  padding: 18px !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+.lead-card h3,
+.pipeline-card h3,
+.kanban-card h3 {
+  font-size: 1rem !important;
+  line-height: 1.2 !important;
+}
+
+.lead-card p,
+.pipeline-card p,
+.kanban-card p {
+  font-size: 0.9rem !important;
+  line-height: 1.35 !important;
+}
+
+.lead-card select,
+.pipeline-card select,
+.kanban-card select {
+  min-height: 44px !important;
+  font-size: 0.9rem !important;
+}
+
+.lead-card .card-actions,
+.pipeline-card .card-actions,
+.kanban-card .card-actions {
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+@media (max-width: 1350px) {
+  .kanban-board,
+  .pipeline-board,
+  .leads-board {
+    grid-template-columns: repeat(3, minmax(180px, 1fr)) !important;
+  }
+}
+
+@media (max-width: 850px) {
+  .kanban-board,
+  .pipeline-board,
+  .leads-board {
+    grid-template-columns: 1fr !important;
+  }
+}
