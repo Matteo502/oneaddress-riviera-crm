@@ -203,6 +203,7 @@ function exportCRMAsCsv(data: CRMData) {
 
 export default function CRMApp() {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+  const [leadDraftContactName, setLeadDraftContactName] = useState("");
   const [query, setQuery] = useState("");
   const [data, setData] = useState<CRMData>(seedData);
   const [toast, setToast] = useState<Toast | null>(null);
@@ -356,6 +357,7 @@ export default function CRMApp() {
 
     setData((current) => ({ ...current, leads: [lead, ...current.leads] }));
     event.currentTarget.reset();
+    setLeadDraftContactName("");
     notify("Lead ajouté au pipeline.");
   }
 
@@ -608,11 +610,23 @@ export default function CRMApp() {
         )}
 
         {activeTab === "contacts" && (
-          <ContactsView contacts={filteredContacts} leads={data.leads} tasks={data.tasks} onAdd={addContact} onUpdate={updateContact} onDelete={deleteContact} />
+          <ContactsView contacts={filteredContacts} leads={data.leads} tasks={data.tasks} onAdd={addContact} onUpdate={updateContact} onDelete={deleteContact} onCreateLead={(contactName) => {
+                  setLeadDraftContactName(contactName);
+                  setActiveTab("leads");
+
+                  window.setTimeout(() => {
+                    document.getElementById("lead-create-form")?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start"
+                    });
+                  }, 120);
+
+                  notify(`Lead prêt pour ${contactName}.`);
+                }} />
         )}
 
         {activeTab === "leads" && (
-          <LeadsView leads={filteredLeads} contacts={data.contacts} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} />
+          <LeadsView leads={filteredLeads} contacts={data.contacts} preselectedContactName={leadDraftContactName} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} />
         )}
 
         {activeTab === "properties" && (
@@ -753,7 +767,8 @@ function ContactsView({
   tasks,
   onAdd,
   onUpdate,
-  onDelete
+  onDelete,
+  onCreateLead
 }: {
   contacts: Contact[];
   leads: Lead[];
@@ -761,6 +776,7 @@ function ContactsView({
   onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
   onUpdate: (contact: Contact) => void;
   onDelete: (id: string) => void;
+  onCreateLead: (contactName: string) => void;
 }) {
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
@@ -1028,6 +1044,18 @@ function ContactsView({
               </button>
 
               <button
+                className="secondary-button"
+                type="button"
+                onClick={() => {
+                  const contactName = selectedContact.name;
+                  setSelectedContact(null);
+                  onCreateLead(contactName);
+                }}
+              >
+                Créer un lead
+              </button>
+
+              <button
                 className="primary-button"
                 type="button"
                 onClick={() => openEdit(selectedContact)}
@@ -1092,6 +1120,7 @@ function ContactsView({
 function LeadsView({
   leads,
   contacts,
+  preselectedContactName,
   onAdd,
   onUpdate,
   onStatusChange,
@@ -1099,6 +1128,7 @@ function LeadsView({
 }: {
   leads: Lead[];
   contacts: Contact[];
+  preselectedContactName?: string;
   onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
   onUpdate: (lead: Lead) => void;
   onStatusChange: (id: string, status: LeadStatus) => void;
@@ -1163,7 +1193,7 @@ function LeadsView({
 
   return (
     <div className="stack">
-      <section className="card form-card horizontal-form">
+      <section id="lead-create-form" className="card form-card horizontal-form">
         <div>
           <p className="eyebrow">Nouveau</p>
           <h3>Ajouter un lead</h3>
@@ -1180,7 +1210,7 @@ function LeadsView({
           </label>
 
           <label>Contact
-            <select name="contactName" required>
+            <select name="contactName" required defaultValue={preselectedContactName || ""}>
               <option value="">Sélectionner un contact</option>
               {contacts.map((contact) => (
                 <option key={contact.id} value={contact.name}>
