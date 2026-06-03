@@ -204,6 +204,8 @@ function exportCRMAsCsv(data: CRMData) {
 export default function CRMApp() {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [leadDraftContactName, setLeadDraftContactName] = useState("");
+  const [taskDraftLeadId, setTaskDraftLeadId] = useState("");
+  const [taskDraftTitle, setTaskDraftTitle] = useState("");
   const [query, setQuery] = useState("");
   const [data, setData] = useState<CRMData>(seedData);
   const [toast, setToast] = useState<Toast | null>(null);
@@ -469,6 +471,8 @@ export default function CRMApp() {
     if (!task.title) return notify("Ajoutez au minimum un titre de tâche.", "warning");
     setData((current) => ({ ...current, tasks: [task, ...current.tasks] }));
     event.currentTarget.reset();
+    setTaskDraftLeadId("");
+    setTaskDraftTitle("");
     notify("Tâche ajoutée.");
   }
 
@@ -626,7 +630,20 @@ export default function CRMApp() {
         )}
 
         {activeTab === "leads" && (
-          <LeadsView leads={filteredLeads} contacts={data.contacts} preselectedContactName={leadDraftContactName} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} />
+          <LeadsView leads={filteredLeads} contacts={data.contacts} preselectedContactName={leadDraftContactName} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} onCreateTask={(lead: Lead) => {
+                  setTaskDraftLeadId(lead.id);
+                  setTaskDraftTitle(lead.nextAction || `Relancer ${lead.contactName}`);
+                  setActiveTab("tasks");
+
+                  window.setTimeout(() => {
+                    document.getElementById("task-create-form")?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start"
+                    });
+                  }, 120);
+
+                  notify(`Tâche prête pour ${lead.contactName}.`);
+                }} />
         )}
 
         {activeTab === "properties" && (
@@ -642,7 +659,7 @@ export default function CRMApp() {
         )}
 
         {activeTab === "tasks" && (
-          <TasksView tasks={filteredTasks} leads={data.leads} onAdd={addTask} onUpdate={updateTask} onStatusChange={updateTaskStatus} onDelete={deleteTask} />
+          <TasksView tasks={filteredTasks} leads={data.leads} preselectedLeadId={taskDraftLeadId} prefilledTitle={taskDraftTitle} onAdd={addTask} onUpdate={updateTask} onStatusChange={updateTaskStatus} onDelete={deleteTask} />
         )}
       </section>
 
@@ -1124,7 +1141,8 @@ function LeadsView({
   onAdd,
   onUpdate,
   onStatusChange,
-  onDelete
+  onDelete,
+  onCreateTask
 }: {
   leads: Lead[];
   contacts: Contact[];
@@ -1133,6 +1151,7 @@ function LeadsView({
   onUpdate: (lead: Lead) => void;
   onStatusChange: (id: string, status: LeadStatus) => void;
   onDelete: (id: string) => void;
+  onCreateTask: (lead: Lead) => void;
 }) {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -1376,6 +1395,14 @@ function LeadsView({
                       </button>
 
                       <button
+                        className="lead-detail-button"
+                        type="button"
+                        onClick={() => onCreateTask(lead)}
+                      >
+                        Tâche
+                      </button>
+
+                      <button
                         className="lead-edit-button"
                         type="button"
                         onClick={() => openEdit(lead)}
@@ -1437,6 +1464,18 @@ function LeadsView({
             <div className="confirm-actions">
               <button className="ghost-button" type="button" onClick={() => setSelectedLead(null)}>
                 Fermer
+              </button>
+
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => {
+                  const lead = selectedLead;
+                  setSelectedLead(null);
+                  onCreateTask(lead);
+                }}
+              >
+                Créer une tâche
               </button>
 
               <button
@@ -2171,6 +2210,8 @@ function BoatsView({
 function TasksView({
   tasks,
   leads,
+  preselectedLeadId,
+  prefilledTitle,
   onAdd,
   onUpdate,
   onStatusChange,
@@ -2178,6 +2219,8 @@ function TasksView({
 }: {
   tasks: Task[];
   leads: Lead[];
+  preselectedLeadId?: string;
+  prefilledTitle?: string;
   onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
   onUpdate: (task: Task) => void;
   onStatusChange: (id: string, status: TaskStatus) => void;
@@ -2290,12 +2333,12 @@ function TasksView({
         </div>
       </section>
 
-      <section className="card form-card">
+      <section id="task-create-form" className="card form-card">
         <p className="eyebrow">Nouvelle</p>
         <h3>Ajouter une tâche</h3>
 
         <form className="form-grid" onSubmit={onAdd}>
-          <label>Titre<input name="title" placeholder="Envoyer proposition" /></label>
+          <label>Titre<input name="title" placeholder="Envoyer proposition" defaultValue={prefilledTitle || ""} /></label>
           <label>Responsable<input name="owner" placeholder="Matteo" /></label>
 
           <label>Statut
@@ -2307,7 +2350,7 @@ function TasksView({
           <label>Échéance<input name="dueDate" type="date" /></label>
 
           <label className="full">Lead lié
-            <select name="linkedTo" defaultValue="">
+            <select name="linkedTo" defaultValue={preselectedLeadId || ""}>
               <option value="">Aucun lead lié</option>
               {leads.map((lead) => (
                 <option key={lead.id} value={lead.id}>
