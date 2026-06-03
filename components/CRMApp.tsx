@@ -1795,6 +1795,9 @@ function ContactsView({
                   <td>
                     <strong>{contact.name}</strong>
                     <small>{contact.source || "Source non renseignée"}</small>
+                    <small>
+                      {getContactLeads(contact).length} lead{getContactLeads(contact).length > 1 ? "s" : ""} · {getContactTasks(contact).length} tâche{getContactTasks(contact).length > 1 ? "s" : ""}
+                    </small>
 
                     <div className="contact-row-actions">
                       <button
@@ -1819,6 +1822,14 @@ function ContactsView({
                         onClick={() => onCreateTask(contact.name)}
                       >
                         Tâche
+                      </button>
+
+                      <button
+                        className="contact-detail-button"
+                        type="button"
+                        onClick={() => onCreateLead(contact.name)}
+                      >
+                        Lead
                       </button>
 
                       <button
