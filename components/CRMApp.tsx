@@ -299,8 +299,6 @@ function getPropertyDisplayName(property: Property) {
   return flexibleProperty.name ?? flexibleProperty.title ?? "Bien sans nom";
 }
 
-
-
 type QuoteRequest = {
   id: string;
   clientName: string;
@@ -312,26 +310,55 @@ type QuoteRequest = {
   createdAt: string;
 };
 
-const QUOTES_STORAGE_KEY = "oneaddress-riviera-crm-quotes";
-
-function quoteId() {
+function createQuoteId() {
   return `quote-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function escapeQuoteHtml(value: string) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function formatQuoteDate(value: string) {
   if (!value) return "Non renseigné";
+
+  const parsedDate = new Date(`${value}T00:00:00`);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "Date invalide";
+  }
+
   return new Intl.DateTimeFormat("fr-FR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric"
-  }).format(new Date(`${value}T00:00:00`));
+  }).format(parsedDate);
 }
 
-function buildQuoteHtml(quote: QuoteRequest) {
+function formatQuotePrice(value: number) {
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0
+  }).format(Number.isFinite(value) ? value : 0);
+}
+
+function openQuotePdf(quote: QuoteRequest) {
+  const popup = window.open("", "_blank", "width=900,height=1100");
+
+  if (!popup) {
+    window.alert("Impossible d’ouvrir le PDF. Autorise les pop-ups pour ce site.");
+    return;
+  }
+
   const categories = quote.categories.length ? quote.categories.join(", ") : "Non renseigné";
 
-  return `
-<!doctype html>
+  popup.document.open();
+  popup.document.write(`<!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
@@ -354,7 +381,7 @@ function buildQuoteHtml(quote: QuoteRequest) {
     }
 
     .brand {
-      letter-spacing: 0.28em;
+      letter-spacing: .28em;
       text-transform: uppercase;
       color: #a9813f;
       font: 700 12px Arial, sans-serif;
@@ -367,10 +394,10 @@ function buildQuoteHtml(quote: QuoteRequest) {
       margin: 0 0 22px;
     }
 
-    .intro {
+    .intro,
+    .notes {
       color: #6f746f;
       line-height: 1.6;
-      margin-bottom: 36px;
       font-family: Arial, sans-serif;
     }
 
@@ -382,38 +409,31 @@ function buildQuoteHtml(quote: QuoteRequest) {
     }
 
     th {
+      width: 34%;
       text-align: left;
       color: #a9813f;
-      letter-spacing: 0.16em;
+      letter-spacing: .16em;
       text-transform: uppercase;
       font-size: 11px;
-      padding: 14px 0;
+      padding: 16px 0;
       border-bottom: 1px solid #d8c7a6;
     }
 
     td {
       padding: 16px 0;
-      border-bottom: 1px solid rgba(216, 199, 166, 0.55);
-      vertical-align: top;
+      border-bottom: 1px solid rgba(216, 199, 166, .55);
     }
 
     .total {
       margin-top: 34px;
       text-align: right;
-      font-size: 28px;
-    }
-
-    .notes {
-      margin-top: 36px;
-      color: #6f746f;
-      line-height: 1.6;
-      font-family: Arial, sans-serif;
+      font-size: 30px;
     }
 
     .footer {
       margin-top: 52px;
       color: #a9813f;
-      letter-spacing: 0.18em;
+      letter-spacing: .18em;
       text-transform: uppercase;
       font: 700 11px Arial, sans-serif;
     }
@@ -428,123 +448,74 @@ function buildQuoteHtml(quote: QuoteRequest) {
   <main class="page">
     <div class="brand">One Address Riviera</div>
     <h1>Devis</h1>
-    <p class="intro">
-      Proposition préparée pour <strong>${quote.clientName}</strong>.
-    </p>
+    <p class="intro">Proposition préparée pour <strong>${escapeQuoteHtml(quote.clientName)}</strong>.</p>
 
     <table>
-      <tr>
-        <th>Client</th>
-        <td>${quote.clientName}</td>
-      </tr>
-      <tr>
-        <th>Catégorie(s)</th>
-        <td>${categories}</td>
-      </tr>
-      <tr>
-        <th>Dates demandées</th>
-        <td>Du ${formatQuoteDate(quote.startDate)} au ${formatQuoteDate(quote.endDate)}</td>
-      </tr>
-      <tr>
-        <th>Prix unitaire</th>
-        <td>${new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(quote.unitPrice)}</td>
-      </tr>
+      <tr><th>Client</th><td>${escapeQuoteHtml(quote.clientName)}</td></tr>
+      <tr><th>Catégorie(s)</th><td>${escapeQuoteHtml(categories)}</td></tr>
+      <tr><th>Dates demandées</th><td>Du ${formatQuoteDate(quote.startDate)} au ${formatQuoteDate(quote.endDate)}</td></tr>
+      <tr><th>Prix unitaire</th><td>${formatQuotePrice(quote.unitPrice)}</td></tr>
     </table>
 
-    <div class="total">
-      Prix indicatif : ${new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(quote.unitPrice)}
-    </div>
+    <div class="total">Total indicatif : ${formatQuotePrice(quote.unitPrice)}</div>
 
-    ${quote.notes ? `<p class="notes">${quote.notes}</p>` : ""}
+    ${quote.notes ? `<p class="notes">${escapeQuoteHtml(quote.notes)}</p>` : ""}
 
     <div class="footer">Private Riviera Experiences, by request only</div>
   </main>
 
   <script>
-    window.onload = () => {
-      window.print();
-    };
+    window.onload = () => window.print();
   </script>
 </body>
-</html>`;
-}
-
-function printQuotePdf(quote: QuoteRequest) {
-  const popup = window.open("", "_blank", "width=900,height=1100");
-
-  if (!popup) {
-    window.alert("Impossible d’ouvrir le PDF. Autorise les pop-ups pour ce site.");
-    return;
-  }
-
-  popup.document.open();
-  popup.document.write(buildQuoteHtml(quote));
+</html>`);
   popup.document.close();
 }
 
-function QuotesView({
-  contacts
-}: {
-  contacts: Contact[];
-}) {
-  const [quotes, setQuotes] = useState<QuoteRequest[]>(() => {
-    if (typeof window === "undefined") return [];
-
-    try {
-      const saved = window.localStorage.getItem(QUOTES_STORAGE_KEY);
-      const parsed = saved ? JSON.parse(saved) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  });
-
-  function saveQuotes(nextQuotes: QuoteRequest[]) {
-    setQuotes(nextQuotes);
-
-    try {
-      window.localStorage.setItem(QUOTES_STORAGE_KEY, JSON.stringify(nextQuotes));
-    } catch {
-      // Le devis ne doit jamais bloquer le CRM.
-    }
-  }
+function QuotesView({ contacts }: { contacts: Contact[] }) {
+  const [quotes, setQuotes] = useState<QuoteRequest[]>([]);
 
   function addQuote(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const form = new FormData(event.currentTarget);
-    const categories = form.getAll("categories").map(String).filter(Boolean);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
 
-    const quote: QuoteRequest = {
-      id: quoteId(),
-      clientName: String(form.get("clientName") ?? "").trim(),
-      categories,
-      startDate: String(form.get("startDate") ?? ""),
-      endDate: String(form.get("endDate") ?? ""),
-      unitPrice: Number(form.get("unitPrice") ?? 0),
-      notes: String(form.get("notes") ?? "").trim(),
-      createdAt: new Date().toISOString()
-    };
+    const selectedCategories = form.getAll("categories").map(String);
+    const clientName = String(form.get("clientName") ?? "").trim();
+    const startDate = String(form.get("startDate") ?? "");
+    const endDate = String(form.get("endDate") ?? "");
+    const unitPrice = Number(form.get("unitPrice") ?? 0);
+    const notes = String(form.get("notes") ?? "").trim();
 
-    if (!quote.clientName) {
+    if (!clientName) {
       window.alert("Sélectionne un client.");
       return;
     }
 
-    if (quote.categories.length === 0) {
+    if (selectedCategories.length === 0) {
       window.alert("Sélectionne au moins une catégorie.");
       return;
     }
 
-    saveQuotes([quote, ...quotes]);
-    event.currentTarget.reset();
-  }
+    if (!startDate || !endDate) {
+      window.alert("Renseigne les dates demandées.");
+      return;
+    }
 
-  function deleteQuote(id: string) {
-    const confirmed = window.confirm("Supprimer ce devis ?");
-    if (!confirmed) return;
+    const quote: QuoteRequest = {
+      id: createQuoteId(),
+      clientName,
+      categories: selectedCategories,
+      startDate,
+      endDate,
+      unitPrice,
+      notes,
+      createdAt: new Date().toISOString()
+    };
 
-    saveQuotes(quotes.filter((quote) => quote.id !== id));
+    setQuotes((current) => [quote, ...current]);
+    formElement.reset();
   }
 
   return (
@@ -558,34 +529,39 @@ function QuotesView({
         </div>
 
         <div className="list-stack">
-          {quotes.length === 0 && (
+          {quotes.length === 0 ? (
             <p className="muted-line">Aucun devis préparé pour le moment.</p>
+          ) : (
+            quotes.map((quote) => (
+              <article className="quote-card" key={quote.id}>
+                <div>
+                  <p className="eyebrow">{quote.categories.join(" · ")}</p>
+                  <h3>{quote.clientName}</h3>
+                  <p>Du {formatQuoteDate(quote.startDate)} au {formatQuoteDate(quote.endDate)}</p>
+                  <strong>{formatQuotePrice(quote.unitPrice)}</strong>
+                  {quote.notes && <p>{quote.notes}</p>}
+                </div>
+
+                <div className="quote-actions">
+                  <button className="primary-button" type="button" onClick={() => openQuotePdf(quote)}>
+                    Générer PDF
+                  </button>
+
+                  <button
+                    className="danger-link"
+                    type="button"
+                    onClick={() => {
+                      const confirmed = window.confirm("Supprimer ce devis ?");
+                      if (!confirmed) return;
+                      setQuotes((current) => current.filter((item) => item.id !== quote.id));
+                    }}
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              </article>
+            ))
           )}
-
-          {quotes.map((quote) => (
-            <article className="quote-card" key={quote.id}>
-              <div>
-                <p className="eyebrow">{quote.categories.join(" · ")}</p>
-                <h3>{quote.clientName}</h3>
-                <p>
-                  Du {formatQuoteDate(quote.startDate)} au {formatQuoteDate(quote.endDate)}
-                </p>
-                <strong>
-                  {new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(quote.unitPrice)}
-                </strong>
-              </div>
-
-              <div className="quote-actions">
-                <button className="primary-button" type="button" onClick={() => printQuotePdf(quote)}>
-                  Générer PDF
-                </button>
-
-                <button className="danger-link" type="button" onClick={() => deleteQuote(quote.id)}>
-                  Supprimer
-                </button>
-              </div>
-            </article>
-          ))}
         </div>
       </section>
 
@@ -607,33 +583,17 @@ function QuotesView({
 
           <fieldset className="full quote-category-box">
             <legend>Catégories à louer</legend>
-
-            <label>
-              <input type="checkbox" name="categories" value="Villa" />
-              Villa
-            </label>
-
-            <label>
-              <input type="checkbox" name="categories" value="Bateau" />
-              Bateau
-            </label>
-
-            <label>
-              <input type="checkbox" name="categories" value="Voiture" />
-              Voiture
-            </label>
-
-            <label>
-              <input type="checkbox" name="categories" value="Conciergerie" />
-              Conciergerie
-            </label>
+            <label><input type="checkbox" name="categories" value="Villa" /> Villa</label>
+            <label><input type="checkbox" name="categories" value="Bateau" /> Bateau</label>
+            <label><input type="checkbox" name="categories" value="Voiture" /> Voiture</label>
+            <label><input type="checkbox" name="categories" value="Conciergerie" /> Conciergerie</label>
           </fieldset>
 
-          <label>Date début
+          <label>Date début demandée
             <input name="startDate" type="date" required />
           </label>
 
-          <label>Date fin
+          <label>Date fin demandée
             <input name="endDate" type="date" required />
           </label>
 
@@ -651,6 +611,7 @@ function QuotesView({
     </div>
   );
 }
+
 
 export default function CRMApp() {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
