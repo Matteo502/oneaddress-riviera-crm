@@ -2581,3 +2581,74 @@ td small,
     justify-content: flex-start;
   }
 }
+
+
+/* FIX TEXTES LONGS CRM */
+.lead-card,
+.quote-card,
+.property-card,
+.mini-row,
+.contact-detail-grid,
+.asset-detail-grid,
+.table-wrap,
+.form-card {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.lead-card strong,
+.lead-card span,
+.lead-card small,
+.lead-card p,
+.lead-card dd,
+.quote-card strong,
+.quote-card span,
+.quote-card p,
+.property-card strong,
+.property-card span,
+.property-card p,
+.mini-row strong,
+.mini-row span,
+.contact-detail-grid strong,
+.contact-detail-grid p,
+.asset-detail-grid strong,
+.asset-detail-grid p {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.lead-card p,
+.quote-card p,
+.property-card p,
+.mini-row span,
+.contact-detail-grid p,
+.asset-detail-grid p {
+  line-height: 1.45;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table-wrap td,
+.table-wrap th {
+  vertical-align: top;
+}
+
+.table-wrap td strong,
+.table-wrap td small,
+.table-wrap td span {
+  overflow-wrap: anywhere;
+}
+
+input,
+select,
+textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
+textarea {
+  line-height: 1.45;
+}
