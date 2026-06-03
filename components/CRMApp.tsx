@@ -318,8 +318,9 @@ function makeActivity(action: string, category: string, label: string): Activity
   };
 }
 
-function ActivityHistory({ entries }: { entries: ActivityEntry[] }) {
-  const latest = entries.slice(0, 12);
+function ActivityHistory({ entries }: { entries?: ActivityEntry[] }) {
+  const safeEntries = Array.isArray(entries) ? entries : [];
+  const latest = safeEntries.slice(0, 12);
 
   return (
     <section className="card activity-history-card">
@@ -328,7 +329,7 @@ function ActivityHistory({ entries }: { entries: ActivityEntry[] }) {
           <p className="eyebrow">Historique</p>
           <h3>Dernières actions</h3>
         </div>
-        <span className="history-count">{entries.length}</span>
+        <span className="history-count">{safeEntries.length}</span>
       </div>
 
       {latest.length === 0 ? (
@@ -342,12 +343,12 @@ function ActivityHistory({ entries }: { entries: ActivityEntry[] }) {
                 <span>{entry.label}</span>
               </div>
               <time>
-                {new Date(entry.at).toLocaleString("fr-FR", {
+                {entry.at ? new Date(entry.at).toLocaleString("fr-FR", {
                   day: "2-digit",
                   month: "2-digit",
                   hour: "2-digit",
                   minute: "2-digit"
-                })}
+                }) : "—"}
               </time>
             </article>
           ))}
@@ -413,13 +414,24 @@ export default function CRMApp() {
 
 
   function logActivity(action: string, category: string, label: string) {
-    const entry = makeActivity(action, category, label);
+    try {
+      const entry = makeActivity(action, category, label);
 
-    setActivityHistory((current) => {
-      const next = [entry, ...current].slice(0, 80);
-      window.localStorage.setItem(ACTIVITY_KEY, JSON.stringify(next));
-      return next;
-    });
+      setActivityHistory((current) => {
+        const safeCurrent = Array.isArray(current) ? current : [];
+        const next = [entry, ...safeCurrent].slice(0, 80);
+
+        try {
+          window.localStorage.setItem(ACTIVITY_KEY, JSON.stringify(next));
+        } catch {
+          // Ne jamais bloquer le CRM pour un problème d'historique local.
+        }
+
+        return next;
+      });
+    } catch {
+      // Ne jamais bloquer le CRM pour un problème d'historique.
+    }
   }
 
 
