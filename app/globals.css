@@ -1897,3 +1897,14 @@ td small,
   content: "Aujourd'hui";
   color: #a9813f;
 }
+
+
+/* Filtres leads plus opérationnels */
+.lead-filter-grid {
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)) !important;
+  min-width: min(1040px, 100%) !important;
+}
+
+.lead-filter-grid .ghost-button {
+  align-self: end !important;
+}

@@ -1219,6 +1219,8 @@ function LeadsView({
   const [leadCategoryFilter, setLeadCategoryFilter] = useState<"Toutes" | Lead["category"]>("Toutes");
   const [leadStatusFilter, setLeadStatusFilter] = useState<"Tous" | LeadStatus>("Tous");
   const [leadPriorityFilter, setLeadPriorityFilter] = useState<"Toutes" | Lead["priority"]>("Toutes");
+  const [leadDueFilter, setLeadDueFilter] = useState<"Tous" | "En retard" | "Aujourd'hui" | "À venir" | "Sans échéance">("Tous");
+  const [leadActionFilter, setLeadActionFilter] = useState<"Tous" | "Sans prochaine action">("Tous");
 
   function submitEdit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1263,17 +1265,32 @@ function LeadsView({
   }
 
   const visibleLeads = leads.filter((lead) => {
+    const dueStatus = getDueStatus(lead.dueDate);
+
     const categoryMatches = leadCategoryFilter === "Toutes" || lead.category === leadCategoryFilter;
     const statusMatches = leadStatusFilter === "Tous" || lead.status === leadStatusFilter;
     const priorityMatches = leadPriorityFilter === "Toutes" || lead.priority === leadPriorityFilter;
 
-    return categoryMatches && statusMatches && priorityMatches;
+    const dueMatches =
+      leadDueFilter === "Tous" ||
+      (leadDueFilter === "En retard" && dueStatus === "overdue") ||
+      (leadDueFilter === "Aujourd'hui" && dueStatus === "today") ||
+      (leadDueFilter === "À venir" && dueStatus === "future") ||
+      (leadDueFilter === "Sans échéance" && dueStatus === "none");
+
+    const actionMatches =
+      leadActionFilter === "Tous" ||
+      !lead.nextAction?.trim();
+
+    return categoryMatches && statusMatches && priorityMatches && dueMatches && actionMatches;
   });
 
   const filtersAreActive =
     leadCategoryFilter !== "Toutes" ||
     leadStatusFilter !== "Tous" ||
-    leadPriorityFilter !== "Toutes";
+    leadPriorityFilter !== "Toutes" ||
+    leadDueFilter !== "Tous" ||
+    leadActionFilter !== "Tous";
 
   return (
     <div className="stack">
@@ -1388,6 +1405,8 @@ function LeadsView({
               setLeadCategoryFilter("Toutes");
               setLeadStatusFilter("Tous");
               setLeadPriorityFilter("Toutes");
+              setLeadDueFilter("Tous");
+              setLeadActionFilter("Tous");
             }}
           >
             Réinitialiser
