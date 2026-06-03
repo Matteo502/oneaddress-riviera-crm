@@ -1735,6 +1735,15 @@ function LeadsView({
     leadDueFilter !== "Tous" ||
     leadActionFilter !== "Tous";
 
+  const [collapsedLeadStatuses, setCollapsedLeadStatuses] = useState<Partial<Record<LeadStatus, boolean>>>({});
+
+  function toggleLeadColumn(status: LeadStatus) {
+    setCollapsedLeadStatuses((current) => ({
+      ...current,
+      [status]: !current[status]
+    }));
+  }
+
   return (
     <div className="stack">
       <section id="lead-create-form" className="card form-card horizontal-form">
@@ -1868,92 +1877,91 @@ function LeadsView({
         </div>
       </section>
 
-      <section className="pipeline-grid">
+      <section className="pipeline-grid compact-pipeline" aria-label="Pipeline leads">
         {leadStatuses.map((status) => {
           const columnLeads = sortByUrgency(visibleLeads.filter((lead) => lead.status === status));
+          const isCollapsed = Boolean(collapsedLeadStatuses[status]);
 
           return (
-            <div className="pipeline-column" key={status}>
-              <div className="pipeline-title">
+            <div className={`pipeline-column ${isCollapsed ? "is-collapsed" : ""}`} key={status}>
+              <button
+                className="pipeline-title pipeline-toggle"
+                type="button"
+                onClick={() => toggleLeadColumn(status)}
+                aria-expanded={!isCollapsed}
+              >
                 <strong>{status}</strong>
                 <span>{columnLeads.length}</span>
-              </div>
+                <em>{isCollapsed ? "▾" : "▴"}</em>
+              </button>
 
-              <div className="list-stack">
-                {columnLeads.map((lead) => (
-                  <article className={`lead-card ${getDueStatus(lead.dueDate)}`} key={lead.id}>
-                    <div className="lead-topline">
-                      <Badge>{lead.priority}</Badge>
+              {!isCollapsed && (
+                <div className="list-stack">
+                  {columnLeads.map((lead) => (
+                    <article className={`lead-card ${getDueStatus(lead.dueDate)}`} key={lead.id}>
+                      <div className="lead-topline">
+                        <Badge>{lead.priority}</Badge>
 
-                      <button
-                        className="icon-button"
-                        onClick={() => {
-                          const confirmed = window.confirm(
-                            `Supprimer ce lead pour "${lead.contactName}" ?`
-                          );
+                        <button
+                          className="icon-button"
+                          type="button"
+                          onClick={() => {
+                            const confirmed = window.confirm(
+                              `Supprimer ce lead pour "${lead.contactName}" ?`
+                            );
 
-                          if (confirmed) {
-                            onDelete(lead.id);
-                          }
-                        }}
-                        aria-label="Supprimer"
-                      >
-                        ×
-                      </button>
-                    </div>
+                            if (confirmed) {
+                              onDelete(lead.id);
+                            }
+                          }}
+                          aria-label="Supprimer"
+                        >
+                          ×
+                        </button>
+                      </div>
 
-                    <strong>{lead.category}</strong>
-                    <span>{lead.contactName}</span>
-                    <small>{formatReservationPeriod(lead.rentalStartDate, lead.rentalEndDate)}</small>
-                    {getLeadAssetLabel(lead) && (
-                      <small className="asset-linked-line">{getLeadAssetLabel(lead)}</small>
-                    )}
+                      <strong>{lead.category}</strong>
+                      <span>{lead.contactName}</span>
+                      <small>{formatReservationPeriod(lead.rentalStartDate, lead.rentalEndDate)}</small>
 
-                    <p>{lead.nextAction || "Aucune prochaine action"}</p>
+                      {getLeadAssetLabel(lead) && (
+                        <small className="asset-linked-line">{getLeadAssetLabel(lead)}</small>
+                      )}
 
-                    {lead.notes && (
-                      <p className="lead-note-preview">{lead.notes}</p>
-                    )}
+                      <p>{lead.nextAction || "Aucune prochaine action"}</p>
 
-                    <div className="lead-footer">
-                      <b>{currency.format(lead.value)}</b>
-                      <small className={`due-label ${getDueStatus(lead.dueDate)}`}>
-                        {getDueLabel(lead.dueDate)}
-                      </small>
-                    </div>
+                      {lead.notes && (
+                        <p className="lead-note-preview">{lead.notes}</p>
+                      )}
 
-                    <select value={lead.status} onChange={(event) => onStatusChange(lead.id, event.target.value as LeadStatus)}>
-                      {leadStatuses.map((option) => <option key={option}>{option}</option>)}
-                    </select>
+                      <div className="lead-footer">
+                        <b>{currency.format(lead.value)}</b>
+                        <small className={`due-label ${getDueStatus(lead.dueDate)}`}>
+                          {getDueLabel(lead.dueDate)}
+                        </small>
+                      </div>
 
-                    <div className="lead-card-actions">
-                      <button
-                        className="lead-detail-button"
-                        type="button"
-                        onClick={() => setSelectedLead(lead)}
-                      >
-                        Détails
-                      </button>
+                      <select value={lead.status} onChange={(event) => onStatusChange(lead.id, event.target.value as LeadStatus)}>
+                        {leadStatuses.map((option) => <option key={option}>{option}</option>)}
+                      </select>
 
-                      <button
-                        className="lead-detail-button"
-                        type="button"
-                        onClick={() => onCreateTask(lead)}
-                      >
-                        Tâche
-                      </button>
+                      <div className="lead-card-actions">
+                        <button className="lead-detail-button" type="button" onClick={() => setSelectedLead(lead)}>
+                          Détails
+                        </button>
 
-                      <button
-                        className="lead-edit-button"
-                        type="button"
-                        onClick={() => openEdit(lead)}
-                      >
-                        Modifier
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
+                        <button className="lead-detail-button" type="button" onClick={() => onCreateTask(lead)}>
+                          Tâche
+                        </button>
+
+                        <button className="lead-edit-button" type="button" onClick={() => openEdit(lead)}>
+                          Modifier
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}

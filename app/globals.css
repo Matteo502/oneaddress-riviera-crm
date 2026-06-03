@@ -2165,3 +2165,93 @@ td small,
     min-height: 46px !important;
   }
 }
+
+
+/* Pipeline Leads ciblé : colonnes repliables */
+.compact-pipeline {
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(150px, 1fr)) !important;
+  gap: 14px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+.compact-pipeline .pipeline-column {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.compact-pipeline .pipeline-toggle {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 44px !important;
+  padding: 0 10px !important;
+  border: 0 !important;
+  background: transparent !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
+  gap: 8px !important;
+  align-items: center !important;
+  text-align: left !important;
+  cursor: pointer !important;
+}
+
+.compact-pipeline .pipeline-toggle strong {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.compact-pipeline .pipeline-toggle em {
+  font-style: normal !important;
+  color: #a9813f !important;
+}
+
+.compact-pipeline .pipeline-column.is-collapsed {
+  min-height: 82px !important;
+}
+
+.compact-pipeline .pipeline-column.is-collapsed .pipeline-toggle {
+  height: 100% !important;
+}
+
+.compact-pipeline .lead-card {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  padding: 16px !important;
+}
+
+.compact-pipeline .lead-card * {
+  max-width: 100% !important;
+}
+
+.compact-pipeline .lead-card p,
+.compact-pipeline .lead-card small,
+.compact-pipeline .lead-card span {
+  overflow-wrap: anywhere !important;
+}
+
+.compact-pipeline .lead-card-actions {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+}
+
+.compact-pipeline .lead-card-actions button {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+@media (max-width: 1400px) {
+  .compact-pipeline {
+    grid-template-columns: repeat(3, minmax(190px, 1fr)) !important;
+  }
+}
+
+@media (max-width: 850px) {
+  .compact-pipeline {
+    grid-template-columns: 1fr !important;
+  }
+}
