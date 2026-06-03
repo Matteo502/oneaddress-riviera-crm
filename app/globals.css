@@ -2431,3 +2431,57 @@ td small,
     width: 100%;
   }
 }
+
+
+/* Filtres actifs : boutons Réinitialiser cadrés */
+.asset-filter-card {
+  overflow: hidden !important;
+}
+
+.asset-filter-card .asset-filter-grid {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: grid !important;
+  grid-template-columns: minmax(150px, 1fr) minmax(170px, 1fr) 145px !important;
+  gap: 14px !important;
+  align-items: end !important;
+}
+
+.asset-filter-card .asset-filter-grid > * {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.asset-filter-card .asset-filter-grid input,
+.asset-filter-card .asset-filter-grid select {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.asset-filter-card .asset-filter-grid button {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 145px !important;
+  padding: 0 8px !important;
+  font-size: 0.66rem !important;
+  letter-spacing: 0.11em !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-align: center !important;
+}
+
+@media (max-width: 1150px) {
+  .asset-filter-card .asset-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .asset-filter-card .asset-filter-grid button {
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .asset-filter-card .asset-filter-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
