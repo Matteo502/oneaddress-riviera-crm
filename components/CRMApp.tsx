@@ -692,7 +692,7 @@ export default function CRMApp() {
               placeholder="Rechercher client, bien, lead..."
               aria-label="Recherche"
             />
-            <button className="secondary-button" onClick={exportJson}>Exporter</button>
+            <button className="secondary-button" onClick={exportJson}>Backup JSON</button>
             <button className="secondary-button" onClick={() => {
             exportCRMAsCsv(data);
             notify("Export CSV téléchargé.");
