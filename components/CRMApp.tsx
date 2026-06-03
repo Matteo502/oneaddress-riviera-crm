@@ -53,6 +53,10 @@ function safeNumber(value: FormDataEntryValue | null) {
 
 
 
+function isOpenLead(lead: Lead) {
+  return lead.status !== "Gagné" && lead.status !== "Perdu";
+}
+
 function getDueStatus(value?: string) {
   if (!value) return "none";
 
