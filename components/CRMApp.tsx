@@ -725,6 +725,19 @@ export default function CRMApp() {
                   }, 120);
 
                   notify(`Lead prêt pour ${contactName}.`);
+                }} onCreateTask={(contactName) => {
+                  setTaskDraftLeadId("");
+                  setTaskDraftTitle(`Relancer ${contactName}`);
+                  setActiveTab("tasks");
+
+                  window.setTimeout(() => {
+                    document.getElementById("task-create-form")?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start"
+                    });
+                  }, 120);
+
+                  notify(`Tâche prête pour ${contactName}.`);
                 }} />
         )}
 
@@ -884,7 +897,8 @@ function ContactsView({
   onAdd,
   onUpdate,
   onDelete,
-  onCreateLead
+  onCreateLead,
+  onCreateTask
 }: {
   contacts: Contact[];
   leads: Lead[];
@@ -893,6 +907,7 @@ function ContactsView({
   onUpdate: (contact: Contact) => void;
   onDelete: (id: string) => void;
   onCreateLead: (contactName: string) => void;
+  onCreateTask: (contactName: string) => void;
 }) {
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
@@ -1181,6 +1196,18 @@ function ContactsView({
                 }}
               >
                 Créer un lead
+              </button>
+
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => {
+                  const contactName = selectedContact.name;
+                  setSelectedContact(null);
+                  onCreateTask(contactName);
+                }}
+              >
+                Créer une tâche
               </button>
 
               <button
