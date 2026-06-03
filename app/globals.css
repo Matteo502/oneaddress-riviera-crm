@@ -2259,3 +2259,50 @@ aside {
     width: 100%;
   }
 }
+
+
+/* Correction filtres : boutons qui dépassent */
+.filters,
+.filter-row,
+.pipeline-filters {
+  width: 100%;
+  max-width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 16px;
+  align-items: end;
+  overflow: hidden;
+}
+
+.filters > *,
+.filter-row > *,
+.pipeline-filters > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.filters button,
+.filter-row button,
+.pipeline-filters button,
+.filters .secondary-button,
+.filter-row .secondary-button,
+.pipeline-filters .secondary-button,
+.filters .ghost-button,
+.filter-row .ghost-button,
+.pipeline-filters .ghost-button {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding-inline: 14px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+@media (min-width: 1200px) {
+  .filters,
+  .filter-row,
+  .pipeline-filters {
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  }
+}
