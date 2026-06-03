@@ -26,7 +26,7 @@ const boatStatuses: BoatStatus[] = ["Disponible", "En charter", "En maintenance"
 const taskStatuses: TaskStatus[] = ["À faire", "En cours", "Terminé"];
 const contactKinds: ContactKind[] = ["Client", "Propriétaire", "Partenaire"];
 
-type Tab = "dashboard" | "contacts" | "leads" | "properties" | "vehicles" | "boats" | "tasks";
+type Tab = "dashboard" | "contacts" | "leads" | "properties" | "vehicles" | "boats" | "tasks" | "quotes";
 
 type Toast = {
   message: string;
@@ -299,6 +299,358 @@ function getPropertyDisplayName(property: Property) {
   return flexibleProperty.name ?? flexibleProperty.title ?? "Bien sans nom";
 }
 
+
+
+type QuoteRequest = {
+  id: string;
+  clientName: string;
+  categories: string[];
+  startDate: string;
+  endDate: string;
+  unitPrice: number;
+  notes: string;
+  createdAt: string;
+};
+
+const QUOTES_STORAGE_KEY = "oneaddress-riviera-crm-quotes";
+
+function quoteId() {
+  return `quote-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function formatQuoteDate(value: string) {
+  if (!value) return "Non renseigné";
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  }).format(new Date(`${value}T00:00:00`));
+}
+
+function buildQuoteHtml(quote: QuoteRequest) {
+  const categories = quote.categories.length ? quote.categories.join(", ") : "Non renseigné";
+
+  return `
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Devis One Address Riviera</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 48px;
+      font-family: Georgia, "Times New Roman", serif;
+      color: #011d30;
+      background: #f7f4ed;
+    }
+
+    .page {
+      max-width: 820px;
+      margin: 0 auto;
+      background: #fffaf1;
+      border: 1px solid #d8c7a6;
+      padding: 48px;
+    }
+
+    .brand {
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: #a9813f;
+      font: 700 12px Arial, sans-serif;
+      margin-bottom: 32px;
+    }
+
+    h1 {
+      font-size: 44px;
+      font-weight: 400;
+      margin: 0 0 22px;
+    }
+
+    .intro {
+      color: #6f746f;
+      line-height: 1.6;
+      margin-bottom: 36px;
+      font-family: Arial, sans-serif;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 28px;
+      font-family: Arial, sans-serif;
+    }
+
+    th {
+      text-align: left;
+      color: #a9813f;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-size: 11px;
+      padding: 14px 0;
+      border-bottom: 1px solid #d8c7a6;
+    }
+
+    td {
+      padding: 16px 0;
+      border-bottom: 1px solid rgba(216, 199, 166, 0.55);
+      vertical-align: top;
+    }
+
+    .total {
+      margin-top: 34px;
+      text-align: right;
+      font-size: 28px;
+    }
+
+    .notes {
+      margin-top: 36px;
+      color: #6f746f;
+      line-height: 1.6;
+      font-family: Arial, sans-serif;
+    }
+
+    .footer {
+      margin-top: 52px;
+      color: #a9813f;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font: 700 11px Arial, sans-serif;
+    }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .page { border: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="brand">One Address Riviera</div>
+    <h1>Devis</h1>
+    <p class="intro">
+      Proposition préparée pour <strong>${quote.clientName}</strong>.
+    </p>
+
+    <table>
+      <tr>
+        <th>Client</th>
+        <td>${quote.clientName}</td>
+      </tr>
+      <tr>
+        <th>Catégorie(s)</th>
+        <td>${categories}</td>
+      </tr>
+      <tr>
+        <th>Dates demandées</th>
+        <td>Du ${formatQuoteDate(quote.startDate)} au ${formatQuoteDate(quote.endDate)}</td>
+      </tr>
+      <tr>
+        <th>Prix unitaire</th>
+        <td>${new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(quote.unitPrice)}</td>
+      </tr>
+    </table>
+
+    <div class="total">
+      Prix indicatif : ${new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(quote.unitPrice)}
+    </div>
+
+    ${quote.notes ? `<p class="notes">${quote.notes}</p>` : ""}
+
+    <div class="footer">Private Riviera Experiences, by request only</div>
+  </main>
+
+  <script>
+    window.onload = () => {
+      window.print();
+    };
+  </script>
+</body>
+</html>`;
+}
+
+function printQuotePdf(quote: QuoteRequest) {
+  const popup = window.open("", "_blank", "width=900,height=1100");
+
+  if (!popup) {
+    window.alert("Impossible d’ouvrir le PDF. Autorise les pop-ups pour ce site.");
+    return;
+  }
+
+  popup.document.open();
+  popup.document.write(buildQuoteHtml(quote));
+  popup.document.close();
+}
+
+function QuotesView({
+  contacts
+}: {
+  contacts: Contact[];
+}) {
+  const [quotes, setQuotes] = useState<QuoteRequest[]>(() => {
+    if (typeof window === "undefined") return [];
+
+    try {
+      const saved = window.localStorage.getItem(QUOTES_STORAGE_KEY);
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+
+  function saveQuotes(nextQuotes: QuoteRequest[]) {
+    setQuotes(nextQuotes);
+
+    try {
+      window.localStorage.setItem(QUOTES_STORAGE_KEY, JSON.stringify(nextQuotes));
+    } catch {
+      // Le devis ne doit jamais bloquer le CRM.
+    }
+  }
+
+  function addQuote(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const form = new FormData(event.currentTarget);
+    const categories = form.getAll("categories").map(String).filter(Boolean);
+
+    const quote: QuoteRequest = {
+      id: quoteId(),
+      clientName: String(form.get("clientName") ?? "").trim(),
+      categories,
+      startDate: String(form.get("startDate") ?? ""),
+      endDate: String(form.get("endDate") ?? ""),
+      unitPrice: Number(form.get("unitPrice") ?? 0),
+      notes: String(form.get("notes") ?? "").trim(),
+      createdAt: new Date().toISOString()
+    };
+
+    if (!quote.clientName) {
+      window.alert("Sélectionne un client.");
+      return;
+    }
+
+    if (quote.categories.length === 0) {
+      window.alert("Sélectionne au moins une catégorie.");
+      return;
+    }
+
+    saveQuotes([quote, ...quotes]);
+    event.currentTarget.reset();
+  }
+
+  function deleteQuote(id: string) {
+    const confirmed = window.confirm("Supprimer ce devis ?");
+    if (!confirmed) return;
+
+    saveQuotes(quotes.filter((quote) => quote.id !== id));
+  }
+
+  return (
+    <div className="two-columns wide-left">
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Devis</p>
+            <h3>{quotes.length} devis préparés</h3>
+          </div>
+        </div>
+
+        <div className="list-stack">
+          {quotes.length === 0 && (
+            <p className="muted-line">Aucun devis préparé pour le moment.</p>
+          )}
+
+          {quotes.map((quote) => (
+            <article className="quote-card" key={quote.id}>
+              <div>
+                <p className="eyebrow">{quote.categories.join(" · ")}</p>
+                <h3>{quote.clientName}</h3>
+                <p>
+                  Du {formatQuoteDate(quote.startDate)} au {formatQuoteDate(quote.endDate)}
+                </p>
+                <strong>
+                  {new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(quote.unitPrice)}
+                </strong>
+              </div>
+
+              <div className="quote-actions">
+                <button className="primary-button" type="button" onClick={() => printQuotePdf(quote)}>
+                  Générer PDF
+                </button>
+
+                <button className="danger-link" type="button" onClick={() => deleteQuote(quote.id)}>
+                  Supprimer
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="card form-card">
+        <p className="eyebrow">Nouveau</p>
+        <h3>Créer un devis</h3>
+
+        <form className="form-grid" onSubmit={addQuote}>
+          <label className="full">Client
+            <select name="clientName" required>
+              <option value="">Sélectionner un client</option>
+              {contacts.map((contact) => (
+                <option key={contact.id} value={contact.name}>
+                  {contact.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <fieldset className="full quote-category-box">
+            <legend>Catégories à louer</legend>
+
+            <label>
+              <input type="checkbox" name="categories" value="Villa" />
+              Villa
+            </label>
+
+            <label>
+              <input type="checkbox" name="categories" value="Bateau" />
+              Bateau
+            </label>
+
+            <label>
+              <input type="checkbox" name="categories" value="Voiture" />
+              Voiture
+            </label>
+
+            <label>
+              <input type="checkbox" name="categories" value="Conciergerie" />
+              Conciergerie
+            </label>
+          </fieldset>
+
+          <label>Date début
+            <input name="startDate" type="date" required />
+          </label>
+
+          <label>Date fin
+            <input name="endDate" type="date" required />
+          </label>
+
+          <label>Prix unitaire
+            <input name="unitPrice" type="number" min="0" placeholder="2500" required />
+          </label>
+
+          <label className="full">Notes
+            <textarea name="notes" placeholder="Conditions, inclusions, remarques client..." />
+          </label>
+
+          <button className="primary-button" type="submit">Créer le devis</button>
+        </form>
+      </section>
+    </div>
+  );
+}
 
 export default function CRMApp() {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
@@ -742,6 +1094,8 @@ export default function CRMApp() {
                   notify(`Tâche prête pour ${contactName}.`);
                 }} />
         )}
+
+        {activeTab === "quotes" && <QuotesView contacts={data.contacts} />}
 
         {activeTab === "leads" && (
           <LeadsView leads={filteredLeads} contacts={data.contacts} tasks={data.tasks} properties={data.properties} vehicles={data.vehicles ?? []} boats={data.boats ?? []} preselectedContactName={leadDraftContactName} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} onCreateTask={(lead: Lead) => {
