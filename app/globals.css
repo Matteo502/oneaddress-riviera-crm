@@ -2343,3 +2343,91 @@ td small,
 .compact-pipeline .lead-card select {
   margin-top: 12px;
 }
+
+
+/* Formulaire Leads : version épurée et premium */
+#lead-create-form {
+  overflow: visible;
+}
+
+.lead-smart-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 30px;
+  width: 100%;
+}
+
+.lead-form-block {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+  border: 0;
+  border-top: 1px solid rgba(216, 199, 166, 0.75);
+  padding: 28px 0 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.lead-form-block:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.lead-form-block legend {
+  grid-column: 1 / -1;
+  padding: 0;
+  margin-bottom: 2px;
+  color: #a9813f;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.lead-form-block label {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.lead-form-block .full {
+  grid-column: 1 / -1;
+}
+
+.lead-smart-form input,
+.lead-smart-form select,
+.lead-smart-form textarea {
+  min-height: 52px;
+  background: rgba(255, 250, 241, 0.72);
+}
+
+.lead-smart-form textarea {
+  min-height: 96px;
+}
+
+.lead-form-actions {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: 4px;
+}
+
+.lead-form-actions .primary-button {
+  min-width: 230px;
+}
+
+@media (max-width: 1200px) {
+  .lead-form-block {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .lead-form-block {
+    grid-template-columns: 1fr;
+  }
+
+  .lead-form-actions .primary-button {
+    width: 100%;
+  }
+}
