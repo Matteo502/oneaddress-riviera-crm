@@ -2115,3 +2115,53 @@ td small,
   }
 }
 
+
+
+/* Filtres rapides Leads : garder Réinitialiser dans le cadre */
+.card:has(.lead-reset-button) {
+  overflow: hidden !important;
+}
+
+.card:has(.lead-reset-button) > div:last-child,
+.card:has(.lead-reset-button) .filters,
+.card:has(.lead-reset-button) .filter-row,
+.card:has(.lead-reset-button) .pipeline-filters {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: grid !important;
+  grid-template-columns: 120px repeat(3, minmax(0, 1fr)) 160px !important;
+  gap: 14px !important;
+  align-items: end !important;
+  overflow: hidden !important;
+}
+
+.card:has(.lead-reset-button) select,
+.card:has(.lead-reset-button) input {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.lead-reset-button {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  padding-inline: 8px !important;
+  font-size: 0.66rem !important;
+  letter-spacing: 0.13em !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-align: center !important;
+}
+
+@media (max-width: 1200px) {
+  .card:has(.lead-reset-button) > div:last-child,
+  .card:has(.lead-reset-button) .filters,
+  .card:has(.lead-reset-button) .filter-row,
+  .card:has(.lead-reset-button) .pipeline-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .lead-reset-button {
+    min-height: 46px !important;
+  }
+}
