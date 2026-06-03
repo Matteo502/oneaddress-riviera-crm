@@ -1850,3 +1850,50 @@ td small,
 .pipeline-column select {
   width: 100% !important;
 }
+
+
+/* Urgences / échéances */
+.due-label {
+  font-weight: 700;
+}
+
+.due-label.overdue {
+  color: #a44737 !important;
+}
+
+.due-label.today {
+  color: #a9813f !important;
+}
+
+.lead-card.overdue {
+  border-color: rgba(164, 71, 55, 0.42) !important;
+  box-shadow: 0 18px 45px rgba(164, 71, 55, 0.10) !important;
+}
+
+.lead-card.today {
+  border-color: rgba(169, 129, 63, 0.46) !important;
+  box-shadow: 0 18px 45px rgba(169, 129, 63, 0.10) !important;
+}
+
+.lead-card.overdue::before,
+.lead-card.today::before {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 8px;
+  padding: 6px 9px;
+  border: 1px solid currentColor;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.lead-card.overdue::before {
+  content: "En retard";
+  color: #a44737;
+}
+
+.lead-card.today::before {
+  content: "Aujourd'hui";
+  color: #a9813f;
+}

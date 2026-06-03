@@ -52,6 +52,65 @@ function safeNumber(value: FormDataEntryValue | null) {
 }
 
 
+
+function getDueStatus(value?: string) {
+  if (!value) return "none";
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const date = new Date(`${value}T00:00:00`);
+  date.setHours(0, 0, 0, 0);
+
+  if (date.getTime() < today.getTime()) return "overdue";
+  if (date.getTime() === today.getTime()) return "today";
+
+  return "future";
+}
+
+function getDueLabel(value?: string) {
+  const status = getDueStatus(value);
+
+  if (!value) return "Échéance non renseignée";
+  if (status === "overdue") return `En retard · ${formatDateFR(value)}`;
+  if (status === "today") return `Aujourd'hui · ${formatDateFR(value)}`;
+
+  return `Échéance ${formatDateFR(value)}`;
+}
+
+function priorityWeight(priority?: string) {
+  if (priority === "Haute") return 0;
+  if (priority === "Moyenne") return 1;
+  return 2;
+}
+
+function sortByUrgency<T extends { dueDate: string; priority?: string; value?: number }>(items: T[]) {
+  return [...items].sort((a, b) => {
+    const statusA = getDueStatus(a.dueDate);
+    const statusB = getDueStatus(b.dueDate);
+
+    const statusWeight = {
+      overdue: 0,
+      today: 1,
+      future: 2,
+      none: 3
+    };
+
+    const statusDiff = statusWeight[statusA] - statusWeight[statusB];
+    if (statusDiff !== 0) return statusDiff;
+
+    const dateA = a.dueDate ? new Date(`${a.dueDate}T00:00:00`).getTime() : Number.MAX_SAFE_INTEGER;
+    const dateB = b.dueDate ? new Date(`${b.dueDate}T00:00:00`).getTime() : Number.MAX_SAFE_INTEGER;
+
+    if (dateA !== dateB) return dateA - dateB;
+
+    const priorityDiff = priorityWeight(a.priority) - priorityWeight(b.priority);
+    if (priorityDiff !== 0) return priorityDiff;
+
+    return (b.value ?? 0) - (a.value ?? 0);
+  });
+}
+
 function formatDateFR(value?: string) {
   if (!value) return "";
   const date = new Date(`${value}T00:00:00`);
@@ -1338,7 +1397,7 @@ function LeadsView({
 
       <section className="pipeline-grid">
         {leadStatuses.map((status) => {
-          const columnLeads = visibleLeads.filter((lead) => lead.status === status);
+          const columnLeads = sortByUrgency(visibleLeads.filter((lead) => lead.status === status));
 
           return (
             <div className="pipeline-column" key={status}>
@@ -1349,7 +1408,7 @@ function LeadsView({
 
               <div className="list-stack">
                 {columnLeads.map((lead) => (
-                  <article className="lead-card" key={lead.id}>
+                  <article className={`lead-card ${getDueStatus(lead.dueDate)}`} key={lead.id}>
                     <div className="lead-topline">
                       <Badge>{lead.priority}</Badge>
 
@@ -1382,8 +1441,8 @@ function LeadsView({
 
                     <div className="lead-footer">
                       <b>{currency.format(lead.value)}</b>
-                      <small>
-                        {lead.dueDate ? `Échéance ${formatDateFR(lead.dueDate)}` : "Échéance non renseignée"}
+                      <small className={`due-label ${getDueStatus(lead.dueDate)}`}>
+                        {getDueLabel(lead.dueDate)}
                       </small>
                     </div>
 
@@ -2327,7 +2386,9 @@ function TasksView({
               <div>
                 <strong>{task.title}</strong>
                 <span>{getLinkedLeadLabel(task.linkedTo)}</span>
-                <small>{task.owner || "Responsable non renseigné"} • {task.dueDate || "Sans échéance"}</small>
+                <small>
+                  {task.owner || "Responsable non renseigné"} • <span className={`due-label ${getDueStatus(task.dueDate)}`}>{getDueLabel(task.dueDate)}</span>
+                </small>
 
                 <button
                   className="task-edit-button"
