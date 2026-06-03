@@ -299,20 +299,33 @@ function getPropertyDisplayName(property: Property) {
   return flexibleProperty.name ?? flexibleProperty.title ?? "Bien sans nom";
 }
 
+type QuoteBillingUnit = "day" | "week" | "fixed";
+
 type QuoteLine = {
   id: string;
   category: string;
+  description: string;
   unitPrice: number;
+  billingUnit: QuoteBillingUnit;
+  deposit: number;
 };
 
 type QuoteRequest = {
   id: string;
   clientName: string;
+  title: string;
+  location: string;
+  guestCount: string;
   categories: string[];
   items?: QuoteLine[];
   startDate: string;
   endDate: string;
   unitPrice: number;
+  validityDate: string;
+  paymentTerms: string;
+  cancellationTerms: string;
+  included: string;
+  excluded: string;
   notes: string;
   createdAt: string;
 };
@@ -322,12 +335,21 @@ function createQuoteId() {
 }
 
 function escapeQuoteHtml(value: string) {
-  return String(value)
+  return String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function formatQuoteText(value: string) {
+  return escapeQuoteHtml(value).replace(/\n/g, "<br />");
+}
+
+function readQuoteNumber(value: FormDataEntryValue | null) {
+  const numberValue = Number(value ?? 0);
+  return Number.isFinite(numberValue) ? numberValue : 0;
 }
 
 function formatQuoteDate(value: string) {
@@ -346,12 +368,46 @@ function formatQuoteDate(value: string) {
   }).format(parsedDate);
 }
 
+function formatQuoteLongDate(value: string) {
+  if (!value) return "Non renseigné";
+
+  const parsedDate = new Date(`${value}T00:00:00`);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "Date invalide";
+  }
+
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric"
+  }).format(parsedDate);
+}
+
 function formatQuotePrice(value: number) {
   return new Intl.NumberFormat("fr-FR", {
     style: "currency",
     currency: "EUR",
     maximumFractionDigits: 0
   }).format(Number.isFinite(value) ? value : 0);
+}
+
+function getQuoteBillingUnit(value: unknown): QuoteBillingUnit {
+  if (value === "week") return "week";
+  if (value === "fixed") return "fixed";
+  return "day";
+}
+
+function getQuoteUnitLabel(unit: QuoteBillingUnit) {
+  if (unit === "week") return "semaine";
+  if (unit === "fixed") return "forfait";
+  return "jour";
+}
+
+function getQuoteUnitShortLabel(unit: QuoteBillingUnit) {
+  if (unit === "week") return "/ semaine";
+  if (unit === "fixed") return "forfait";
+  return "/ jour";
 }
 
 function getQuoteDurationDays(quote: QuoteRequest) {
@@ -366,13 +422,34 @@ function getQuoteDurationDays(quote: QuoteRequest) {
   return Math.max(diff, 1);
 }
 
+function getQuoteBillingQuantity(quote: QuoteRequest, unit: QuoteBillingUnit) {
+  const days = getQuoteDurationDays(quote);
+
+  if (unit === "week") return Math.max(Math.ceil(days / 7), 1);
+  if (unit === "fixed") return 1;
+
+  return days;
+}
+
+function getQuoteQuantityLabel(quote: QuoteRequest, unit: QuoteBillingUnit) {
+  const quantity = getQuoteBillingQuantity(quote, unit);
+  const label = getQuoteUnitLabel(unit);
+
+  if (unit === "fixed") return "1 forfait";
+
+  return `${quantity} ${label}${quantity > 1 ? "s" : ""}`;
+}
+
 function getQuoteItems(quote: QuoteRequest): QuoteLine[] {
   if (Array.isArray(quote.items) && quote.items.length > 0) {
     return quote.items
       .map((item) => ({
         id: String(item.id ?? createQuoteId()),
         category: String(item.category ?? "").trim(),
-        unitPrice: Number.isFinite(Number(item.unitPrice)) ? Number(item.unitPrice) : 0
+        description: String(item.description ?? "").trim(),
+        unitPrice: Number.isFinite(Number(item.unitPrice)) ? Number(item.unitPrice) : 0,
+        billingUnit: getQuoteBillingUnit(item.billingUnit),
+        deposit: Number.isFinite(Number(item.deposit)) ? Number(item.deposit) : 0
       }))
       .filter((item) => item.category);
   }
@@ -380,13 +457,27 @@ function getQuoteItems(quote: QuoteRequest): QuoteLine[] {
   return (Array.isArray(quote.categories) ? quote.categories : []).map((category) => ({
     id: category,
     category,
-    unitPrice: Number.isFinite(quote.unitPrice) ? quote.unitPrice : 0
+    description: "",
+    unitPrice: Number.isFinite(quote.unitPrice) ? quote.unitPrice : 0,
+    billingUnit: "day",
+    deposit: 0
   }));
 }
 
+function getQuoteLineSubtotal(quote: QuoteRequest, item: QuoteLine) {
+  return item.unitPrice * getQuoteBillingQuantity(quote, item.billingUnit);
+}
+
+function getQuoteSubtotal(quote: QuoteRequest) {
+  return getQuoteItems(quote).reduce((sum, item) => sum + getQuoteLineSubtotal(quote, item), 0);
+}
+
+function getQuoteDepositTotal(quote: QuoteRequest) {
+  return getQuoteItems(quote).reduce((sum, item) => sum + item.deposit, 0);
+}
+
 function getQuoteTotal(quote: QuoteRequest) {
-  const dailyTotal = getQuoteItems(quote).reduce((sum, item) => sum + item.unitPrice, 0);
-  return getQuoteDurationDays(quote) * dailyTotal;
+  return getQuoteSubtotal(quote);
 }
 
 function openQuotePdf(quote: QuoteRequest) {
@@ -400,135 +491,316 @@ function openQuotePdf(quote: QuoteRequest) {
   const quoteItems = getQuoteItems(quote);
   const categories = quoteItems.length ? quoteItems.map((item) => item.category).join(", ") : "Non renseigné";
   const durationDays = getQuoteDurationDays(quote);
-  const total = getQuoteTotal(quote);
+  const subtotal = getQuoteSubtotal(quote);
+  const depositTotal = getQuoteDepositTotal(quote);
+  const quoteReference = quote.id.replace("quote-", "DEV-").toUpperCase();
+
+  const issuedAt = new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric"
+  }).format(new Date());
+
   const linesHtml = quoteItems.length
     ? quoteItems.map((item) => `
       <tr>
-        <td>${escapeQuoteHtml(item.category)}</td>
-        <td>${formatQuotePrice(item.unitPrice)}</td>
-        <td>${formatQuotePrice(item.unitPrice * durationDays)}</td>
+        <td>
+          <strong>${escapeQuoteHtml(item.category)}</strong>
+          ${item.description ? `<br /><small>${escapeQuoteHtml(item.description)}</small>` : ""}
+        </td>
+        <td>${formatQuotePrice(item.unitPrice)} ${escapeQuoteHtml(getQuoteUnitShortLabel(item.billingUnit))}</td>
+        <td>${escapeQuoteHtml(getQuoteQuantityLabel(quote, item.billingUnit))}</td>
+        <td>${formatQuotePrice(getQuoteLineSubtotal(quote, item))}</td>
+        <td>${item.deposit > 0 ? formatQuotePrice(item.deposit) : "—"}</td>
       </tr>
     `).join("")
-    : `<tr><td colspan="3">Aucune ligne renseignée</td></tr>`;
+    : `<tr><td colspan="5">Aucune prestation renseignée</td></tr>`;
+
+  const includedHtml = quote.included
+    ? `<section class="notes-block"><h2>Inclus</h2><p>${formatQuoteText(quote.included)}</p></section>`
+    : "";
+
+  const excludedHtml = quote.excluded
+    ? `<section class="notes-block"><h2>Non inclus</h2><p>${formatQuoteText(quote.excluded)}</p></section>`
+    : "";
+
+  const notesHtml = quote.notes
+    ? `<section class="notes-block"><h2>Notes</h2><p>${formatQuoteText(quote.notes)}</p></section>`
+    : "";
 
   popup.document.open();
   popup.document.write(`<!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Devis One Address Riviera</title>
+  <title>${escapeQuoteHtml(quoteReference)} · One Address Riviera</title>
   <style>
     body {
       margin: 0;
-      padding: 48px;
-      font-family: Georgia, "Times New Roman", serif;
-      color: #011d30;
+      padding: 42px;
       background: #f7f4ed;
+      color: #011d30;
+      font-family: Arial, sans-serif;
     }
 
     .page {
-      max-width: 820px;
+      max-width: 860px;
       margin: 0 auto;
       background: #fffaf1;
       border: 1px solid #d8c7a6;
-      padding: 48px;
+      padding: 46px;
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      gap: 28px;
+      border-bottom: 1px solid #d8c7a6;
+      padding-bottom: 28px;
+      margin-bottom: 34px;
     }
 
     .brand {
-      letter-spacing: .28em;
+      letter-spacing: 0.28em;
       text-transform: uppercase;
       color: #a9813f;
-      font: 700 12px Arial, sans-serif;
-      margin-bottom: 32px;
+      font-weight: 800;
+      font-size: 12px;
+      margin-bottom: 12px;
     }
 
     h1 {
-      font-size: 44px;
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 46px;
       font-weight: 400;
-      margin: 0 0 22px;
+      line-height: 1;
     }
 
-    .intro,
-    .notes {
-      color: #6f746f;
-      line-height: 1.6;
-      font-family: Arial, sans-serif;
+    .meta {
+      text-align: right;
+      color: #68706d;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .intro {
+      margin: 0 0 30px;
+      color: #68706d;
+      line-height: 1.7;
+    }
+
+    .client-name {
+      color: #011d30;
+      font-weight: 800;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 28px;
-      font-family: Arial, sans-serif;
+      margin-top: 24px;
     }
 
     th {
-      width: 34%;
       text-align: left;
       color: #a9813f;
-      letter-spacing: .16em;
+      letter-spacing: 0.13em;
       text-transform: uppercase;
-      font-size: 11px;
-      padding: 16px 0;
-      border-bottom: 1px solid #d8c7a6;
+      font-size: 10px;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(216, 199, 166, 0.75);
+      vertical-align: top;
     }
 
     td {
-      padding: 16px 0;
-      border-bottom: 1px solid rgba(216, 199, 166, .55);
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(216, 199, 166, 0.55);
+      vertical-align: top;
+      line-height: 1.5;
     }
 
-    .total {
+    td small {
+      color: #68706d;
+    }
+
+    .section-title {
+      margin: 34px 0 0;
+      color: #a9813f;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+
+    .total-card {
       margin-top: 34px;
+      padding: 26px;
+      border: 1px solid #d8c7a6;
+      background: rgba(169, 129, 63, 0.08);
       text-align: right;
-      font-size: 30px;
+    }
+
+    .total-card span {
+      display: block;
+      color: #a9813f;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-size: 11px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .total-card strong {
+      display: block;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 34px;
+      font-weight: 400;
+    }
+
+    .total-card small {
+      display: block;
+      margin-top: 12px;
+      color: #68706d;
+      line-height: 1.5;
+    }
+
+    .notes-block {
+      margin-top: 28px;
+      padding-top: 22px;
+      border-top: 1px solid #d8c7a6;
+    }
+
+    .notes-block h2 {
+      margin: 0 0 10px;
+      color: #a9813f;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+
+    .notes-block p {
+      margin: 0;
+      color: #68706d;
+      line-height: 1.7;
     }
 
     .footer {
-      margin-top: 52px;
+      margin-top: 48px;
+      display: flex;
+      justify-content: space-between;
+      gap: 22px;
       color: #a9813f;
-      letter-spacing: .18em;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
-      font: 700 11px Arial, sans-serif;
+      font-size: 10px;
+      font-weight: 800;
+      border-top: 1px solid #d8c7a6;
+      padding-top: 22px;
     }
 
     @media print {
-      body { background: white; padding: 0; }
-      .page { border: 0; }
+      body {
+        background: white;
+        padding: 0;
+      }
+
+      .page {
+        border: 0;
+      }
     }
   </style>
 </head>
+
 <body>
   <main class="page">
-    <div class="brand">One Address Riviera</div>
-    <h1>Devis</h1>
-    <p class="intro">Proposition préparée pour <strong>${escapeQuoteHtml(quote.clientName)}</strong>.</p>
+    <header class="top">
+      <div>
+        <div class="brand">One Address Riviera</div>
+        <h1>Devis</h1>
+      </div>
+
+      <div class="meta">
+        <div>${escapeQuoteHtml(quoteReference)}</div>
+        <div>${escapeQuoteHtml(issuedAt)}</div>
+      </div>
+    </header>
+
+    <p class="intro">
+      Proposition préparée pour <span class="client-name">${escapeQuoteHtml(quote.clientName)}</span>.
+      ${quote.title ? `<br />${escapeQuoteHtml(quote.title)}` : ""}
+    </p>
 
     <table>
       <tr><th>Client</th><td>${escapeQuoteHtml(quote.clientName)}</td></tr>
+      <tr><th>Lieu</th><td>${escapeQuoteHtml(quote.location || "Non renseigné")}</td></tr>
+      <tr><th>Voyageurs</th><td>${escapeQuoteHtml(quote.guestCount || "Non renseigné")}</td></tr>
       <tr><th>Catégorie(s)</th><td>${escapeQuoteHtml(categories)}</td></tr>
       <tr><th>Dates demandées</th><td>Du ${formatQuoteDate(quote.startDate)} au ${formatQuoteDate(quote.endDate)}</td></tr>
-      <tr><th>Prix unitaire</th><td>${formatQuotePrice(quote.unitPrice)}</td></tr>
-      <tr><th>Durée</th><td>${durationDays} jour${durationDays > 1 ? "s" : ""}</td></tr>
-      <tr><th>Total indicatif</th><td>${formatQuotePrice(total)}</td></tr>
+      <tr><th>Durée réelle</th><td>${durationDays} jour${durationDays > 1 ? "s" : ""}</td></tr>
+      <tr><th>Validité du devis</th><td>${quote.validityDate ? formatQuoteLongDate(quote.validityDate) : "À confirmer"}</td></tr>
     </table>
 
-    <div class="total">Total indicatif : ${formatQuotePrice(total)}</div>
+    <h2 class="section-title">Détail des prestations</h2>
 
-    ${quote.notes ? `<p class="notes">${escapeQuoteHtml(quote.notes)}</p>` : ""}
+    <table>
+      <thead>
+        <tr>
+          <th>Prestation</th>
+          <th>Prix</th>
+          <th>Quantité</th>
+          <th>Sous-total</th>
+          <th>Caution</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${linesHtml}
+      </tbody>
+    </table>
 
-    <div class="footer">Private Riviera Experiences, by request only</div>
+    <section class="total-card">
+      <span>Total prestations</span>
+      <strong>${formatQuotePrice(subtotal)}</strong>
+      <small>
+        Caution totale à prévoir : ${depositTotal > 0 ? formatQuotePrice(depositTotal) : "aucune caution renseignée"}.
+        Les cautions sont indiquées séparément et ne sont pas incluses dans le total des prestations.
+      </small>
+    </section>
+
+    ${includedHtml}
+    ${excludedHtml}
+
+    <section class="notes-block">
+      <h2>Conditions de paiement</h2>
+      <p>${formatQuoteText(quote.paymentTerms || "Acompte à la confirmation, solde avant le début de la prestation.")}</p>
+    </section>
+
+    <section class="notes-block">
+      <h2>Conditions d’annulation</h2>
+      <p>${formatQuoteText(quote.cancellationTerms || "Conditions à confirmer selon disponibilité, saison et prestataires.")}</p>
+    </section>
+
+    ${notesHtml}
+
+    <footer class="footer">
+      <span>Private Riviera Experiences</span>
+      <span>contact@oneaddressriviera.com</span>
+    </footer>
   </main>
 
   <script>
-    window.onload = () => window.print();
+    window.onload = () => {
+      window.focus();
+      window.print();
+    };
   </script>
 </body>
 </html>`);
   popup.document.close();
 }
+
 function QuotesView({ contacts }: { contacts: Contact[] }) {
   const [quotes, setQuotes] = useState<QuoteRequest[]>([]);
+
+  const quoteCategories = ["Villa", "Bateau", "Voiture", "Conciergerie"];
 
   function addQuote(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -538,16 +810,28 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
 
     const selectedCategories = form.getAll("categories").map(String);
     const clientName = String(form.get("clientName") ?? "").trim();
+    const title = String(form.get("title") ?? "").trim();
+    const location = String(form.get("location") ?? "").trim();
+    const guestCount = String(form.get("guestCount") ?? "").trim();
     const startDate = String(form.get("startDate") ?? "");
     const endDate = String(form.get("endDate") ?? "");
+    const validityDate = String(form.get("validityDate") ?? "");
+    const paymentTerms = String(form.get("paymentTerms") ?? "").trim();
+    const cancellationTerms = String(form.get("cancellationTerms") ?? "").trim();
+    const included = String(form.get("included") ?? "").trim();
+    const excluded = String(form.get("excluded") ?? "").trim();
+    const notes = String(form.get("notes") ?? "").trim();
+
     const quoteItems: QuoteLine[] = selectedCategories.map((category) => ({
       id: createQuoteId(),
       category,
-      unitPrice: safeNumber(form.get(`price${category}`))
+      description: String(form.get(`description${category}`) ?? "").trim(),
+      unitPrice: readQuoteNumber(form.get(`price${category}`)),
+      billingUnit: getQuoteBillingUnit(form.get(`unit${category}`)),
+      deposit: readQuoteNumber(form.get(`deposit${category}`))
     }));
 
     const unitPrice = quoteItems.reduce((sum, item) => sum + item.unitPrice, 0);
-    const notes = String(form.get("notes") ?? "").trim();
 
     if (!clientName) {
       window.alert("Sélectionne un client.");
@@ -555,7 +839,7 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
     }
 
     if (selectedCategories.length === 0) {
-      window.alert("Sélectionne au moins une catégorie.");
+      window.alert("Sélectionne au moins une prestation.");
       return;
     }
 
@@ -572,11 +856,19 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
     const quote: QuoteRequest = {
       id: createQuoteId(),
       clientName,
+      title,
+      location,
+      guestCount,
       categories: selectedCategories,
       items: quoteItems,
       startDate,
       endDate,
       unitPrice,
+      validityDate,
+      paymentTerms,
+      cancellationTerms,
+      included,
+      excluded,
       notes,
       createdAt: new Date().toISOString()
     };
@@ -603,24 +895,29 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
               <article className="quote-card" key={quote.id}>
                 <div>
                   <p className="eyebrow">{getQuoteItems(quote).map((item) => item.category).join(" · ")}</p>
-                  <h3>{quote.clientName}</h3>
+                  <h3>{quote.title || quote.clientName}</h3>
+                  <p>{quote.clientName}</p>
                   <p>Du {formatQuoteDate(quote.startDate)} au {formatQuoteDate(quote.endDate)}</p>
-                  <strong>{formatQuotePrice(getQuoteTotal(quote))}</strong>
-                  <small>{getQuoteDurationDays(quote)} jour{getQuoteDurationDays(quote) > 1 ? "s" : ""} · {getQuoteItems(quote).length} ligne{getQuoteItems(quote).length > 1 ? "s" : ""}</small>
+                  <strong>{formatQuotePrice(getQuoteSubtotal(quote))}</strong>
+
+                  {getQuoteDepositTotal(quote) > 0 && (
+                    <small>Caution : {formatQuotePrice(getQuoteDepositTotal(quote))}</small>
+                  )}
 
                   <ul className="quote-line-preview">
                     {getQuoteItems(quote).map((item) => (
                       <li key={item.id}>
                         <span>{item.category}</span>
-                        <strong>{formatQuotePrice(item.unitPrice)} / jour</strong>
+                        <strong>{formatQuotePrice(item.unitPrice)} {getQuoteUnitShortLabel(item.billingUnit)}</strong>
                       </li>
                     ))}
                   </ul>
-                  {quote.notes && <p>{quote.notes}</p>}
+
+                  {quote.location && <p>{quote.location}</p>}
                 </div>
 
                 <div className="quote-actions">
-                  <button className="asset-reset-button primary-button" type="button" onClick={() => openQuotePdf(quote)}>
+                  <button className="primary-button" type="button" onClick={() => openQuotePdf(quote)}>
                     Générer PDF
                   </button>
 
@@ -647,7 +944,7 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
         <h3>Créer un devis</h3>
 
         <form className="form-grid" onSubmit={addQuote}>
-          <label className="full">Client
+          <label>Client
             <select name="clientName" required>
               <option value="">Sélectionner un client</option>
               {contacts.map((contact) => (
@@ -658,29 +955,17 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
             </select>
           </label>
 
-          <fieldset className="full quote-category-box quote-lines-box">
-            <legend>Prestations du devis</legend>
+          <label>Intitulé du devis
+            <input name="title" placeholder="Séjour villa, location bateau, conciergerie..." />
+          </label>
 
-            <div className="quote-line-input">
-              <label><input type="checkbox" name="categories" value="Villa" /> Villa</label>
-              <input name="priceVilla" type="number" min="0" placeholder="Prix / jour" />
-            </div>
+          <label>Lieu / destination
+            <input name="location" placeholder="Cannes, Saint-Tropez, Monaco..." />
+          </label>
 
-            <div className="quote-line-input">
-              <label><input type="checkbox" name="categories" value="Bateau" /> Bateau</label>
-              <input name="priceBateau" type="number" min="0" placeholder="Prix / jour" />
-            </div>
-
-            <div className="quote-line-input">
-              <label><input type="checkbox" name="categories" value="Voiture" /> Voiture</label>
-              <input name="priceVoiture" type="number" min="0" placeholder="Prix / jour" />
-            </div>
-
-            <div className="quote-line-input">
-              <label><input type="checkbox" name="categories" value="Conciergerie" /> Conciergerie</label>
-              <input name="priceConciergerie" type="number" min="0" placeholder="Prix / jour" />
-            </div>
-          </fieldset>
+          <label>Nombre de voyageurs
+            <input name="guestCount" placeholder="Ex : 6 adultes, 2 enfants" />
+          </label>
 
           <label>Date début demandée
             <input name="startDate" type="date" required />
@@ -690,8 +975,53 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
             <input name="endDate" type="date" required />
           </label>
 
-          <label className="full">Notes
-            <textarea name="notes" placeholder="Conditions, inclusions, remarques client..." />
+          <label>Validité du devis
+            <input name="validityDate" type="date" />
+          </label>
+
+          <fieldset className="full quote-category-box quote-lines-box">
+            <legend>Prestations, prix et cautions</legend>
+
+            {quoteCategories.map((category) => (
+              <div className="quote-line-input" key={category}>
+                <label>
+                  <input type="checkbox" name="categories" value={category} />
+                  {category}
+                </label>
+
+                <input name={`description${category}`} placeholder="Détail prestation" />
+
+                <input name={`price${category}`} type="number" min="0" placeholder="Prix" />
+
+                <select name={`unit${category}`} defaultValue="day">
+                  <option value="day">Prix / jour</option>
+                  <option value="week">Prix / semaine</option>
+                  <option value="fixed">Forfait</option>
+                </select>
+
+                <input name={`deposit${category}`} type="number" min="0" placeholder="Caution" />
+              </div>
+            ))}
+          </fieldset>
+
+          <label className="full">Inclus
+            <textarea name="included" placeholder="Ex : accueil, linge, ménage intermédiaire, skipper, livraison..." />
+          </label>
+
+          <label className="full">Non inclus
+            <textarea name="excluded" placeholder="Ex : carburant, extras, transferts, repas, taxe de séjour..." />
+          </label>
+
+          <label className="full">Conditions de paiement
+            <textarea name="paymentTerms" placeholder="Ex : 50 % à la réservation, solde 30 jours avant l’arrivée..." />
+          </label>
+
+          <label className="full">Conditions d’annulation
+            <textarea name="cancellationTerms" placeholder="Conditions selon saison, disponibilité et prestataires..." />
+          </label>
+
+          <label className="full">Notes internes / précisions client
+            <textarea name="notes" placeholder="Informations utiles, préférences client, demandes spéciales..." />
           </label>
 
           <button className="primary-button" type="submit">Créer le devis</button>
