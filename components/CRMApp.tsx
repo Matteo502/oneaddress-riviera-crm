@@ -299,10 +299,17 @@ function getPropertyDisplayName(property: Property) {
   return flexibleProperty.name ?? flexibleProperty.title ?? "Bien sans nom";
 }
 
+type QuoteLine = {
+  id: string;
+  category: string;
+  unitPrice: number;
+};
+
 type QuoteRequest = {
   id: string;
   clientName: string;
   categories: string[];
+  items?: QuoteLine[];
   startDate: string;
   endDate: string;
   unitPrice: number;
@@ -359,8 +366,27 @@ function getQuoteDurationDays(quote: QuoteRequest) {
   return Math.max(diff, 1);
 }
 
+function getQuoteItems(quote: QuoteRequest): QuoteLine[] {
+  if (Array.isArray(quote.items) && quote.items.length > 0) {
+    return quote.items
+      .map((item) => ({
+        id: String(item.id ?? createQuoteId()),
+        category: String(item.category ?? "").trim(),
+        unitPrice: Number.isFinite(Number(item.unitPrice)) ? Number(item.unitPrice) : 0
+      }))
+      .filter((item) => item.category);
+  }
+
+  return (Array.isArray(quote.categories) ? quote.categories : []).map((category) => ({
+    id: category,
+    category,
+    unitPrice: Number.isFinite(quote.unitPrice) ? quote.unitPrice : 0
+  }));
+}
+
 function getQuoteTotal(quote: QuoteRequest) {
-  return getQuoteDurationDays(quote) * (Number.isFinite(quote.unitPrice) ? quote.unitPrice : 0);
+  const dailyTotal = getQuoteItems(quote).reduce((sum, item) => sum + item.unitPrice, 0);
+  return getQuoteDurationDays(quote) * dailyTotal;
 }
 
 function openQuotePdf(quote: QuoteRequest) {
@@ -371,9 +397,19 @@ function openQuotePdf(quote: QuoteRequest) {
     return;
   }
 
-  const categories = quote.categories.length ? quote.categories.join(", ") : "Non renseigné";
+  const quoteItems = getQuoteItems(quote);
+  const categories = quoteItems.length ? quoteItems.map((item) => item.category).join(", ") : "Non renseigné";
   const durationDays = getQuoteDurationDays(quote);
   const total = getQuoteTotal(quote);
+  const linesHtml = quoteItems.length
+    ? quoteItems.map((item) => `
+      <tr>
+        <td>${escapeQuoteHtml(item.category)}</td>
+        <td>${formatQuotePrice(item.unitPrice)}</td>
+        <td>${formatQuotePrice(item.unitPrice * durationDays)}</td>
+      </tr>
+    `).join("")
+    : `<tr><td colspan="3">Aucune ligne renseignée</td></tr>`;
 
   popup.document.open();
   popup.document.write(`<!doctype html>
@@ -491,7 +527,6 @@ function openQuotePdf(quote: QuoteRequest) {
 </html>`);
   popup.document.close();
 }
-
 function QuotesView({ contacts }: { contacts: Contact[] }) {
   const [quotes, setQuotes] = useState<QuoteRequest[]>([]);
 
@@ -505,7 +540,13 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
     const clientName = String(form.get("clientName") ?? "").trim();
     const startDate = String(form.get("startDate") ?? "");
     const endDate = String(form.get("endDate") ?? "");
-    const unitPrice = Number(form.get("unitPrice") ?? 0);
+    const quoteItems: QuoteLine[] = selectedCategories.map((category) => ({
+      id: createQuoteId(),
+      category,
+      unitPrice: safeNumber(form.get(`price${category}`))
+    }));
+
+    const unitPrice = quoteItems.reduce((sum, item) => sum + item.unitPrice, 0);
     const notes = String(form.get("notes") ?? "").trim();
 
     if (!clientName) {
@@ -518,6 +559,11 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
       return;
     }
 
+    if (quoteItems.some((item) => item.unitPrice <= 0)) {
+      window.alert("Renseigne un prix pour chaque prestation sélectionnée.");
+      return;
+    }
+
     if (!startDate || !endDate) {
       window.alert("Renseigne les dates demandées.");
       return;
@@ -527,6 +573,7 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
       id: createQuoteId(),
       clientName,
       categories: selectedCategories,
+      items: quoteItems,
       startDate,
       endDate,
       unitPrice,
@@ -555,11 +602,20 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
             quotes.map((quote) => (
               <article className="quote-card" key={quote.id}>
                 <div>
-                  <p className="eyebrow">{quote.categories.join(" · ")}</p>
+                  <p className="eyebrow">{getQuoteItems(quote).map((item) => item.category).join(" · ")}</p>
                   <h3>{quote.clientName}</h3>
                   <p>Du {formatQuoteDate(quote.startDate)} au {formatQuoteDate(quote.endDate)}</p>
                   <strong>{formatQuotePrice(getQuoteTotal(quote))}</strong>
-                  <small>{getQuoteDurationDays(quote)} jour{getQuoteDurationDays(quote) > 1 ? "s" : ""} × {formatQuotePrice(quote.unitPrice)}</small>
+                  <small>{getQuoteDurationDays(quote)} jour{getQuoteDurationDays(quote) > 1 ? "s" : ""} · {getQuoteItems(quote).length} ligne{getQuoteItems(quote).length > 1 ? "s" : ""}</small>
+
+                  <ul className="quote-line-preview">
+                    {getQuoteItems(quote).map((item) => (
+                      <li key={item.id}>
+                        <span>{item.category}</span>
+                        <strong>{formatQuotePrice(item.unitPrice)} / jour</strong>
+                      </li>
+                    ))}
+                  </ul>
                   {quote.notes && <p>{quote.notes}</p>}
                 </div>
 
@@ -602,12 +658,28 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
             </select>
           </label>
 
-          <fieldset className="full quote-category-box">
-            <legend>Catégories à louer</legend>
-            <label><input type="checkbox" name="categories" value="Villa" /> Villa</label>
-            <label><input type="checkbox" name="categories" value="Bateau" /> Bateau</label>
-            <label><input type="checkbox" name="categories" value="Voiture" /> Voiture</label>
-            <label><input type="checkbox" name="categories" value="Conciergerie" /> Conciergerie</label>
+          <fieldset className="full quote-category-box quote-lines-box">
+            <legend>Prestations du devis</legend>
+
+            <div className="quote-line-input">
+              <label><input type="checkbox" name="categories" value="Villa" /> Villa</label>
+              <input name="priceVilla" type="number" min="0" placeholder="Prix / jour" />
+            </div>
+
+            <div className="quote-line-input">
+              <label><input type="checkbox" name="categories" value="Bateau" /> Bateau</label>
+              <input name="priceBateau" type="number" min="0" placeholder="Prix / jour" />
+            </div>
+
+            <div className="quote-line-input">
+              <label><input type="checkbox" name="categories" value="Voiture" /> Voiture</label>
+              <input name="priceVoiture" type="number" min="0" placeholder="Prix / jour" />
+            </div>
+
+            <div className="quote-line-input">
+              <label><input type="checkbox" name="categories" value="Conciergerie" /> Conciergerie</label>
+              <input name="priceConciergerie" type="number" min="0" placeholder="Prix / jour" />
+            </div>
           </fieldset>
 
           <label>Date début demandée
@@ -616,10 +688,6 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
 
           <label>Date fin demandée
             <input name="endDate" type="date" required />
-          </label>
-
-          <label>Prix unitaire
-            <input name="unitPrice" type="number" min="0" placeholder="2500" required />
           </label>
 
           <label className="full">Notes
