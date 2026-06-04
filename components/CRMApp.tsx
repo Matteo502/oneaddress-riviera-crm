@@ -1118,12 +1118,17 @@ export default function CRMApp() {
   }, [data.boats, query]);
 
   const filteredTasks = useMemo(() => {
-    return data.tasks.filter((task) => {
+    const matchingTasks = data.tasks.filter((task) => {
       const linkedLead = data.leads.find((lead) => lead.id === task.linkedTo);
       const linkedLeadLabel = linkedLead ? `${linkedLead.category} ${linkedLead.contactName}` : task.linkedTo;
 
       return searchMatch(query, [task.title, task.owner, task.status, linkedLeadLabel]);
     });
+
+    return [
+      ...sortByUrgency(matchingTasks.filter((task) => task.status !== "Terminé")),
+      ...sortByUrgency(matchingTasks.filter((task) => task.status === "Terminé"))
+    ];
   }, [data.tasks, data.leads, query]);
 
   function notify(message: string, tone: Toast["tone"] = "success") {
