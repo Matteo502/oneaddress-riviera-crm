@@ -1959,6 +1959,52 @@ function ContactsView({
             </div>
 
             <div className="contact-related-section">
+              <p className="eyebrow">Synthèse commerciale</p>
+
+              <div className="list-stack">
+                <article className="mini-row">
+                  <div>
+                    <strong>Pipeline actif</strong>
+                    <span>
+                      {getContactLeads(selectedContact).filter((lead) => lead.status !== "Gagné" && lead.status !== "Perdu").length} lead{getContactLeads(selectedContact).filter((lead) => lead.status !== "Gagné" && lead.status !== "Perdu").length > 1 ? "s" : ""} ouvert{getContactLeads(selectedContact).filter((lead) => lead.status !== "Gagné" && lead.status !== "Perdu").length > 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <strong>
+                    {currency.format(
+                      getContactLeads(selectedContact)
+                        .filter((lead) => lead.status !== "Gagné" && lead.status !== "Perdu")
+                        .reduce((sum, lead) => sum + lead.value, 0)
+                    )}
+                  </strong>
+                </article>
+
+                <article className="mini-row">
+                  <div>
+                    <strong>Gagné</strong>
+                    <span>Valeur déjà gagnée avec ce contact</span>
+                  </div>
+                  <strong>
+                    {currency.format(
+                      getContactLeads(selectedContact)
+                        .filter((lead) => lead.status === "Gagné")
+                        .reduce((sum, lead) => sum + lead.value, 0)
+                    )}
+                  </strong>
+                </article>
+
+                <article className="mini-row">
+                  <div>
+                    <strong>Tâches ouvertes</strong>
+                    <span>Actions restantes liées à ce contact</span>
+                  </div>
+                  <Badge>
+                    {getContactTasks(selectedContact).filter((task) => task.status !== "Terminé").length}
+                  </Badge>
+                </article>
+              </div>
+            </div>
+
+            <div className="contact-related-section">
               <p className="eyebrow">Leads liés</p>
 
               <div className="list-stack">
