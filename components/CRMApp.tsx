@@ -849,6 +849,67 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
   }, [quotes]);
 
   const quoteCategories = ["Villa", "Bateau", "Voiture", "Conciergerie"];
+  const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
+
+  function fillQuoteForm(quote: QuoteRequest) {
+    const foundForm = document.querySelector<HTMLFormElement>('form[data-quote-form="true"]');
+
+    if (foundForm === null) {
+      return;
+    }
+
+    const quoteForm: HTMLFormElement = foundForm;
+
+    quoteForm.reset();
+
+    function setField(name: string, value: string | number | undefined) {
+      const field = quoteForm.elements.namedItem(name);
+
+      if (
+        field instanceof HTMLInputElement ||
+        field instanceof HTMLSelectElement ||
+        field instanceof HTMLTextAreaElement
+      ) {
+        field.value = String(value ?? "");
+      }
+    }
+
+    setEditingQuoteId(quote.id);
+
+    setField("clientName", quote.clientName);
+    setField("title", quote.title);
+    setField("location", quote.location);
+    setField("guestCount", quote.guestCount);
+    setField("startDate", quote.startDate);
+    setField("endDate", quote.endDate);
+    setField("validityDate", quote.validityDate);
+    setField("included", quote.included);
+    setField("excluded", quote.excluded);
+    setField("paymentTerms", quote.paymentTerms);
+    setField("cancellationTerms", quote.cancellationTerms);
+    setField("notes", quote.notes);
+
+    const quoteItems = getQuoteItems(quote);
+
+    quoteForm.querySelectorAll<HTMLInputElement>('input[name="categories"]').forEach((checkbox) => {
+      const item = quoteItems.find((quoteItem) => quoteItem.category === checkbox.value);
+      checkbox.checked = Boolean(item);
+
+      if (item) {
+        setField(`description${item.category}`, item.description);
+        setField(`price${item.category}`, item.unitPrice);
+        setField(`unit${item.category}`, item.billingUnit);
+        setField(`deposit${item.category}`, item.deposit);
+      }
+    });
+
+    window.setTimeout(() => {
+      quoteForm.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    }, 80);
+  }
 
   function addQuote(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -902,7 +963,7 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
     }
 
     const quote: QuoteRequest = {
-      id: createQuoteId(),
+      id: editingQuoteId ?? createQuoteId(),
       clientName,
       title,
       location,
@@ -918,10 +979,18 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
       included,
       excluded,
       notes,
-      createdAt: new Date().toISOString()
+      createdAt: editingQuoteId
+        ? quotes.find((item) => item.id === editingQuoteId)?.createdAt ?? new Date().toISOString()
+        : new Date().toISOString()
     };
 
-    setQuotes((current) => [quote, ...current]);
+    if (editingQuoteId) {
+      setQuotes((current) => current.map((item) => (item.id === editingQuoteId ? quote : item)));
+      setEditingQuoteId(null);
+    } else {
+      setQuotes((current) => [quote, ...current]);
+    }
+
     formElement.reset();
     window.setTimeout(() => {
       document.getElementById("quotes-list-panel")?.scrollIntoView({
@@ -972,6 +1041,10 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
                 </div>
 
                 <div className="quote-actions">
+                  <button className="secondary-button" type="button" onClick={() => fillQuoteForm(quote)}>
+                    Modifier
+                  </button>
+
                   <button className="primary-button" type="button" onClick={() => openQuotePdf(quote)}>
                     Générer PDF
                   </button>
@@ -995,10 +1068,10 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
       </section>
 
       <section className="card form-card">
-        <p className="eyebrow">Nouveau</p>
-        <h3>Créer un devis</h3>
+        <p className="eyebrow">{editingQuoteId ? "Modification" : "Nouveau"}</p>
+        <h3>{editingQuoteId ? "Modifier le devis" : "Créer un devis"}</h3>
 
-        <form className="form-grid" onSubmit={addQuote}>
+        <form className="form-grid" data-quote-form="true" onSubmit={addQuote}>
           <label>Client
             <select name="clientName" required>
               <option value="">Sélectionner un client</option>
@@ -1079,7 +1152,23 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
             <textarea name="notes" placeholder="Informations utiles, préférences client, demandes spéciales..." />
           </label>
 
-          <button className="primary-button" type="submit">Créer le devis</button>
+          <button className="primary-button" type="submit">
+            {editingQuoteId ? "Enregistrer les modifications" : "Créer le devis"}
+          </button>
+
+          {editingQuoteId && (
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => {
+                setEditingQuoteId(null);
+                const form = document.querySelector<HTMLFormElement>('form[data-quote-form="true"]');
+                form?.reset();
+              }}
+            >
+              Annuler la modification
+            </button>
+          )}
         </form>
       </section>
     </div>
