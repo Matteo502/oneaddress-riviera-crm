@@ -3514,62 +3514,90 @@ function TasksView({
         <div className="section-heading">
           <div>
             <p className="eyebrow">Suivi</p>
-            <h3>{tasks.length} tâches</h3>
+            <h3>{tasks.length} tâche{tasks.length > 1 ? "s" : ""}</h3>
           </div>
         </div>
 
-        <div className="list-stack">
-          {tasks.length === 0 && (
-            <div className="empty-state">
-              <h3>Aucune tâche pour le moment</h3>
-              <p>Ajoutez une tâche avec le formulaire à droite.</p>
-            </div>
-          )}
+        {tasks.length === 0 ? (
+          <div className="empty-state">
+            <h3>Aucune tâche pour le moment</h3>
+            <p>Ajoutez une tâche avec le formulaire à droite.</p>
+          </div>
+        ) : (
+          <div className="pipeline-grid">
+            {taskStatuses.map((status) => {
+              const columnTasks = tasks.filter((task) => task.status === status);
 
-          {tasks.map((task) => (
-            <article
-              className={`task-row ${task.status === "Terminé" ? "done" : ""}`}
-              key={task.id}
-            >
-              <div>
-                <strong>{task.title}</strong>
-                <span>{getLinkedLeadLabel(task.linkedTo)}</span>
-                <small>
-                  {task.owner || "Responsable non renseigné"} • <span className={`due-label ${getDueStatus(task.dueDate)}`}>{getDueLabel(task.dueDate)}</span>
-                </small>
+              return (
+                <div className="pipeline-column" key={status}>
+                  <div className="pipeline-title">
+                    <strong>{status}</strong>
+                    <span>{columnTasks.length}</span>
+                  </div>
 
-                <button
-                  className="task-edit-button"
-                  type="button"
-                  onClick={() => openEdit(task)}
-                >
-                  Modifier
-                </button>
-              </div>
+                  <div className="list-stack">
+                    {columnTasks.length === 0 ? (
+                      <p className="muted-line">Aucune tâche.</p>
+                    ) : (
+                      columnTasks.map((task) => {
+                        const linkedLead = leads.find((lead) => lead.id === task.linkedTo);
 
-              <div className="task-actions">
-                <select value={task.status} onChange={(event) => onStatusChange(task.id, event.target.value as TaskStatus)}>
-                  {taskStatuses.map((status) => <option key={status}>{status}</option>)}
-                </select>
+                        return (
+                          <article className="task-row" key={task.id}>
+                            <div>
+                              <strong>{task.title}</strong>
+                              <small>
+                                {task.owner || "Responsable non renseigné"} ·{" "}
+                                <span className={`due-label ${getDueStatus(task.dueDate)}`}>
+                                  {getDueLabel(task.dueDate)}
+                                </span>
+                              </small>
 
-                <button
-                  className="icon-button"
-                  type="button"
-                  onClick={() => {
-                    const confirmed = window.confirm(`Supprimer la tâche "${task.title}" ?`);
+                              {linkedLead && (
+                                <small>
+                                  Lead lié : {linkedLead.category} · {linkedLead.contactName}
+                                </small>
+                              )}
 
-                    if (confirmed) {
-                      onDelete(task.id);
-                    }
-                  }}
-                  aria-label="Supprimer"
-                >
-                  ×
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
+                              <button
+                                className="task-edit-button"
+                                type="button"
+                                onClick={() => openEdit(task)}
+                              >
+                                Modifier
+                              </button>
+                            </div>
+
+                            <div className="task-actions">
+                              <select value={task.status} onChange={(event) => onStatusChange(task.id, event.target.value as TaskStatus)}>
+                                {taskStatuses.map((option) => <option key={option}>{option}</option>)}
+                              </select>
+
+                              <button
+                                className="icon-button"
+                                type="button"
+                                onClick={() => {
+                                  const confirmed = window.confirm(`Supprimer la tâche "${task.title}" ?`);
+
+                                  if (confirmed) {
+                                    onDelete(task.id);
+                                  }
+                                }}
+                                aria-label="Supprimer"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </article>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <section id="task-create-form" className="card form-card">
