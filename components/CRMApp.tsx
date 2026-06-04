@@ -19,6 +19,7 @@ import type {
 } from "@/lib/types";
 
 const STORAGE_KEY = "oneaddress-riviera-crm-v1";
+const QUOTES_STORAGE_KEY = "oneaddress-riviera-crm-quotes-v1";
 const leadStatuses: LeadStatus[] = ["Nouveau", "Contacté", "Devis", "Négociation", "Gagné", "Perdu"];
 const propertyStatuses: PropertyStatus[] = ["Disponible", "Mandat en cours", "Loué", "Vendu"];
 const vehicleStatuses: VehicleStatus[] = ["Disponible", "En location", "En maintenance", "Vendu"];
@@ -797,8 +798,55 @@ function openQuotePdf(quote: QuoteRequest) {
   popup.document.close();
 }
 
+
+function normalizeQuoteRequest(value: unknown): QuoteRequest | null {
+  if (!value || typeof value !== "object") return null;
+
+  const raw = value as Record<string, unknown>;
+
+  return {
+    ...raw,
+    id: String(raw.id || createQuoteId()),
+    clientName: String(raw.clientName || ""),
+    categories: Array.isArray(raw.categories) ? raw.categories.map(String) : [],
+    startDate: String(raw.startDate || ""),
+    endDate: String(raw.endDate || ""),
+    unitPrice: Number.isFinite(Number(raw.unitPrice)) ? Number(raw.unitPrice) : 0,
+    notes: String(raw.notes || ""),
+    createdAt: String(raw.createdAt || new Date().toISOString())
+  } as QuoteRequest;
+}
+
+function loadSavedQuotes() {
+  if (typeof window === "undefined") return [] as QuoteRequest[];
+
+  try {
+    const raw = window.localStorage.getItem(QUOTES_STORAGE_KEY);
+    if (!raw) return [] as QuoteRequest[];
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [] as QuoteRequest[];
+
+    return parsed
+      .map(normalizeQuoteRequest)
+      .filter((quote): quote is QuoteRequest => Boolean(quote));
+  } catch {
+    return [] as QuoteRequest[];
+  }
+}
+
+function saveQuotesToBrowser(quotes: QuoteRequest[]) {
+  if (typeof window === "undefined") return;
+
+  window.localStorage.setItem(QUOTES_STORAGE_KEY, JSON.stringify(quotes));
+}
+
 function QuotesView({ contacts }: { contacts: Contact[] }) {
-  const [quotes, setQuotes] = useState<QuoteRequest[]>([]);
+  const [quotes, setQuotes] = useState<QuoteRequest[]>(() => loadSavedQuotes());
+
+  useEffect(() => {
+    saveQuotesToBrowser(quotes);
+  }, [quotes]);
 
   const quoteCategories = ["Villa", "Bateau", "Voiture", "Conciergerie"];
 
@@ -1141,7 +1189,12 @@ export default function CRMApp() {
   }
 
   function exportJson() {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const exportPayload = {
+      ...data,
+      quotes: loadSavedQuotes()
+    };
+
+    const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
