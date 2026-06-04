@@ -1178,6 +1178,38 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
 
 export default function CRMApp() {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+
+  // AUTO_SCROLL_LEAD_DETAILS
+  useEffect(() => {
+    if (activeTab !== "leads") return;
+
+    function handleLeadDetailsClick(event: MouseEvent) {
+      const target = event.target;
+
+      if (!(target instanceof Element)) return;
+
+      const button = target.closest("button");
+
+      if (!button) return;
+
+      const label = button.textContent?.trim().toLowerCase() ?? "";
+
+      if (label !== "détails" && label !== "details") return;
+
+      window.setTimeout(() => {
+        window.scrollTo({
+          top: document.documentElement.scrollHeight,
+          behavior: "smooth"
+        });
+      }, 120);
+    }
+
+    document.addEventListener("click", handleLeadDetailsClick);
+
+    return () => {
+      document.removeEventListener("click", handleLeadDetailsClick);
+    };
+  }, [activeTab]);
   const [leadDraftContactName, setLeadDraftContactName] = useState("");
   const [taskDraftLeadId, setTaskDraftLeadId] = useState("");
   const [taskDraftTitle, setTaskDraftTitle] = useState("");
