@@ -923,11 +923,18 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
 
     setQuotes((current) => [quote, ...current]);
     formElement.reset();
+    window.setTimeout(() => {
+      document.getElementById("quotes-list-panel")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    }, 80);
+
   }
 
   return (
     <div className="two-columns wide-left">
-      <section className="card">
+      <section id="quotes-list-panel" className="card">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Devis</p>
