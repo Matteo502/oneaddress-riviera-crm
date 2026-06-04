@@ -1580,7 +1580,16 @@ export default function CRMApp() {
         } as CRMData;
 
         setData(nextData);
-        window.alert("Import JSON réussi.");
+
+        if (Array.isArray((parsed as { quotes?: unknown }).quotes)) {
+          const importedQuotes = ((parsed as { quotes?: unknown }).quotes as unknown[])
+            .map(normalizeQuoteRequest)
+            .filter((quote): quote is QuoteRequest => Boolean(quote));
+
+          saveQuotesToBrowser(importedQuotes);
+        }
+
+        window.alert("Import JSON réussi. Recharge la page pour afficher les devis restaurés.");
       } catch (error) {
         window.alert("Import impossible : le fichier JSON n’est pas valide.");
       } finally {
