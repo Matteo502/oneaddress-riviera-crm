@@ -1853,6 +1853,70 @@ function planningRangesOverlap(startA: string, endA: string, startB: string, end
   return planningDateValue(startA) <= planningDateValue(endB) && planningDateValue(startB) <= planningDateValue(endA);
 }
 
+function formatPlanningDateValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatPlanningMonthValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+
+  return `${year}-${month}`;
+}
+
+function getPlanningMonthTitle(monthValue: string) {
+  const [yearText, monthText] = monthValue.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+
+  if (!Number.isFinite(year) || !Number.isFinite(month)) {
+    return "Mois invalide";
+  }
+
+  return new Intl.DateTimeFormat("fr-FR", {
+    month: "long",
+    year: "numeric"
+  }).format(new Date(year, month - 1, 1));
+}
+
+function getPlanningCalendarWeeks(monthValue: string) {
+  const [yearText, monthText] = monthValue.split("-");
+  const today = new Date();
+
+  const year = Number.isFinite(Number(yearText)) ? Number(yearText) : today.getFullYear();
+  const monthIndex = Number.isFinite(Number(monthText)) ? Number(monthText) - 1 : today.getMonth();
+
+  const firstDay = new Date(year, monthIndex, 1);
+  const lastDay = new Date(year, monthIndex + 1, 0);
+
+  const leadingEmptyDays = (firstDay.getDay() + 6) % 7;
+  const cells: Array<{ iso: string; day: number } | null> = Array.from({ length: leadingEmptyDays }, () => null);
+
+  for (let day = 1; day <= lastDay.getDate(); day += 1) {
+    const date = new Date(year, monthIndex, day);
+    cells.push({
+      iso: formatPlanningDateValue(date),
+      day
+    });
+  }
+
+  while (cells.length % 7 !== 0) {
+    cells.push(null);
+  }
+
+  const weeks: Array<Array<{ iso: string; day: number } | null>> = [];
+
+  for (let index = 0; index < cells.length; index += 7) {
+    weeks.push(cells.slice(index, index + 7));
+  }
+
+  return weeks;
+}
+
 function PlanningView({
   leads,
   properties,
@@ -1867,6 +1931,7 @@ function PlanningView({
   const [categoryFilter, setCategoryFilter] = useState("Tous");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [calendarMonth, setCalendarMonth] = useState(() => formatPlanningMonthValue(new Date()));
 
   const assets = useMemo<PlanningAsset[]>(() => {
     return [
@@ -1986,6 +2051,37 @@ function PlanningView({
   }
 
   const categories = ["Tous", ...Array.from(new Set(assets.map((asset) => asset.category))).sort()];
+  const calendarWeeks = useMemo(() => getPlanningCalendarWeeks(calendarMonth), [calendarMonth]);
+  const calendarWeekDays = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+
+  const calendarEvents = useMemo(() => {
+    return [
+      ...confirmedBookings.map((booking) => ({
+        ...booking,
+        planningLabel: "Confirmé"
+      })),
+      ...pendingBookings.map((booking) => ({
+        ...booking,
+        planningLabel: booking.status
+      }))
+    ].sort((a, b) => planningDateValue(a.startDate) - planningDateValue(b.startDate));
+  }, [confirmedBookings, pendingBookings]);
+
+  function getEventsForCalendarDay(dayIso: string) {
+    return calendarEvents.filter((event) =>
+      planningRangesOverlap(dayIso, dayIso, event.startDate, event.endDate)
+    );
+  }
+
+  function moveCalendarMonth(offset: number) {
+    const [yearText, monthText] = calendarMonth.split("-");
+    const year = Number(yearText);
+    const month = Number(monthText);
+
+    if (!Number.isFinite(year) || !Number.isFinite(month)) return;
+
+    setCalendarMonth(formatPlanningMonthValue(new Date(year, month - 1 + offset, 1)));
+  }
 
   return (
     <div className="stack">
@@ -2026,6 +2122,79 @@ function PlanningView({
             Reset
           </button>
         </form>
+      </section>
+
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Calendrier mensuel</p>
+            <h3>{getPlanningMonthTitle(calendarMonth)}</h3>
+          </div>
+
+          <div className="quote-actions">
+            <button className="ghost-button" type="button" onClick={() => moveCalendarMonth(-1)}>
+              Mois précédent
+            </button>
+
+            <button className="ghost-button" type="button" onClick={() => moveCalendarMonth(1)}>
+              Mois suivant
+            </button>
+          </div>
+        </div>
+
+        <form className="form-grid compact">
+          <label>Mois
+            <input type="month" value={calendarMonth} onChange={(event) => setCalendarMonth(event.target.value)} />
+          </label>
+        </form>
+
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                {calendarWeekDays.map((day) => (
+                  <th key={day}>{day}</th>
+                ))}
+              </tr>
+            </thead>
+
+            <tbody>
+              {calendarWeeks.map((week, weekIndex) => (
+                <tr key={`week-${weekIndex}`}>
+                  {week.map((day, dayIndex) => {
+                    const events = day ? getEventsForCalendarDay(day.iso) : [];
+
+                    return (
+                      <td key={`${weekIndex}-${dayIndex}`}>
+                        {day ? (
+                          <div>
+                            <strong>{day.day}</strong>
+
+                            {events.length === 0 ? (
+                              <span className="muted-line">Disponible</span>
+                            ) : (
+                              events.slice(0, 4).map((event) => (
+                                <span className="muted-line" key={event.id}>
+                                  {event.assetLabel} · {event.contactName} · {event.planningLabel}
+                                </span>
+                              ))
+                            )}
+
+                            {events.length > 4 && (
+                              <small>+ {events.length - 4} autre{events.length - 4 > 1 ? "s" : ""}</small>
+                            )}
+                          </div>
+                        ) : (
+                          <span />
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="card">
