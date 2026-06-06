@@ -27,7 +27,7 @@ const boatStatuses: BoatStatus[] = ["Disponible", "En charter", "En maintenance"
 const taskStatuses: TaskStatus[] = ["À faire", "En cours", "Terminé"];
 const contactKinds: ContactKind[] = ["Client", "Propriétaire", "Partenaire"];
 
-type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "properties" | "vehicles" | "boats";
+type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "planning" | "properties" | "vehicles" | "boats";
 
 type Toast = {
   message: string;
@@ -1663,6 +1663,7 @@ export default function CRMApp() {
         <NavButton label="Leads" icon="▣" active={activeTab === "leads"} onClick={() => setActiveTab("leads")} />
         <NavButton label="Tâches" icon="✓" active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} />
         <NavButton label="Devis" icon="◈" active={activeTab === "quotes"} onClick={() => setActiveTab("quotes")} />
+        <NavButton label="Planning" icon="▦" active={activeTab === "planning"} onClick={() => setActiveTab("planning")} />
         <NavButton label="Biens" icon="⌂" active={activeTab === "properties"} onClick={() => setActiveTab("properties")} />
         <NavButton label="Voitures" icon="◇" active={activeTab === "vehicles"} onClick={() => setActiveTab("vehicles")} />
         <NavButton label="Bateaux" icon="≈" active={activeTab === "boats"} onClick={() => setActiveTab("boats")} />
@@ -1801,6 +1802,7 @@ function titleForTab(tab: Tab) {
     leads: "Pipeline leads",
     tasks: "Tâches",
     quotes: "Devis",
+    planning: "Planning",
     properties: "Biens",
     vehicles: "Voitures",
     boats: "Bateaux"
@@ -1812,6 +1814,252 @@ function searchMatch(query: string, fields: Array<string | number>) {
   const needle = query.trim().toLowerCase();
   if (!needle) return true;
   return fields.some((field) => String(field).toLowerCase().includes(needle));
+}
+
+
+type PlanningAsset = {
+  id: string;
+  type: "Property" | "Vehicle" | "Boat";
+  label: string;
+  category: string;
+  location: string;
+};
+
+function isValidPlanningDate(value?: string) {
+  if (!value) return false;
+
+  const date = new Date(`${value}T00:00:00`);
+  return !Number.isNaN(date.getTime());
+}
+
+function planningDateValue(value: string) {
+  return new Date(`${value}T00:00:00`).getTime();
+}
+
+function planningRangesOverlap(startA: string, endA: string, startB: string, endB: string) {
+  if (!isValidPlanningDate(startA) || !isValidPlanningDate(endA) || !isValidPlanningDate(startB) || !isValidPlanningDate(endB)) {
+    return false;
+  }
+
+  return planningDateValue(startA) <= planningDateValue(endB) && planningDateValue(startB) <= planningDateValue(endA);
+}
+
+function PlanningView({
+  leads,
+  properties,
+  vehicles,
+  boats
+}: {
+  leads: Lead[];
+  properties: Property[];
+  vehicles: Vehicle[];
+  boats: Boat[];
+}) {
+  const [categoryFilter, setCategoryFilter] = useState("Tous");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const assets = useMemo<PlanningAsset[]>(() => {
+    return [
+      ...properties.map((property) => ({
+        id: property.id,
+        type: "Property" as const,
+        label: getPropertyDisplayName(property),
+        category: property.type || "Bien",
+        location: property.city || "Lieu non renseigné"
+      })),
+      ...vehicles.map((vehicle) => ({
+        id: vehicle.id,
+        type: "Vehicle" as const,
+        label: vehicle.name || `${vehicle.brand} ${vehicle.model}`.trim() || "Voiture sans nom",
+        category: "Voiture",
+        location: vehicle.city || "Lieu non renseigné"
+      })),
+      ...boats.map((boat) => ({
+        id: boat.id,
+        type: "Boat" as const,
+        label: boat.name || "Bateau sans nom",
+        category: "Bateau",
+        location: boat.port || "Port non renseigné"
+      }))
+    ];
+  }, [properties, vehicles, boats]);
+
+  const confirmedBookings = useMemo(() => {
+    return leads
+      .filter((lead) =>
+        lead.status === "Gagné" &&
+        Boolean(lead.assetType) &&
+        Boolean(lead.assetId) &&
+        isValidPlanningDate(lead.rentalStartDate) &&
+        isValidPlanningDate(lead.rentalEndDate)
+      )
+      .map((lead) => {
+        const asset = assets.find((item) => item.type === lead.assetType && item.id === lead.assetId);
+
+        return {
+          id: lead.id,
+          assetType: lead.assetType,
+          assetId: lead.assetId,
+          assetLabel: asset?.label ?? lead.assetId,
+          assetCategory: asset?.category ?? lead.category,
+          contactName: lead.contactName,
+          startDate: lead.rentalStartDate,
+          endDate: lead.rentalEndDate,
+          value: lead.value,
+          nextAction: lead.nextAction
+        };
+      })
+      .sort((a, b) => planningDateValue(a.startDate) - planningDateValue(b.startDate));
+  }, [leads, assets]);
+
+  const visibleAssets = assets.filter((asset) => {
+    if (categoryFilter === "Tous") return true;
+    return asset.category === categoryFilter;
+  });
+
+  const selectedStartDate = startDate;
+  const selectedEndDate = endDate || startDate;
+  const hasSelectedPeriod = isValidPlanningDate(selectedStartDate) && isValidPlanningDate(selectedEndDate);
+
+  function getBookingsForAsset(asset: PlanningAsset) {
+    return confirmedBookings.filter((booking) => booking.assetType === asset.type && booking.assetId === asset.id);
+  }
+
+  function getAvailabilityLabel(asset: PlanningAsset) {
+    if (!hasSelectedPeriod) return "Choisissez des dates";
+
+    const hasOverlap = getBookingsForAsset(asset).some((booking) =>
+      planningRangesOverlap(selectedStartDate, selectedEndDate, booking.startDate, booking.endDate)
+    );
+
+    return hasOverlap ? "Occupé" : "Disponible";
+  }
+
+  const categories = ["Tous", ...Array.from(new Set(assets.map((asset) => asset.category))).sort()];
+
+  return (
+    <div className="stack">
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Planning</p>
+            <h3>Disponibilités & locations confirmées</h3>
+          </div>
+        </div>
+
+        <form className="form-grid compact">
+          <label>Catégorie
+            <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+              {categories.map((category) => (
+                <option key={category}>{category}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>Date début
+            <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+          </label>
+
+          <label>Date fin
+            <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+          </label>
+
+          <button
+            className="ghost-button"
+            type="button"
+            onClick={() => {
+              setCategoryFilter("Tous");
+              setStartDate("");
+              setEndDate("");
+            }}
+          >
+            Reset
+          </button>
+        </form>
+      </section>
+
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Disponibilités</p>
+            <h3>{visibleAssets.length} actif{visibleAssets.length > 1 ? "s" : ""}</h3>
+          </div>
+        </div>
+
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Actif</th>
+                <th>Catégorie</th>
+                <th>Lieu</th>
+                <th>Statut période</th>
+                <th>Prochaines locations</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {visibleAssets.map((asset) => {
+                const bookings = getBookingsForAsset(asset);
+
+                return (
+                  <tr key={`${asset.type}-${asset.id}`}>
+                    <td>
+                      <strong>{asset.label}</strong>
+                      <small>{bookings.length} réservation{bookings.length > 1 ? "s" : ""} confirmée{bookings.length > 1 ? "s" : ""}</small>
+                    </td>
+                    <td>{asset.category}</td>
+                    <td>{asset.location}</td>
+                    <td>
+                      <Badge>{getAvailabilityLabel(asset)}</Badge>
+                    </td>
+                    <td>
+                      {bookings.length === 0 ? (
+                        <span className="muted-line">Aucune location confirmée</span>
+                      ) : (
+                        bookings.slice(0, 3).map((booking) => (
+                          <span className="muted-line" key={booking.id}>
+                            {formatDateFR(booking.startDate)} → {formatDateFR(booking.endDate)} · {booking.contactName}
+                          </span>
+                        ))
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Locations confirmées</p>
+            <h3>{confirmedBookings.length} réservation{confirmedBookings.length > 1 ? "s" : ""}</h3>
+          </div>
+        </div>
+
+        <div className="list-stack">
+          {confirmedBookings.length === 0 ? (
+            <p className="muted-line">Aucune location confirmée pour le moment. Passe un lead en statut Gagné avec des dates et un actif lié pour l’afficher ici.</p>
+          ) : (
+            confirmedBookings.map((booking) => (
+              <article className="mini-row" key={booking.id}>
+                <div>
+                  <strong>{booking.assetLabel}</strong>
+                  <span>{booking.contactName} · {formatDateFR(booking.startDate)} → {formatDateFR(booking.endDate)}</span>
+                  <span>{booking.assetCategory} · {currency.format(booking.value)}</span>
+                </div>
+                <Badge>Confirmé</Badge>
+              </article>
+            ))
+          )}
+        </div>
+      </section>
+    </div>
+  );
 }
 
 function Dashboard({
