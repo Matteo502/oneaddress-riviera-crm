@@ -1763,6 +1763,22 @@ export default function CRMApp() {
   }
 
 
+  function createTaskDraftFromFollowUp(recommendation: FollowUpRecommendation) {
+    setTaskDraftLeadId(recommendation.leadId ?? "");
+    setTaskDraftTitle(recommendation.title);
+    setActiveTab("tasks");
+
+    window.setTimeout(() => {
+      document.getElementById("task-create-form")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    }, 120);
+
+    notify("Tâche de relance prête.");
+  }
+
+
   function updateTask(updatedTask: Task) {
     setData((current) => ({
       ...current,
@@ -1962,11 +1978,21 @@ export default function CRMApp() {
         </header>
 
         {activeTab === "dashboard" && (
-          <Dashboard
-            stats={stats}
-            data={data}
-            onLeadStatusChange={updateLeadStatus}
-            onTaskStatusChange={updateTaskStatus} />
+          <>
+            <FollowUpsPanel
+              leads={data.leads}
+              tasks={data.tasks}
+              quotes={loadSavedQuotes()}
+              onCreateTask={createTaskDraftFromFollowUp}
+            />
+
+            <Dashboard
+              stats={stats}
+              data={data}
+              onLeadStatusChange={updateLeadStatus}
+              onTaskStatusChange={updateTaskStatus}
+            />
+          </>
         )}
 
         {activeTab === "contacts" && (
@@ -2663,6 +2689,141 @@ function PlanningView({
         </div>
       </section>
     </div>
+  );
+}
+
+
+type FollowUpRecommendation = {
+  id: string;
+  title: string;
+  detail: string;
+  priority: "Haute" | "Moyenne";
+  leadId?: string;
+};
+
+function getQuoteAgeDays(createdAt: string) {
+  if (!createdAt) return 0;
+
+  const createdDate = new Date(createdAt);
+
+  if (Number.isNaN(createdDate.getTime())) return 0;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  createdDate.setHours(0, 0, 0, 0);
+
+  return Math.max(0, Math.floor((today.getTime() - createdDate.getTime()) / 86400000));
+}
+
+function FollowUpsPanel({
+  leads,
+  tasks,
+  quotes,
+  onCreateTask
+}: {
+  leads: Lead[];
+  tasks: Task[];
+  quotes: QuoteRequest[];
+  onCreateTask: (recommendation: FollowUpRecommendation) => void;
+}) {
+  const recommendations = useMemo<FollowUpRecommendation[]>(() => {
+    const items: FollowUpRecommendation[] = [];
+
+    const openTaskLeadIds = new Set(
+      tasks
+        .filter((task) => task.status !== "Terminé" && task.linkedTo)
+        .map((task) => task.linkedTo)
+    );
+
+    leads.forEach((lead) => {
+      if (lead.status === "Gagné" || lead.status === "Perdu") return;
+
+      const hasOpenTask = openTaskLeadIds.has(lead.id);
+      const dueStatus = getDueStatus(lead.dueDate);
+
+      if (!hasOpenTask && (dueStatus === "overdue" || dueStatus === "today")) {
+        items.push({
+          id: `lead-due-${lead.id}`,
+          title: `Relancer ${lead.contactName}`,
+          detail: `${lead.category} · ${lead.status} · ${getDueLabel(lead.dueDate)}`,
+          priority: dueStatus === "overdue" ? "Haute" : "Moyenne",
+          leadId: lead.id
+        });
+      }
+
+      if (!hasOpenTask && !lead.nextAction?.trim()) {
+        items.push({
+          id: `lead-action-${lead.id}`,
+          title: `Définir la prochaine action pour ${lead.contactName}`,
+          detail: `${lead.category} · ${lead.status} · aucune prochaine action renseignée`,
+          priority: "Moyenne",
+          leadId: lead.id
+        });
+      }
+    });
+
+    quotes.forEach((quote) => {
+      const status = getQuoteStatus(quote.status);
+      const ageDays = getQuoteAgeDays(quote.createdAt);
+
+      if (status === "Sent" && ageDays >= 2) {
+        items.push({
+          id: `quote-sent-${quote.id}`,
+          title: `Relancer le devis de ${quote.clientName}`,
+          detail: `${quote.title || "Devis"} · envoyé depuis ${ageDays} jour${ageDays > 1 ? "s" : ""}`,
+          priority: "Haute"
+        });
+      }
+
+      if (status === "Accepted") {
+        items.push({
+          id: `quote-accepted-${quote.id}`,
+          title: `Organiser la suite pour ${quote.clientName}`,
+          detail: `${quote.title || "Devis accepté"} · préparer confirmation, paiement et logistique`,
+          priority: "Haute"
+        });
+      }
+    });
+
+    return items.slice(0, 8);
+  }, [leads, tasks, quotes]);
+
+  return (
+    <section className="card">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Relances recommandées</p>
+          <h3>{recommendations.length} action{recommendations.length > 1 ? "s" : ""} à traiter</h3>
+        </div>
+      </div>
+
+      <div className="list-stack">
+        {recommendations.length === 0 ? (
+          <p className="muted-line">Aucune relance urgente pour le moment.</p>
+        ) : (
+          recommendations.map((recommendation) => (
+            <article className="mini-row" key={recommendation.id}>
+              <div>
+                <strong>{recommendation.title}</strong>
+                <span>{recommendation.detail}</span>
+              </div>
+
+              <div className="quote-actions">
+                <Badge>{recommendation.priority}</Badge>
+
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => onCreateTask(recommendation)}
+                >
+                  Créer tâche
+                </button>
+              </div>
+            </article>
+          ))
+        )}
+      </div>
+    </section>
   );
 }
 
