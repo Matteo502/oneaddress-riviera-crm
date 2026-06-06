@@ -1991,12 +1991,6 @@ export default function CRMApp() {
             exportCRMAsCsv(data);
             notify("Export CSV téléchargé.");
           }}>Exporter CSV</button>
-          <button className="lead-reset-button filter-reset-button ghost-button" onClick={() => {
-              const confirmed = window.confirm("Réinitialiser les données de démonstration ? Cette action remplacera les données locales actuelles.");
-              if (!confirmed) return;
-              setData(seedData);
-              notify("Données de démonstration réinitialisées.");
-            }}></button>
           </div>
         </header>
 
@@ -3759,19 +3753,6 @@ function LeadsView({
               <option value="Haute">Haute</option>
             </select>
           </label>
-
-          <button
-            className="lead-reset-button filter-reset-button ghost-button"
-            type="button"
-            disabled={!filtersAreActive}
-            onClick={() => {
-              setLeadCategoryFilter("Toutes");
-              setLeadStatusFilter("Tous");
-              setLeadPriorityFilter("Toutes");
-              setLeadDueFilter("Tous");
-              setLeadActionFilter("Tous");
-            }}
-          >Reset</button>
         </div>
       </section>
 
@@ -4140,11 +4121,6 @@ function PropertiesView({
             <label>Ville
               <input value={propertyCityFilter} onChange={(event) => setPropertyCityFilter(event.target.value)} placeholder="Cannes, Nice..." />
             </label>
-
-            <button className="lead-reset-button filter-reset-button ghost-button" type="button" onClick={() => {
-              setPropertyStatusFilter("Tous");
-              setPropertyCityFilter("");
-            }}>Reset</button>
           </div>
         </div>
 
@@ -4388,11 +4364,6 @@ function VehiclesView({
             <label>Ville
               <input value={vehicleCityFilter} onChange={(event) => setVehicleCityFilter(event.target.value)} placeholder="Cannes, Monaco..." />
             </label>
-
-            <button className="lead-reset-button filter-reset-button ghost-button" type="button" onClick={() => {
-              setVehicleStatusFilter("Tous");
-              setVehicleCityFilter("");
-            }}>Reset</button>
           </div>
         </div>
 
@@ -4629,11 +4600,6 @@ function BoatsView({
             <label>Port
               <input value={boatPortFilter} onChange={(event) => setBoatPortFilter(event.target.value)} placeholder="Cannes, Antibes..." />
             </label>
-
-            <button className="lead-reset-button filter-reset-button ghost-button" type="button" onClick={() => {
-              setBoatStatusFilter("Tous");
-              setBoatPortFilter("");
-            }}>Reset</button>
           </div>
         </div>
 
