@@ -1776,6 +1776,71 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     saveQuickEntryText(quickEntryText);
   }
 
+
+  async function saveCrmBackupToSupabase() {
+    const currentData = data as any;
+
+    const contactsCount = Array.isArray(currentData.contacts) ? currentData.contacts.length : 0;
+    const leadsCount = Array.isArray(currentData.leads) ? currentData.leads.length : 0;
+    const propertiesCount = Array.isArray(currentData.properties) ? currentData.properties.length : 0;
+    const vehiclesCount = Array.isArray(currentData.vehicles) ? currentData.vehicles.length : 0;
+    const boatsCount = Array.isArray(currentData.boats) ? currentData.boats.length : 0;
+    const tasksCount = Array.isArray(currentData.tasks) ? currentData.tasks.length : 0;
+    const quotesCount = Array.isArray(currentData.quotes) ? currentData.quotes.length : 0;
+
+    const total =
+      contactsCount +
+      leadsCount +
+      propertiesCount +
+      vehiclesCount +
+      boatsCount +
+      tasksCount +
+      quotesCount;
+
+    if (total === 0) {
+      window.alert("Sauvegarde refusée : le CRM est vide.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Créer une sauvegarde Supabase ?\n\nContacts: ${contactsCount}\nLeads: ${leadsCount}\nBiens: ${propertiesCount}\nVoitures: ${vehiclesCount}\nBateaux: ${boatsCount}\nTâches: ${tasksCount}\nDevis: ${quotesCount}`
+    );
+
+    if (!confirmed) return;
+
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !userData.user) {
+      window.alert("Sauvegarde impossible : utilisateur Supabase non connecté.");
+      return;
+    }
+
+    const payload = {
+      version: "oneaddress-riviera-crm-v1",
+      savedAt: new Date().toISOString(),
+      data: currentData
+    };
+
+    const { error } = await supabase.from("crm_backups").insert({
+      user_id: userData.user.id,
+      payload,
+      contacts_count: contactsCount,
+      leads_count: leadsCount,
+      properties_count: propertiesCount,
+      vehicles_count: vehiclesCount,
+      boats_count: boatsCount,
+      tasks_count: tasksCount,
+      quotes_count: quotesCount
+    });
+
+    if (error) {
+      window.alert(`Erreur sauvegarde Supabase : ${error.message}`);
+      return;
+    }
+
+    window.alert("Sauvegarde Supabase créée.");
+  }
+
   function exportJson() {
     const exportPayload = {
       ...data,
@@ -2243,10 +2308,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             <button className="secondary-button" type="button" onClick={onLogout}>Déconnexion</button>
             <button className="secondary-button" type="button" onClick={openQuickEntryPrompt}>Saisie rapide</button>
             <button className="secondary-button" onClick={exportJson}>Backup JSON</button>
-            <label className="ghost-button import-json-button">
-              Importer JSON
-              <input type="file" accept="application/json,.json" onChange={handleImportJson} />
-            </label>
+            <button className="secondary-button" type="button" onClick={saveCrmBackupToSupabase}>Sauvegarder Supabase</button>
+            
             <button className="secondary-button" onClick={() => {
             exportCRMAsCsv(data);
             notify("Export CSV téléchargé.");
