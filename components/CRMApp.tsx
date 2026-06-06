@@ -894,7 +894,79 @@ function openQuotePdf(quote: QuoteRequest) {
       <span>Private Riviera Experiences</span>
       <span>contact@oneaddressriviera.com</span>
     </footer>
-  </main>
+  
+        {quickEntryOpen && (
+          <section className="quick-entry-panel" style={{
+            position: "fixed",
+            top: 90,
+            right: 32,
+            zIndex: 50,
+            width: "min(520px, calc(100vw - 48px))",
+            maxHeight: "calc(100vh - 130px)",
+            overflow: "auto",
+            background: "#f7f1e7",
+            border: "1px solid rgba(160, 120, 70, 0.35)",
+            boxShadow: "0 24px 80px rgba(0,0,0,0.25)",
+            padding: 24
+          }}>
+            <div className="eyebrow">Saisie rapide</div>
+            <h2>Créer contact + lead</h2>
+
+            <p className="muted-line">
+              Colle un email, WhatsApp ou note client. Le CRM prépare automatiquement les champs principaux.
+            </p>
+
+            <textarea
+              value={quickEntryText}
+              onChange={(event) => setQuickEntryText(event.target.value)}
+              placeholder={"Exemple :\nClient : Heily Aavik\nRecherche villa à Super Cannes\nDates : 22/07/2026 au 29/07/2026\nBudget : 18 000 €\nBesoin : 5 chambres, proche Cannes"}
+              style={{
+                width: "100%",
+                minHeight: 180,
+                marginTop: 16,
+                padding: 14,
+                border: "1px solid rgba(160, 120, 70, 0.35)",
+                background: "#fffaf2"
+              }}
+            />
+
+            {quickEntryText.trim() && (
+              <div style={{
+                marginTop: 16,
+                padding: 14,
+                background: "rgba(255,255,255,0.55)",
+                border: "1px solid rgba(160, 120, 70, 0.25)"
+              }}>
+                {(() => {
+                  const draft = parseQuickEntryText(quickEntryText);
+
+                  return (
+                    <>
+                      <div><strong>Contact :</strong> {draft.contactName}</div>
+                      <div><strong>Catégorie :</strong> {draft.category}</div>
+                      <div><strong>Ville / lieu :</strong> {draft.destination || "À qualifier"}</div>
+                      <div><strong>Email :</strong> {draft.email || "À qualifier"}</div>
+                      <div><strong>Téléphone :</strong> {draft.phone || "À qualifier"}</div>
+                      <div><strong>Budget :</strong> {draft.budget ? draft.budget.toLocaleString("fr-FR") + " €" : "À qualifier"}</div>
+                      <div><strong>Dates :</strong> {draft.rentalStartDate || "?"} → {draft.rentalEndDate || "?"}</div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 12, marginTop: 18, justifyContent: "flex-end" }}>
+              <button className="secondary-button" type="button" onClick={() => setQuickEntryOpen(false)}>
+                Annuler
+              </button>
+              <button className="primary-button" type="button" onClick={createQuickEntry}>
+                Créer
+              </button>
+            </div>
+          </section>
+        )}
+
+</main>
 
   <script>
     window.onload = () => {
@@ -1363,6 +1435,9 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
 function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
 
+  const [quickEntryText, setQuickEntryText] = useState("");
+  const [quickEntryOpen, setQuickEntryOpen] = useState(false);
+
   // AUTO_SCROLL_LEAD_DETAILS
   useEffect(() => {
     if (activeTab !== "leads") return;
@@ -1530,6 +1605,159 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
 
 
 
+
+
+  function normalizeQuickEntryDate(value: string) {
+    const match = value.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);
+    if (!match) return "";
+
+    const day = match[1].padStart(2, "0");
+    const month = match[2].padStart(2, "0");
+    const rawYear = match[3];
+    const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
+
+    return `${year}-${month}-${day}`;
+  }
+
+  function parseQuickEntryText(text: string) {
+    const raw = text.trim();
+    const lower = raw.toLowerCase();
+
+    const email = raw.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] ?? "";
+    const phone = raw.match(/(\+?\d[\d\s().-]{7,}\d)/)?.[0]?.trim() ?? "";
+
+    const budgetMatch = raw.match(/(?:budget|prix|valeur|montant)\s*[:\-]?\s*([\d\s.,]+)\s*€?/i)
+      ?? raw.match(/([\d\s]{4,})\s*€/);
+
+    const budget = budgetMatch
+      ? Number(String(budgetMatch[1]).replace(/[^\d]/g, ""))
+      : 0;
+
+    const explicitName = raw.match(/(?:client|nom|contact)\s*[:\-]\s*([^\n]+)/i)?.[1]?.trim();
+
+    const fallbackName = raw
+      .split(/\n/)
+      .map((line) => line.trim())
+      .find((line) =>
+        line.length > 2 &&
+        line.length < 60 &&
+        !line.includes("@") &&
+        !/budget|prix|date|villa|bateau|voiture|conciergerie|message|note/i.test(line)
+      );
+
+    const contactName = explicitName || fallbackName || "Contact à qualifier";
+
+    const destination =
+      raw.match(/(?:ville|lieu|destination|secteur)\s*[:\-]\s*([^\n]+)/i)?.[1]?.trim()
+      || (lower.includes("super cannes") ? "Super Cannes" : "")
+      || (lower.includes("cannes") ? "Cannes" : "");
+
+    const category =
+      lower.includes("bateau") || lower.includes("yacht") ? "Yacht"
+      : lower.includes("voiture") || lower.includes("car") ? "Voiture"
+      : lower.includes("conciergerie") ? "Conciergerie"
+      : "Villa";
+
+    const dateMatches = [...raw.matchAll(/\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}/g)].map((m) => m[0]);
+    const rentalStartDate = dateMatches[0] ? normalizeQuickEntryDate(dateMatches[0]) : "";
+    const rentalEndDate = dateMatches[1] ? normalizeQuickEntryDate(dateMatches[1]) : "";
+
+    const bedroomsMatch = raw.match(/(\d+)\s*(?:chambres|chambre|beds|bedrooms)/i);
+    const peopleMatch = raw.match(/(\d+)\s*(?:personnes|pax|guests|adultes|adults)/i);
+
+    const nextAction =
+      category === "Villa"
+        ? "Qualifier dates, destination, nombre de personnes, chambres, budget réel et critères prioritaires."
+        : category === "Yacht"
+          ? "Qualifier dates, port, nombre de personnes, durée, budget et type de bateau."
+          : category === "Voiture"
+            ? "Qualifier dates, lieu de livraison, modèle souhaité, budget et assurance."
+            : "Qualifier besoin conciergerie, dates, lieu, urgence et budget.";
+
+    const notes = [
+      raw,
+      bedroomsMatch ? `Chambres détectées : ${bedroomsMatch[1]}` : "",
+      peopleMatch ? `Personnes détectées : ${peopleMatch[1]}` : ""
+    ].filter(Boolean).join("\\n\\n");
+
+    return {
+      contactName,
+      email,
+      phone,
+      budget,
+      destination,
+      category,
+      rentalStartDate,
+      rentalEndDate,
+      nextAction,
+      notes
+    };
+  }
+
+  function createQuickEntry() {
+    const draft = parseQuickEntryText(quickEntryText);
+
+    if (!quickEntryText.trim()) {
+      window.alert("Colle d’abord un message client.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Créer un contact + lead pour : ${draft.contactName} ?`
+    );
+
+    if (!confirmed) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const contactId = crypto.randomUUID();
+    const leadId = crypto.randomUUID();
+
+    const newContact = {
+      id: contactId,
+      name: draft.contactName,
+      kind: "Client",
+      email: draft.email,
+      phone: draft.phone,
+      city: draft.destination,
+      postalAddress: "",
+      budget: draft.budget,
+      source: "Saisie rapide",
+      notes: draft.notes,
+      clientLevel: "Standard",
+      preferredLanguage: "Français",
+      relationshipStatus: "Prospect",
+      preferences: "",
+      importantNotes: "",
+      createdAt: today
+    } as any;
+
+    const newLead = {
+      id: leadId,
+      category: draft.category,
+      contactName: draft.contactName,
+      assetType: "",
+      assetId: "",
+      status: "Nouveau",
+      value: draft.budget,
+      priority: "Moyenne",
+      nextAction: draft.nextAction,
+      notes: draft.notes,
+      dueDate: today,
+      rentalStartDate: draft.rentalStartDate,
+      rentalEndDate: draft.rentalEndDate
+    } as any;
+
+    setData((current: any) => ({
+      ...current,
+      contacts: [newContact, ...(current.contacts ?? [])],
+      leads: [newLead, ...(current.leads ?? [])]
+    }));
+
+    setQuickEntryText("");
+    setQuickEntryOpen(false);
+
+    notify("Contact et lead créés depuis la saisie rapide.");
+  }
 
   function exportJson() {
     const exportPayload = {
