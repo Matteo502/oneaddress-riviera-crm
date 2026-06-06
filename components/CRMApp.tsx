@@ -26,6 +26,9 @@ const vehicleStatuses: VehicleStatus[] = ["Disponible", "En location", "En maint
 const boatStatuses: BoatStatus[] = ["Disponible", "En charter", "En maintenance", "Vendu"];
 const taskStatuses: TaskStatus[] = ["À faire", "En cours", "Terminé"];
 const contactKinds: ContactKind[] = ["Client", "Propriétaire", "Partenaire"];
+const contactLevels = ["Standard", "VIP", "Ultra VIP"] as const;
+const contactLanguages = ["Français", "Anglais", "Italien", "Autre"] as const;
+const contactRelationshipStatuses = ["Prospect", "Actif", "Dormant"] as const;
 
 type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "planning" | "properties" | "vehicles" | "boats";
 
@@ -136,6 +139,20 @@ function formatReservationPeriod(start?: string, end?: string) {
 }
 
 
+function getContactClientLevel(contact: Contact) {
+  return contact.clientLevel || "Standard";
+}
+
+function getContactPreferredLanguage(contact: Contact) {
+  return contact.preferredLanguage || "Français";
+}
+
+function getContactRelationshipStatus(contact: Contact) {
+  return contact.relationshipStatus || "Prospect";
+}
+
+
+
 function csvEscape(value: unknown) {
   const stringValue = String(value ?? "");
   const escaped = stringValue.replace(/"/g, '""');
@@ -170,16 +187,21 @@ function exportCRMAsCsv(data: CRMData) {
   const sections = [
     {
       title: "CONTACTS",
-      headers: ["Nom", "Type", "Email", "Téléphone", "Ville", "Adresse postale", "Budget", "Source", "Notes"],
+      headers: ["Nom", "Type", "Niveau client", "Langue", "Relation", "Email", "Téléphone", "Ville", "Adresse postale", "Budget", "Source", "Préférences", "Notes importantes", "Notes"],
       rows: data.contacts.map((contact) => [
         contact.name,
         contact.kind,
+        getContactClientLevel(contact),
+        getContactPreferredLanguage(contact),
+        getContactRelationshipStatus(contact),
         contact.email,
         contact.phone,
         contact.city,
         contact.postalAddress,
         contact.budget,
         contact.source,
+        contact.preferences ?? "",
+        contact.importantNotes ?? "",
         contact.notes
       ])
     },
@@ -1531,6 +1553,11 @@ export default function CRMApp() {
       budget: safeNumber(form.get("budget")),
       source: String(form.get("source") ?? "").trim() || "Direct",
       notes: String(form.get("notes") ?? "").trim(),
+      clientLevel: String(form.get("clientLevel") ?? "Standard") as NonNullable<Contact["clientLevel"]>,
+      preferredLanguage: String(form.get("preferredLanguage") ?? "Français") as NonNullable<Contact["preferredLanguage"]>,
+      relationshipStatus: String(form.get("relationshipStatus") ?? "Prospect") as NonNullable<Contact["relationshipStatus"]>,
+      preferences: String(form.get("preferences") ?? "").trim(),
+      importantNotes: String(form.get("importantNotes") ?? "").trim(),
       createdAt: new Date().toISOString().slice(0, 10)
     };
     if (!contact.name) return notify("Ajoutez au minimum un nom de contact.", "warning");
@@ -2972,7 +2999,12 @@ function ContactsView({
       postalAddress: String(form.get("postalAddress") ?? "").trim(),
       budget: safeNumber(form.get("budget")),
       source: String(form.get("source") ?? "").trim(),
-      notes: String(form.get("notes") ?? "").trim()
+      notes: String(form.get("notes") ?? "").trim(),
+      clientLevel: String(form.get("clientLevel") ?? getContactClientLevel(editingContact)) as NonNullable<Contact["clientLevel"]>,
+      preferredLanguage: String(form.get("preferredLanguage") ?? getContactPreferredLanguage(editingContact)) as NonNullable<Contact["preferredLanguage"]>,
+      relationshipStatus: String(form.get("relationshipStatus") ?? getContactRelationshipStatus(editingContact)) as NonNullable<Contact["relationshipStatus"]>,
+      preferences: String(form.get("preferences") ?? "").trim(),
+      importantNotes: String(form.get("importantNotes") ?? "").trim()
     };
 
     if (!updatedContact.name) return;
@@ -3017,6 +3049,7 @@ function ContactsView({
                   <td>
                     <strong>{contact.name}</strong>
                     <small>{contact.source || "Source non renseignée"}</small>
+                    <small>{getContactClientLevel(contact)} · {getContactPreferredLanguage(contact)} · {getContactRelationshipStatus(contact)}</small>
                     <small>
                       {getContactLeads(contact).length} lead{getContactLeads(contact).length > 1 ? "s" : ""} · {getContactTasks(contact).length} tâche{getContactTasks(contact).length > 1 ? "s" : ""}
                     </small>
@@ -3117,12 +3150,44 @@ function ContactsView({
             </select>
           </label>
 
+          <label>Niveau client
+            <select name="clientLevel" defaultValue="Standard">
+              {contactLevels.map((level) => (
+                <option key={level} value={level}>{level}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>Langue préférée
+            <select name="preferredLanguage" defaultValue="Français">
+              {contactLanguages.map((language) => (
+                <option key={language} value={language}>{language}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>Relation
+            <select name="relationshipStatus" defaultValue="Prospect">
+              {contactRelationshipStatuses.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+          </label>
+
           <label>Email<input name="email" type="email" placeholder="email@example.com" /></label>
           <label>Téléphone<input name="phone" placeholder="+33..." /></label>
           <label>Ville<input name="city" placeholder="Cannes" /></label>
           <label>Adresse postale<input name="postalAddress" placeholder="12 Boulevard de la Croisette, 06400 Cannes" /></label>
           <label>Budget<input name="budget" type="number" min="0" placeholder="2500000" /></label>
           <label>Source<input name="source" placeholder="Site web, recommandation..." /></label>
+
+          <label className="full">Préférences
+            <textarea name="preferences" placeholder="Villa, bateau, voiture, chauffeur, chef privé, sécurité..." />
+          </label>
+
+          <label className="full">Notes importantes
+            <textarea name="importantNotes" placeholder="Informations à voir immédiatement avant de contacter ce client." />
+          </label>
 
           <label className="full">Notes
             <textarea name="notes" placeholder="Besoins, contexte, prochaines infos à retenir" />
@@ -3150,6 +3215,21 @@ function ContactsView({
               </div>
 
               <div>
+                <span>Niveau client</span>
+                <strong>{getContactClientLevel(selectedContact)}</strong>
+              </div>
+
+              <div>
+                <span>Langue préférée</span>
+                <strong>{getContactPreferredLanguage(selectedContact)}</strong>
+              </div>
+
+              <div>
+                <span>Relation</span>
+                <strong>{getContactRelationshipStatus(selectedContact)}</strong>
+              </div>
+
+              <div>
                 <span>Email</span>
                 <strong>{selectedContact.email || "Non renseigné"}</strong>
               </div>
@@ -3172,6 +3252,16 @@ function ContactsView({
               <div className="full">
                 <span>Adresse postale</span>
                 <strong>{selectedContact.postalAddress || "Non renseignée"}</strong>
+              </div>
+
+              <div className="full">
+                <span>Préférences</span>
+                <p>{selectedContact.preferences || "Aucune préférence renseignée."}</p>
+              </div>
+
+              <div className="full">
+                <span>Notes importantes</span>
+                <p>{selectedContact.importantNotes || "Aucune note importante."}</p>
               </div>
 
               <div className="full">
@@ -3324,12 +3414,44 @@ function ContactsView({
                 </select>
               </label>
 
+              <label>Niveau client
+                <select name="clientLevel" defaultValue={getContactClientLevel(editingContact)}>
+                  {contactLevels.map((level) => (
+                    <option key={level} value={level}>{level}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label>Langue préférée
+                <select name="preferredLanguage" defaultValue={getContactPreferredLanguage(editingContact)}>
+                  {contactLanguages.map((language) => (
+                    <option key={language} value={language}>{language}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label>Relation
+                <select name="relationshipStatus" defaultValue={getContactRelationshipStatus(editingContact)}>
+                  {contactRelationshipStatuses.map((status) => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+              </label>
+
               <label>Email<input name="email" type="email" defaultValue={editingContact.email} /></label>
               <label>Téléphone<input name="phone" defaultValue={editingContact.phone} /></label>
               <label>Ville<input name="city" defaultValue={editingContact.city} /></label>
               <label>Adresse postale<input name="postalAddress" defaultValue={editingContact.postalAddress} /></label>
               <label>Budget<input name="budget" type="number" min="0" defaultValue={editingContact.budget || ""} /></label>
               <label>Source<input name="source" defaultValue={editingContact.source} /></label>
+
+              <label className="full">Préférences
+                <textarea name="preferences" defaultValue={editingContact.preferences ?? ""} />
+              </label>
+
+              <label className="full">Notes importantes
+                <textarea name="importantNotes" defaultValue={editingContact.importantNotes ?? ""} />
+              </label>
 
               <label className="full">Notes
                 <textarea name="notes" defaultValue={editingContact.notes} />

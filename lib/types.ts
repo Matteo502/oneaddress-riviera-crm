@@ -1,4 +1,7 @@
 export type ContactKind = "Client" | "Propriétaire" | "Partenaire";
+export type ContactLevel = "Standard" | "VIP" | "Ultra VIP";
+export type ContactLanguage = "Français" | "Anglais" | "Italien" | "Autre";
+export type ContactRelationshipStatus = "Prospect" | "Actif" | "Dormant";
 export type LeadStatus = "Nouveau" | "Contacté" | "Devis" | "Négociation" | "Gagné" | "Perdu" | "Perdu";
 export type PropertyStatus = "Disponible" | "Mandat en cours" | "Loué" | "Vendu";
 export type VehicleStatus = "Disponible" | "En location" | "En maintenance" | "Vendu";
@@ -16,6 +19,11 @@ export type Contact = {
   budget: number;
   source: string;
   notes: string;
+  clientLevel?: ContactLevel;
+  preferredLanguage?: ContactLanguage;
+  relationshipStatus?: ContactRelationshipStatus;
+  preferences?: string;
+  importantNotes?: string;
   createdAt: string;
 };
 
