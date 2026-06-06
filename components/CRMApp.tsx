@@ -1694,13 +1694,15 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     };
   }
 
-  function createQuickEntry() {
-    const draft = parseQuickEntryText(quickEntryText);
+  function saveQuickEntryText(rawText: string) {
+    const cleanedText = rawText.trim();
 
-    if (!quickEntryText.trim()) {
+    if (!cleanedText) {
       window.alert("Colle d’abord un message client.");
       return;
     }
+
+    const draft = parseQuickEntryText(cleanedText);
 
     const confirmed = window.confirm(
       `Créer un contact + lead pour : ${draft.contactName} ?`
@@ -1757,6 +1759,21 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     setQuickEntryOpen(false);
 
     notify("Contact et lead créés depuis la saisie rapide.");
+  }
+
+  function openQuickEntryPrompt() {
+    const text = window.prompt(
+      "Colle ici le message client, email ou WhatsApp :",
+      quickEntryText || "Client : \nRecherche : \nDates : \nBudget : \nBesoin : "
+    );
+
+    if (!text) return;
+
+    saveQuickEntryText(text);
+  }
+
+  function createQuickEntry() {
+    saveQuickEntryText(quickEntryText);
   }
 
   function exportJson() {
@@ -2224,7 +2241,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             />
             <span className="muted-line">Connecté : {sessionEmail}</span>
             <button className="secondary-button" type="button" onClick={onLogout}>Déconnexion</button>
-            <button className="secondary-button" type="button" onClick={() => setQuickEntryOpen(true)}>Saisie rapide</button>
+            <button className="secondary-button" type="button" onClick={openQuickEntryPrompt}>Saisie rapide</button>
             <button className="secondary-button" onClick={exportJson}>Backup JSON</button>
             <label className="ghost-button import-json-button">
               Importer JSON
