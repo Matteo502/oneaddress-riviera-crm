@@ -2157,7 +2157,7 @@ function PlanningView({
           id: lead.id,
           assetType: lead.assetType,
           assetId: lead.assetId,
-          assetLabel: asset?.label ?? lead.assetId,
+          assetLabel: asset?.label ?? String(lead.assetId ?? "Actif non renseigné"),
           assetCategory: asset?.category ?? lead.category,
           contactName: lead.contactName,
           startDate: lead.rentalStartDate,
@@ -2187,7 +2187,7 @@ function PlanningView({
           status: lead.status,
           assetType: lead.assetType,
           assetId: lead.assetId,
-          assetLabel: asset?.label ?? lead.assetId,
+          assetLabel: asset?.label ?? String(lead.assetId ?? "Actif non renseigné"),
           assetCategory: asset?.category ?? lead.category,
           contactName: lead.contactName,
           startDate: lead.rentalStartDate,
@@ -2249,6 +2249,83 @@ function PlanningView({
     ].sort((a, b) => planningDateValue(a.startDate) - planningDateValue(b.startDate));
   }, [confirmedBookings, pendingBookings]);
 
+  const planningConflicts = useMemo(() => {
+    const usableLeads = leads
+      .filter((lead) =>
+        lead.status !== "Perdu" &&
+        Boolean(lead.assetType) &&
+        Boolean(lead.assetId) &&
+        isValidPlanningDate(lead.rentalStartDate) &&
+        isValidPlanningDate(lead.rentalEndDate)
+      )
+      .map((lead) => {
+        const asset = assets.find((item) => item.type === lead.assetType && item.id === lead.assetId);
+
+        return {
+          id: lead.id,
+          status: lead.status,
+          assetType: lead.assetType,
+          assetId: lead.assetId,
+          assetLabel: asset?.label ?? String(lead.assetId ?? "Actif non renseigné"),
+          contactName: lead.contactName,
+          startDate: lead.rentalStartDate,
+          endDate: lead.rentalEndDate,
+          value: lead.value
+        };
+      });
+
+    const conflicts: Array<{
+      key: string;
+      assetLabel: string;
+      firstContact: string;
+      secondContact: string;
+      firstStatus: LeadStatus;
+      secondStatus: LeadStatus;
+      firstDates: string;
+      secondDates: string;
+      severity: string;
+    }> = [];
+
+    for (let index = 0; index < usableLeads.length; index += 1) {
+      const first = usableLeads[index];
+
+      for (let nextIndex = index + 1; nextIndex < usableLeads.length; nextIndex += 1) {
+        const second = usableLeads[nextIndex];
+
+        if (first.assetType !== second.assetType || first.assetId !== second.assetId) {
+          continue;
+        }
+
+        const overlaps = planningRangesOverlap(
+          first.startDate,
+          first.endDate,
+          second.startDate,
+          second.endDate
+        );
+
+        if (!overlaps) {
+          continue;
+        }
+
+        const hasConfirmed = first.status === "Gagné" || second.status === "Gagné";
+
+        conflicts.push({
+          key: `${first.id}-${second.id}`,
+          assetLabel: first.assetLabel,
+          firstContact: first.contactName,
+          secondContact: second.contactName,
+          firstStatus: first.status,
+          secondStatus: second.status,
+          firstDates: `${formatDateFR(first.startDate)} → ${formatDateFR(first.endDate)}`,
+          secondDates: `${formatDateFR(second.startDate)} → ${formatDateFR(second.endDate)}`,
+          severity: hasConfirmed ? "Conflit confirmé" : "Conflit option"
+        });
+      }
+    }
+
+    return conflicts;
+  }, [leads, assets]);
+
   function getEventsForCalendarDay(dayIso: string) {
     return calendarEvents.filter((event) =>
       planningRangesOverlap(dayIso, dayIso, event.startDate, event.endDate)
@@ -2304,6 +2381,32 @@ function PlanningView({
             Reset
           </button>
         </form>
+      </section>
+
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Conflits planning</p>
+            <h3>{planningConflicts.length} conflit{planningConflicts.length > 1 ? "s" : ""} détecté{planningConflicts.length > 1 ? "s" : ""}</h3>
+          </div>
+        </div>
+
+        <div className="list-stack">
+          {planningConflicts.length === 0 ? (
+            <p className="muted-line">Aucun conflit détecté sur les actifs liés aux leads.</p>
+          ) : (
+            planningConflicts.map((conflict) => (
+              <article className="mini-row" key={conflict.key}>
+                <div>
+                  <strong>{conflict.assetLabel}</strong>
+                  <span>{conflict.firstContact} · {conflict.firstDates} · {conflict.firstStatus}</span>
+                  <span>{conflict.secondContact} · {conflict.secondDates} · {conflict.secondStatus}</span>
+                </div>
+                <Badge>{conflict.severity}</Badge>
+              </article>
+            ))
+          )}
+        </div>
       </section>
 
       <section className="card">
