@@ -2224,6 +2224,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             />
             <span className="muted-line">Connecté : {sessionEmail}</span>
             <button className="secondary-button" type="button" onClick={onLogout}>Déconnexion</button>
+            <button className="secondary-button" type="button" onClick={() => setQuickEntryOpen(true)}>Saisie rapide</button>
             <button className="secondary-button" onClick={exportJson}>Backup JSON</button>
             <label className="ghost-button import-json-button">
               Importer JSON
