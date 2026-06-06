@@ -1762,9 +1762,26 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
   }
 
   function openQuickEntryPrompt() {
+    const choice = window.prompt(
+      "Choisis un modèle :\n\n1 = Villa\n2 = Bateau / Yacht\n3 = Voiture\n4 = Conciergerie\n5 = Texte libre",
+      "1"
+    );
+
+    if (!choice) return;
+
+    const templates: Record<string, string> = {
+      "1": "Client : \nRecherche villa à \nDates : \nBudget : \nPersonnes : \nChambres : \nBesoin : villa, secteur, style, contraintes, services souhaités\nNote : ",
+      "2": "Client : \nRecherche yacht / bateau\nPort / départ : \nDates : \nDurée : \nBudget : \nPersonnes : \nBesoin : taille, équipage, journée ou plusieurs jours, restauration, itinéraire\nNote : ",
+      "3": "Client : \nRecherche voiture\nLieu de livraison : \nDates : \nBudget : \nModèle souhaité : \nBesoin : chauffeur ou sans chauffeur, assurance, livraison, restitution\nNote : ",
+      "4": "Client : \nDemande conciergerie\nLieu : \nDates : \nBudget : \nBesoin : réservation, service maison, transport, événement, personnel, urgence\nNote : ",
+      "5": "Client : \nRecherche : \nDates : \nBudget : \nBesoin : \nNote : "
+    };
+
+    const selectedTemplate = templates[choice.trim()] || templates["5"];
+
     const text = window.prompt(
-      "Colle ici le message client, email ou WhatsApp :",
-      quickEntryText || "Client : \nRecherche : \nDates : \nBudget : \nBesoin : "
+      "Complète le modèle puis valide :",
+      quickEntryText || selectedTemplate
     );
 
     if (!text) return;
