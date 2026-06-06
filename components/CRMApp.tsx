@@ -1970,7 +1970,7 @@ export default function CRMApp() {
         )}
 
         {activeTab === "contacts" && (
-          <ContactsView contacts={filteredContacts} leads={data.leads} tasks={data.tasks} onAdd={addContact} onUpdate={updateContact} onSupprimer={deleteContact} onCreateLead={(contactName) => {
+          <ContactsView contacts={filteredContacts} leads={data.leads} tasks={data.tasks} onAdd={addContact} onUpdate={updateContact} onDelete={deleteContact} onCreateLead={(contactName) => {
                   setLeadDraftContactName(contactName);
                   setActiveTab("leads");
 
@@ -1998,7 +1998,7 @@ export default function CRMApp() {
                 }} />
         )}
 
-        {activeTab === "quotes" && <DevissView contacts={data.contacts} prefilledLead={quoteDraftFromLead} />}
+        {activeTab === "quotes" && <QuotesView contacts={data.contacts} prefilledLead={quoteDraftFromLead} />}
 
         {activeTab === "planning" && (
           <PlanningView
@@ -2010,7 +2010,7 @@ export default function CRMApp() {
         )}
 
         {activeTab === "leads" && (
-          <LeadsView leads={filteredLeads} contacts={data.contacts} tasks={data.tasks} properties={data.properties} vehicles={data.vehicles ?? []} boats={data.boats ?? []} preselectedContactName={leadDraftContactName} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onSupprimer={deleteLead} onCreateQuote={createQuoteDraftFromLead} onCreateTask={(lead: Lead) => {
+          <LeadsView leads={filteredLeads} contacts={data.contacts} tasks={data.tasks} properties={data.properties} vehicles={data.vehicles ?? []} boats={data.boats ?? []} preselectedContactName={leadDraftContactName} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} onCreateQuote={createQuoteDraftFromLead} onCreateTask={(lead: Lead) => {
                   setTaskDraftLeadId(lead.id);
                   setTaskDraftTitle(lead.nextAction || `Relancer ${lead.contactName}`);
                   setActiveTab("tasks");
@@ -2027,19 +2027,19 @@ export default function CRMApp() {
         )}
 
         {activeTab === "properties" && (
-          <PropertiesView properties={filteredProperties} leads={data.leads} onAdd={addProperty} onUpdate={updateProperty} onSupprimer={deleteProperty} />
+          <PropertiesView properties={filteredProperties} leads={data.leads} onAdd={addProperty} onUpdate={updateProperty} onDelete={deleteProperty} />
         )}
 
         {activeTab === "vehicles" && (
-          <VehiclesView vehicles={filteredVehicles} leads={data.leads} onAdd={addVehicle} onUpdate={updateVehicle} onSupprimer={deleteVehicle} />
+          <VehiclesView vehicles={filteredVehicles} leads={data.leads} onAdd={addVehicle} onUpdate={updateVehicle} onDelete={deleteVehicle} />
         )}
 
         {activeTab === "boats" && (
-          <BoatsView boats={filteredBoats} leads={data.leads} onAdd={addBoat} onUpdate={updateBoat} onSupprimer={deleteBoat} />
+          <BoatsView boats={filteredBoats} leads={data.leads} onAdd={addBoat} onUpdate={updateBoat} onDelete={deleteBoat} />
         )}
 
         {activeTab === "tasks" && (
-          <TasksView tasks={filteredTasks} leads={data.leads} preselectedLeadId={taskDraftLeadId} prefilledTitle={taskDraftTitle} onAdd={addTask} onUpdate={updateTask} onStatusChange={updateTaskStatus} onSupprimer={deleteTask} />
+          <TasksView tasks={filteredTasks} leads={data.leads} preselectedLeadId={taskDraftLeadId} prefilledTitle={taskDraftTitle} onAdd={addTask} onUpdate={updateTask} onStatusChange={updateTaskStatus} onDelete={deleteTask} />
         )}
       </section>
 
