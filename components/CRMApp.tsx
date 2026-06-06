@@ -1922,6 +1922,36 @@ function PlanningView({
       .sort((a, b) => planningDateValue(a.startDate) - planningDateValue(b.startDate));
   }, [leads, assets]);
 
+  const pendingBookings = useMemo(() => {
+    return leads
+      .filter((lead) =>
+        lead.status !== "Gagné" &&
+        lead.status !== "Perdu" &&
+        Boolean(lead.assetType) &&
+        Boolean(lead.assetId) &&
+        isValidPlanningDate(lead.rentalStartDate) &&
+        isValidPlanningDate(lead.rentalEndDate)
+      )
+      .map((lead) => {
+        const asset = assets.find((item) => item.type === lead.assetType && item.id === lead.assetId);
+
+        return {
+          id: lead.id,
+          status: lead.status,
+          assetType: lead.assetType,
+          assetId: lead.assetId,
+          assetLabel: asset?.label ?? lead.assetId,
+          assetCategory: asset?.category ?? lead.category,
+          contactName: lead.contactName,
+          startDate: lead.rentalStartDate,
+          endDate: lead.rentalEndDate,
+          value: lead.value,
+          nextAction: lead.nextAction
+        };
+      })
+      .sort((a, b) => planningDateValue(a.startDate) - planningDateValue(b.startDate));
+  }, [leads, assets]);
+
   const visibleAssets = assets.filter((asset) => {
     if (categoryFilter === "Tous") return true;
     return asset.category === categoryFilter;
@@ -1935,14 +1965,24 @@ function PlanningView({
     return confirmedBookings.filter((booking) => booking.assetType === asset.type && booking.assetId === asset.id);
   }
 
+  function getOptionsForAsset(asset: PlanningAsset) {
+    return pendingBookings.filter((booking) => booking.assetType === asset.type && booking.assetId === asset.id);
+  }
+
   function getAvailabilityLabel(asset: PlanningAsset) {
     if (!hasSelectedPeriod) return "Choisissez des dates";
 
-    const hasOverlap = getBookingsForAsset(asset).some((booking) =>
+    const hasConfirmedOverlap = getBookingsForAsset(asset).some((booking) =>
       planningRangesOverlap(selectedStartDate, selectedEndDate, booking.startDate, booking.endDate)
     );
 
-    return hasOverlap ? "Occupé" : "Disponible";
+    if (hasConfirmedOverlap) return "Occupé";
+
+    const hasOptionOverlap = getOptionsForAsset(asset).some((booking) =>
+      planningRangesOverlap(selectedStartDate, selectedEndDate, booking.startDate, booking.endDate)
+    );
+
+    return hasOptionOverlap ? "Option" : "Disponible";
   }
 
   const categories = ["Tous", ...Array.from(new Set(assets.map((asset) => asset.category))).sort()];
@@ -2011,12 +2051,15 @@ function PlanningView({
             <tbody>
               {visibleAssets.map((asset) => {
                 const bookings = getBookingsForAsset(asset);
+                const options = getOptionsForAsset(asset);
 
                 return (
                   <tr key={`${asset.type}-${asset.id}`}>
                     <td>
                       <strong>{asset.label}</strong>
-                      <small>{bookings.length} réservation{bookings.length > 1 ? "s" : ""} confirmée{bookings.length > 1 ? "s" : ""}</small>
+                      <small>
+                        {bookings.length} confirmée{bookings.length > 1 ? "s" : ""} · {options.length} option{options.length > 1 ? "s" : ""}
+                      </small>
                     </td>
                     <td>{asset.category}</td>
                     <td>{asset.location}</td>
@@ -2039,6 +2082,33 @@ function PlanningView({
               })}
             </tbody>
           </table>
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Options / demandes en cours</p>
+            <h3>{pendingBookings.length} demande{pendingBookings.length > 1 ? "s" : ""}</h3>
+          </div>
+        </div>
+
+        <div className="list-stack">
+          {pendingBookings.length === 0 ? (
+            <p className="muted-line">Aucune option en cours. Un lead avec dates, actif lié et statut Devis / Négociation / Contacté apparaîtra ici.</p>
+          ) : (
+            pendingBookings.map((booking) => (
+              <article className="mini-row" key={booking.id}>
+                <div>
+                  <strong>{booking.assetLabel}</strong>
+                  <span>{booking.contactName} · {formatDateFR(booking.startDate)} → {formatDateFR(booking.endDate)}</span>
+                  <span>{booking.assetCategory} · {currency.format(booking.value)}</span>
+                  {booking.nextAction && <span>{booking.nextAction}</span>}
+                </div>
+                <Badge>{booking.status}</Badge>
+              </article>
+            ))
+          )}
         </div>
       </section>
 
