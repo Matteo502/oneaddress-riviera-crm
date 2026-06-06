@@ -1747,6 +1747,15 @@ export default function CRMApp() {
 
         {activeTab === "quotes" && <QuotesView contacts={data.contacts} />}
 
+        {activeTab === "planning" && (
+          <PlanningView
+            leads={data.leads}
+            properties={data.properties}
+            vehicles={data.vehicles ?? []}
+            boats={data.boats ?? []}
+          />
+        )}
+
         {activeTab === "leads" && (
           <LeadsView leads={filteredLeads} contacts={data.contacts} tasks={data.tasks} properties={data.properties} vehicles={data.vehicles ?? []} boats={data.boats ?? []} preselectedContactName={leadDraftContactName} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} onCreateTask={(lead: Lead) => {
                   setTaskDraftLeadId(lead.id);
