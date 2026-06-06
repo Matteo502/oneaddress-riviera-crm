@@ -831,12 +831,12 @@ function openQuotePdf(quote: QuoteRequest) {
 
     <table>
       <tr><th>Client</th><td>${escapeQuoteHtml(quote.clientName)}</td></tr>
-      <tr><th>Location</th><td>${escapeQuoteHtml(quote.location || "Non renseigné")}</td></tr>
-      <tr><th>Guests</th><td>${escapeQuoteHtml(quote.guestCount || "Non renseigné")}</td></tr>
+      <tr><th>Location</th><td>${escapeQuoteHtml(quote.location || "Not specified")}</td></tr>
+      <tr><th>Guests</th><td>${escapeQuoteHtml(quote.guestCount || "Not specified")}</td></tr>
       <tr><th>Service(s)</th><td>${escapeQuoteHtml(categories)}</td></tr>
       <tr><th>Requested dates</th><td>From ${formatQuoteDate(quote.startDate)} to ${formatQuoteDate(quote.endDate)}</td></tr>
       <tr><th>Actual duration</th><td>${durationDays} day${durationDays > 1 ? "s" : ""}</td></tr>
-      <tr><th>Quote validity</th><td>${quote.validityDate ? formatQuoteLongDate(quote.validityDate) : "À confirmer"}</td></tr>
+      <tr><th>Quote validity</th><td>${quote.validityDate ? formatQuoteLongDate(quote.validityDate) : "To be confirmed"}</td></tr>
     </table>
 
     <h2 class="section-title">Service details</h2>
@@ -860,7 +860,7 @@ function openQuotePdf(quote: QuoteRequest) {
       <span>Services total</span>
       <strong>${formatQuotePrice(subtotal)}</strong>
       <small>
-        Security deposit totale à prévoir : ${depositTotal > 0 ? formatQuotePrice(depositTotal) : "aucune caution renseignée"}.
+        Total security deposit to be expected: ${depositTotal > 0 ? formatQuotePrice(depositTotal) : "no security deposit specified"}.
         Security deposits are shown separately and are not included in the service total.
       </small>
     </section>
@@ -1106,22 +1106,22 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
     const unitPrice = quoteItems.reduce((sum, item) => sum + item.unitPrice, 0);
 
     if (!clientName) {
-      window.alert("Select a client.");
+      window.alert("Sélectionnez un client.");
       return;
     }
 
     if (selectedCategories.length === 0) {
-      window.alert("Select at least one service.");
+      window.alert("Sélectionnez au moins une prestation.");
       return;
     }
 
     if (quoteItems.some((item) => item.unitPrice <= 0)) {
-      window.alert("Enter a price for each selected service.");
+      window.alert("Renseignez un prix pour chaque prestation sélectionnée.");
       return;
     }
 
     if (!startDate || !endDate) {
-      window.alert("Enter the requested dates.");
+      window.alert("Renseignez les dates demandées.");
       return;
     }
 
@@ -1177,7 +1177,7 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
 
         <div className="list-stack">
           {quotes.length === 0 ? (
-            <p className="muted-line">No devis préparé yet.</p>
+            <p className="muted-line">Aucun devis préparé pour le moment.</p>
           ) : (
             quotes.map((quote) => (
               <article className="quote-card" key={quote.id}>
@@ -1227,7 +1227,7 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
                     className="danger-link"
                     type="button"
                     onClick={() => {
-                      const confirmed = window.confirm("Supprimer this quote?");
+                      const confirmed = window.confirm("Supprimer ce devis ?");
                       if (!confirmed) return;
                       setQuotes((current) => current.filter((item) => item.id !== quote.id));
                     }}
@@ -1242,7 +1242,7 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
       </section>
 
       <section className="card form-card">
-        <p className="eyebrow">{editingQuoteId ? "Modifiering" : "Nouveau"}</p>
+        <p className="eyebrow">{editingQuoteId ? "Modification" : "Nouveau"}</p>
         <h3>{editingQuoteId ? "Modifier le devis" : "Créer un devis"}</h3>
 
         <form className="form-grid" data-quote-form="true" onSubmit={addQuote}>
@@ -1257,7 +1257,7 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
             </select>
           </label>
 
-          <label>Devis title
+          <label>Titre du devis
             <input name="title" placeholder="Séjour villa, location bateau, voiture, conciergerie..." />
           </label>
 
@@ -1277,7 +1277,7 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
             <input name="endDate" type="date" required />
           </label>
 
-          <label>Devis validity
+          <label>Validité du devis
             <input name="validityDate" type="date" />
           </label>
 
@@ -1293,11 +1293,11 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
 
                 <input name={`description${category}`} placeholder="Détail prestation" />
 
-                <input name={`price${category}`} type="number" min="0" placeholder="Price" />
+                <input name={`price${category}`} type="number" min="0" placeholder="Prix" />
 
                 <select name={`unit${category}`} defaultValue="day">
                   <option value="day">Prix / jour</option>
-                  <option value="week">Price / semaine</option>
+                  <option value="week">Prix / semaine</option>
                   <option value="fixed">Forfait</option>
                 </select>
 
@@ -1306,19 +1306,19 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
             ))}
           </fieldset>
 
-          <label className="full">Included
+          <label className="full">Inclus
             <textarea name="included" placeholder="Ex : accueil, linge, ménage intermédiaire, skipper, livraison..." />
           </label>
 
-          <label className="full">Not included
+          <label className="full">Non inclus
             <textarea name="excluded" placeholder="Ex : carburant, extras, transferts, repas, taxe de séjour..." />
           </label>
 
-          <label className="full">Payment terms
+          <label className="full">Conditions de paiement
             <textarea name="paymentTerms" placeholder="Ex : 50 % à la réservation, solde 30 jours avant arrivée..." />
           </label>
 
-          <label className="full">Cancellation terms
+          <label className="full">Conditions d’annulation
             <textarea name="cancellationTerms" placeholder="Conditions selon saison, disponibilité et prestataires..." />
           </label>
 
