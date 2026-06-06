@@ -2822,3 +2822,31 @@ textarea {
   letter-spacing: 0.18em;
 }
 
+
+
+/* SIDEBAR ICONS CLEAN */
+.nav-button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-button span:first-child {
+  width: 18px;
+  min-width: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  color: #d6b16a;
+}
+
+.nav-button.active span:first-child {
+  color: #e2c27c;
+}
+
