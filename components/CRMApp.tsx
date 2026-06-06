@@ -354,12 +354,12 @@ function readQuoteNumber(value: FormDataEntryValue | null) {
 }
 
 function formatQuoteDate(value: string) {
-  if (!value) return "Non renseigné";
+  if (!value) return "Not specified";
 
   const parsedDate = new Date(`${value}T00:00:00`);
 
   if (Number.isNaN(parsedDate.getTime())) {
-    return "Date invalide";
+    return "Invalid date";
   }
 
   return new Intl.DateTimeFormat("fr-FR", {
@@ -370,12 +370,12 @@ function formatQuoteDate(value: string) {
 }
 
 function formatQuoteLongDate(value: string) {
-  if (!value) return "Non renseigné";
+  if (!value) return "Not specified";
 
   const parsedDate = new Date(`${value}T00:00:00`);
 
   if (Number.isNaN(parsedDate.getTime())) {
-    return "Date invalide";
+    return "Invalid date";
   }
 
   return new Intl.DateTimeFormat("fr-FR", {
@@ -400,15 +400,29 @@ function getQuoteBillingUnit(value: unknown): QuoteBillingUnit {
 }
 
 function getQuoteUnitLabel(unit: QuoteBillingUnit) {
-  if (unit === "week") return "semaine";
-  if (unit === "fixed") return "forfait";
-  return "jour";
+  if (unit === "week") return "week";
+  if (unit === "fixed") return "fixed fee";
+  return "day";
+}
+
+function getQuoteCategoryLabel(category: string) {
+  const labels: Record<string, string> = {
+    Villa: "Villa",
+    Bateau: "Yacht",
+    Voiture: "Car",
+    Conciergerie: "Concierge services",
+    Yacht: "Yacht",
+    Car: "Car",
+    "Concierge services": "Concierge services"
+  };
+
+  return labels[category] ?? category;
 }
 
 function getQuoteUnitShortLabel(unit: QuoteBillingUnit) {
-  if (unit === "week") return "/ semaine";
-  if (unit === "fixed") return "forfait";
-  return "/ jour";
+  if (unit === "week") return "/ week";
+  if (unit === "fixed") return "fixed fee";
+  return "/ day";
 }
 
 function getQuoteDurationDays(quote: QuoteRequest) {
@@ -436,7 +450,7 @@ function getQuoteQuantityLabel(quote: QuoteRequest, unit: QuoteBillingUnit) {
   const quantity = getQuoteBillingQuantity(quote, unit);
   const label = getQuoteUnitLabel(unit);
 
-  if (unit === "fixed") return "1 forfait";
+  if (unit === "fixed") return "1 fixed fee";
 
   return `${quantity} ${label}${quantity > 1 ? "s" : ""}`;
 }
@@ -485,12 +499,12 @@ function openQuotePdf(quote: QuoteRequest) {
   const popup = window.open("", "_blank", "width=900,height=1100");
 
   if (!popup) {
-    window.alert("Impossible d’ouvrir le PDF. Autorise les pop-ups pour ce site.");
+    window.alert("Unable to open the quote. Please allow pop-ups for this site.");
     return;
   }
 
   const quoteItems = getQuoteItems(quote);
-  const categories = quoteItems.length ? quoteItems.map((item) => item.category).join(", ") : "Non renseigné";
+  const categories = quoteItems.length ? quoteItems.map((item) => getQuoteCategoryLabel(item.category)).join(", ") : "Non renseigné";
   const durationDays = getQuoteDurationDays(quote);
   const subtotal = getQuoteSubtotal(quote);
   const depositTotal = getQuoteDepositTotal(quote);
@@ -506,7 +520,7 @@ function openQuotePdf(quote: QuoteRequest) {
     ? quoteItems.map((item) => `
       <tr>
         <td>
-          <strong>${escapeQuoteHtml(item.category)}</strong>
+          <strong>${escapeQuoteHtml(getQuoteCategoryLabel(item.category))}</strong>
           ${item.description ? `<br /><small>${escapeQuoteHtml(item.description)}</small>` : ""}
         </td>
         <td>${formatQuotePrice(item.unitPrice)} ${escapeQuoteHtml(getQuoteUnitShortLabel(item.billingUnit))}</td>
@@ -518,11 +532,11 @@ function openQuotePdf(quote: QuoteRequest) {
     : `<tr><td colspan="5">Aucune prestation renseignée</td></tr>`;
 
   const includedHtml = quote.included
-    ? `<section class="notes-block"><h2>Inclus</h2><p>${formatQuoteText(quote.included)}</p></section>`
+    ? `<section class="notes-block"><h2>Included</h2><p>${formatQuoteText(quote.included)}</p></section>`
     : "";
 
   const excludedHtml = quote.excluded
-    ? `<section class="notes-block"><h2>Non inclus</h2><p>${formatQuoteText(quote.excluded)}</p></section>`
+    ? `<section class="notes-block"><h2>Not included</h2><p>${formatQuoteText(quote.excluded)}</p></section>`
     : "";
 
   const notesHtml = quote.notes
@@ -716,7 +730,7 @@ function openQuotePdf(quote: QuoteRequest) {
     <header class="top">
       <div>
         <div class="brand">One Address Riviera</div>
-        <h1>Devis</h1>
+        <h1>Quote</h1>
       </div>
 
       <div class="meta">
@@ -726,30 +740,30 @@ function openQuotePdf(quote: QuoteRequest) {
     </header>
 
     <p class="intro">
-      Proposition préparée pour <span class="client-name">${escapeQuoteHtml(quote.clientName)}</span>.
+      Quote prepared for <span class="client-name">${escapeQuoteHtml(quote.clientName)}</span>.
       ${quote.title ? `<br />${escapeQuoteHtml(quote.title)}` : ""}
     </p>
 
     <table>
       <tr><th>Client</th><td>${escapeQuoteHtml(quote.clientName)}</td></tr>
-      <tr><th>Lieu</th><td>${escapeQuoteHtml(quote.location || "Non renseigné")}</td></tr>
-      <tr><th>Voyageurs</th><td>${escapeQuoteHtml(quote.guestCount || "Non renseigné")}</td></tr>
-      <tr><th>Catégorie(s)</th><td>${escapeQuoteHtml(categories)}</td></tr>
-      <tr><th>Dates demandées</th><td>Du ${formatQuoteDate(quote.startDate)} au ${formatQuoteDate(quote.endDate)}</td></tr>
-      <tr><th>Durée réelle</th><td>${durationDays} jour${durationDays > 1 ? "s" : ""}</td></tr>
-      <tr><th>Validité du devis</th><td>${quote.validityDate ? formatQuoteLongDate(quote.validityDate) : "À confirmer"}</td></tr>
+      <tr><th>Location</th><td>${escapeQuoteHtml(quote.location || "Non renseigné")}</td></tr>
+      <tr><th>Guests</th><td>${escapeQuoteHtml(quote.guestCount || "Non renseigné")}</td></tr>
+      <tr><th>Service(s)</th><td>${escapeQuoteHtml(categories)}</td></tr>
+      <tr><th>Requested dates</th><td>From ${formatQuoteDate(quote.startDate)} to ${formatQuoteDate(quote.endDate)}</td></tr>
+      <tr><th>Actual duration</th><td>${durationDays} day${durationDays > 1 ? "s" : ""}</td></tr>
+      <tr><th>Quote validity</th><td>${quote.validityDate ? formatQuoteLongDate(quote.validityDate) : "À confirmer"}</td></tr>
     </table>
 
-    <h2 class="section-title">Détail des prestations</h2>
+    <h2 class="section-title">Service details</h2>
 
     <table>
       <thead>
         <tr>
-          <th>Prestation</th>
-          <th>Prix</th>
-          <th>Quantité</th>
-          <th>Sous-total</th>
-          <th>Caution</th>
+          <th>Service</th>
+          <th>Price</th>
+          <th>Quantity</th>
+          <th>Subtotal</th>
+          <th>Security deposit</th>
         </tr>
       </thead>
       <tbody>
@@ -758,11 +772,11 @@ function openQuotePdf(quote: QuoteRequest) {
     </table>
 
     <section class="total-card">
-      <span>Total prestations</span>
+      <span>Services total</span>
       <strong>${formatQuotePrice(subtotal)}</strong>
       <small>
-        Caution totale à prévoir : ${depositTotal > 0 ? formatQuotePrice(depositTotal) : "aucune caution renseignée"}.
-        Les cautions sont indiquées séparément et ne sont pas incluses dans le total des prestations.
+        Security deposit totale à prévoir : ${depositTotal > 0 ? formatQuotePrice(depositTotal) : "aucune caution renseignée"}.
+        Security deposits are shown separately and are not included in the service total.
       </small>
     </section>
 
@@ -770,13 +784,13 @@ function openQuotePdf(quote: QuoteRequest) {
     ${excludedHtml}
 
     <section class="notes-block">
-      <h2>Conditions de paiement</h2>
-      <p>${formatQuoteText(quote.paymentTerms || "Acompte à la confirmation, solde avant le début de la prestation.")}</p>
+      <h2>Payment terms</h2>
+      <p>${formatQuoteText(quote.paymentTerms || "Deposit due upon confirmation, balance due before the beginning of the service.")}</p>
     </section>
 
     <section class="notes-block">
-      <h2>Conditions d’annulation</h2>
-      <p>${formatQuoteText(quote.cancellationTerms || "Conditions à confirmer selon disponibilité, saison et prestataires.")}</p>
+      <h2>Cancellation terms</h2>
+      <p>${formatQuoteText(quote.cancellationTerms || "Terms to be confirmed according to availability, season and service providers.")}</p>
     </section>
 
     ${notesHtml}
@@ -943,22 +957,22 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
     const unitPrice = quoteItems.reduce((sum, item) => sum + item.unitPrice, 0);
 
     if (!clientName) {
-      window.alert("Sélectionne un client.");
+      window.alert("Select a client.");
       return;
     }
 
     if (selectedCategories.length === 0) {
-      window.alert("Sélectionne au moins une prestation.");
+      window.alert("Select at least one service.");
       return;
     }
 
     if (quoteItems.some((item) => item.unitPrice <= 0)) {
-      window.alert("Renseigne un prix pour chaque prestation sélectionnée.");
+      window.alert("Enter a price for each selected service.");
       return;
     }
 
     if (!startDate || !endDate) {
-      window.alert("Renseigne les dates demandées.");
+      window.alert("Enter the requested dates.");
       return;
     }
 
@@ -1006,32 +1020,32 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
       <section id="quotes-list-panel" className="card">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Devis</p>
-            <h3>{quotes.length} devis préparés</h3>
+            <p className="eyebrow">Quote</p>
+            <h3>{quotes.length} quotes prepared</h3>
           </div>
         </div>
 
         <div className="list-stack">
           {quotes.length === 0 ? (
-            <p className="muted-line">Aucun devis préparé pour le moment.</p>
+            <p className="muted-line">No quotes prepared yet.</p>
           ) : (
             quotes.map((quote) => (
               <article className="quote-card" key={quote.id}>
                 <div>
-                  <p className="eyebrow">{getQuoteItems(quote).map((item) => item.category).join(" · ")}</p>
+                  <p className="eyebrow">{getQuoteItems(quote).map((item) => getQuoteCategoryLabel(item.category)).join(" · ")}</p>
                   <h3>{quote.title || quote.clientName}</h3>
                   <p>{quote.clientName}</p>
                   <p>Du {formatQuoteDate(quote.startDate)} au {formatQuoteDate(quote.endDate)}</p>
                   <strong>{formatQuotePrice(getQuoteSubtotal(quote))}</strong>
 
                   {getQuoteDepositTotal(quote) > 0 && (
-                    <small>Caution : {formatQuotePrice(getQuoteDepositTotal(quote))}</small>
+                    <small>Security deposit : {formatQuotePrice(getQuoteDepositTotal(quote))}</small>
                   )}
 
                   <ul className="quote-line-preview">
                     {getQuoteItems(quote).map((item) => (
                       <li key={item.id}>
-                        <span>{item.category}</span>
+                        <span>{getQuoteCategoryLabel(item.category)}</span>
                         <strong>{formatQuotePrice(item.unitPrice)} {getQuoteUnitShortLabel(item.billingUnit)}</strong>
                       </li>
                     ))}
@@ -1042,23 +1056,23 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
 
                 <div className="quote-actions">
                   <button className="secondary-button" type="button" onClick={() => fillQuoteForm(quote)}>
-                    Modifier
+                    Edit
                   </button>
 
                   <button className="primary-button" type="button" onClick={() => openQuotePdf(quote)}>
-                    Générer PDF
+                    Generate PDF
                   </button>
 
                   <button
                     className="danger-link"
                     type="button"
                     onClick={() => {
-                      const confirmed = window.confirm("Supprimer ce devis ?");
+                      const confirmed = window.confirm("Delete this quote?");
                       if (!confirmed) return;
                       setQuotes((current) => current.filter((item) => item.id !== quote.id));
                     }}
                   >
-                    Supprimer
+                    Delete
                   </button>
                 </div>
               </article>
@@ -1068,13 +1082,13 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
       </section>
 
       <section className="card form-card">
-        <p className="eyebrow">{editingQuoteId ? "Modification" : "Nouveau"}</p>
-        <h3>{editingQuoteId ? "Modifier le devis" : "Créer un devis"}</h3>
+        <p className="eyebrow">{editingQuoteId ? "Editing" : "New"}</p>
+        <h3>{editingQuoteId ? "Edit quote" : "Create a quote"}</h3>
 
         <form className="form-grid" data-quote-form="true" onSubmit={addQuote}>
           <label>Client
             <select name="clientName" required>
-              <option value="">Sélectionner un client</option>
+              <option value="">Select a client</option>
               {contacts.map((contact) => (
                 <option key={contact.id} value={contact.name}>
                   {contact.name}
@@ -1083,77 +1097,77 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
             </select>
           </label>
 
-          <label>Intitulé du devis
-            <input name="title" placeholder="Séjour villa, location bateau, conciergerie..." />
+          <label>Quote title
+            <input name="title" placeholder="Villa stay, yacht charter, car rental, concierge services..." />
           </label>
 
-          <label>Lieu / destination
+          <label>Location / destination
             <input name="location" placeholder="Cannes, Saint-Tropez, Monaco..." />
           </label>
 
-          <label>Nombre de voyageurs
-            <input name="guestCount" placeholder="Ex : 6 adultes, 2 enfants" />
+          <label>Number of guests
+            <input name="guestCount" placeholder="E.g. 6 adults, 2 children" />
           </label>
 
-          <label>Date début demandée
+          <label>Requested start date
             <input name="startDate" type="date" required />
           </label>
 
-          <label>Date fin demandée
+          <label>Requested end date
             <input name="endDate" type="date" required />
           </label>
 
-          <label>Validité du devis
+          <label>Quote validity
             <input name="validityDate" type="date" />
           </label>
 
           <fieldset className="full quote-category-box quote-lines-box">
-            <legend>Prestations, prix et cautions</legend>
+            <legend>Services, prix et cautions</legend>
 
             {quoteCategories.map((category) => (
               <div className="quote-line-input" key={category}>
                 <label>
                   <input type="checkbox" name="categories" value={category} />
-                  {category}
+                  {getQuoteCategoryLabel(category)}
                 </label>
 
-                <input name={`description${category}`} placeholder="Détail prestation" />
+                <input name={`description${category}`} placeholder="Service details" />
 
-                <input name={`price${category}`} type="number" min="0" placeholder="Prix" />
+                <input name={`price${category}`} type="number" min="0" placeholder="Price" />
 
                 <select name={`unit${category}`} defaultValue="day">
-                  <option value="day">Prix / jour</option>
-                  <option value="week">Prix / semaine</option>
-                  <option value="fixed">Forfait</option>
+                  <option value="day">Price / jour</option>
+                  <option value="week">Price / semaine</option>
+                  <option value="fixed">Fixed fee</option>
                 </select>
 
-                <input name={`deposit${category}`} type="number" min="0" placeholder="Caution" />
+                <input name={`deposit${category}`} type="number" min="0" placeholder="Security deposit" />
               </div>
             ))}
           </fieldset>
 
-          <label className="full">Inclus
-            <textarea name="included" placeholder="Ex : accueil, linge, ménage intermédiaire, skipper, livraison..." />
+          <label className="full">Included
+            <textarea name="included" placeholder="E.g. welcome service, linen, mid-stay cleaning, skipper, delivery..." />
           </label>
 
-          <label className="full">Non inclus
-            <textarea name="excluded" placeholder="Ex : carburant, extras, transferts, repas, taxe de séjour..." />
+          <label className="full">Not included
+            <textarea name="excluded" placeholder="E.g. fuel, extras, transfers, meals, tourist tax..." />
           </label>
 
-          <label className="full">Conditions de paiement
-            <textarea name="paymentTerms" placeholder="Ex : 50 % à la réservation, solde 30 jours avant l’arrivée..." />
+          <label className="full">Payment terms
+            <textarea name="paymentTerms" placeholder="E.g. 50% upon booking, balance 30 days before arrival..." />
           </label>
 
-          <label className="full">Conditions d’annulation
-            <textarea name="cancellationTerms" placeholder="Conditions selon saison, disponibilité et prestataires..." />
+          <label className="full">Cancellation terms
+            <textarea name="cancellationTerms" placeholder="Terms according to season, availability and service providers..." />
           </label>
 
-          <label className="full">Notes internes / précisions client
-            <textarea name="notes" placeholder="Informations utiles, préférences client, demandes spéciales..." />
+          <label className="full">Internal notes / client details
+            <textarea name="notes" placeholder="Useful information, client preferences, special requests..." />
           </label>
 
           <button className="primary-button" type="submit">
-            {editingQuoteId ? "Enregistrer les modifications" : "Créer le devis"}
+            {editingQuoteId ? "Save changes" : "Create quote"}
           </button>
 
           {editingQuoteId && (
@@ -1166,7 +1180,7 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
                 form?.reset();
               }}
             >
-              Annuler la modification
+              Cancel edit
             </button>
           )}
         </form>
