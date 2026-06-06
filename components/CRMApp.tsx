@@ -1224,6 +1224,38 @@ export default function CRMApp() {
       document.removeEventListener("click", handleLeadDetailsClick);
     };
   }, [activeTab]);
+  // AUTO_SCROLL_ASSET_DETAILS
+  useEffect(() => {
+    if (activeTab !== "properties" && activeTab !== "vehicles" && activeTab !== "boats") return;
+
+    function handleAssetDetailsClick(event: MouseEvent) {
+      const target = event.target;
+
+      if (!(target instanceof Element)) return;
+
+      const button = target.closest("button");
+
+      if (!button) return;
+
+      const label = button.textContent?.trim().toLowerCase() ?? "";
+
+      if (label !== "détails" && label !== "details") return;
+
+      window.setTimeout(() => {
+        window.scrollTo({
+          top: document.documentElement.scrollHeight,
+          behavior: "smooth"
+        });
+      }, 120);
+    }
+
+    document.addEventListener("click", handleAssetDetailsClick);
+
+    return () => {
+      document.removeEventListener("click", handleAssetDetailsClick);
+    };
+  }, [activeTab]);
+
   const [leadDraftContactName, setLeadDraftContactName] = useState("");
   const [taskDraftLeadId, setTaskDraftLeadId] = useState("");
   const [taskDraftTitle, setTaskDraftTitle] = useState("");
@@ -1568,16 +1600,34 @@ export default function CRMApp() {
   }
 
   function deleteProperty(id: string) {
+    const property = data.properties.find((item) => item.id === id);
+    const label = property ? getPropertyDisplayName(property) : "ce bien";
+    const confirmed = window.confirm(`Supprimer définitivement "${label}" ?`);
+
+    if (!confirmed) return;
+
     setData((current) => ({ ...current, properties: current.properties.filter((property) => property.id !== id) }));
     notify("Bien supprimé.");
   }
 
   function deleteVehicle(id: string) {
+    const vehicle = (data.vehicles ?? []).find((item) => item.id === id);
+    const label = vehicle?.name || "cette voiture";
+    const confirmed = window.confirm(`Supprimer définitivement "${label}" ?`);
+
+    if (!confirmed) return;
+
     setData((current) => ({ ...current, vehicles: (current.vehicles ?? []).filter((vehicle) => vehicle.id !== id) }));
     notify("Voiture supprimée.");
   }
 
   function deleteBoat(id: string) {
+    const boat = (data.boats ?? []).find((item) => item.id === id);
+    const label = boat?.name || "ce bateau";
+    const confirmed = window.confirm(`Supprimer définitivement "${label}" ?`);
+
+    if (!confirmed) return;
+
     setData((current) => ({ ...current, boats: (current.boats ?? []).filter((boat) => boat.id !== id) }));
     notify("Bateau supprimé.");
   }
