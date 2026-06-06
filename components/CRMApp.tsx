@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
-import { seedData } from "@/lib/seed";
 import type {
   CRMData,
   Contact,
@@ -31,6 +30,15 @@ const contactKinds: ContactKind[] = ["Client", "Propriétaire", "Partenaire"];
 const contactLevels = ["Standard", "VIP", "Ultra VIP"] as const;
 const contactLanguages = ["Français", "Anglais", "Italien", "Autre"] as const;
 const contactRelationshipStatuses = ["Prospect", "Actif", "Dormant"] as const;
+
+const emptyData: CRMData = {
+  contacts: [],
+  leads: [],
+  properties: [],
+  vehicles: [],
+  boats: [],
+  tasks: []
+};
 
 type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "planning" | "properties" | "vehicles" | "boats";
 
@@ -1423,7 +1431,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
   const [taskDraftTitle, setTaskDraftTitle] = useState("");
   const [quoteDraftFromLead, setQuoteDraftFromLead] = useState<QuoteLeadDraft | null>(null);
   const [query, setQuery] = useState("");
-  const [data, setData] = useState<CRMData>(seedData);
+  const [data, setData] = useState<CRMData>(emptyData);
   const [toast, setToast] = useState<Toast | null>(null);
 
   useEffect(() => {
@@ -1447,14 +1455,14 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<CRMData>;
         setData({
-          ...seedData,
+          ...emptyData,
           ...parsed,
-          contacts: parsed.contacts ?? seedData.contacts,
-          leads: parsed.leads ?? seedData.leads,
-          properties: parsed.properties ?? seedData.properties,
-          vehicles: parsed.vehicles ?? seedData.vehicles,
-          boats: parsed.boats ?? seedData.boats,
-          tasks: parsed.tasks ?? seedData.tasks
+          contacts: parsed.contacts ?? emptyData.contacts,
+          leads: parsed.leads ?? emptyData.leads,
+          properties: parsed.properties ?? emptyData.properties,
+          vehicles: parsed.vehicles ?? emptyData.vehicles,
+          boats: parsed.boats ?? emptyData.boats,
+          tasks: parsed.tasks ?? emptyData.tasks
         });
       }
     } catch {
