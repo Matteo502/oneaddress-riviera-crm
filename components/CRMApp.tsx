@@ -311,6 +311,8 @@ type QuoteLine = {
   deposit: number;
 };
 
+type QuoteStatus = "Draft" | "Sent" | "Accepted" | "Declined";
+
 type QuoteRequest = {
   id: string;
   clientName: string;
@@ -328,6 +330,7 @@ type QuoteRequest = {
   included: string;
   excluded: string;
   notes: string;
+  status: QuoteStatus;
   createdAt: string;
 };
 
@@ -343,6 +346,27 @@ type QuoteLeadDraft = {
   notes: string;
 };
 
+
+const quoteStatuses: QuoteStatus[] = ["Draft", "Sent", "Accepted", "Declined"];
+
+function getQuoteStatus(value: unknown): QuoteStatus {
+  if (value === "Sent" || value === "Accepted" || value === "Declined" || value === "Draft") {
+    return value;
+  }
+
+  return "Draft";
+}
+
+function getQuoteStatusLabel(status: QuoteStatus) {
+  const labels: Record<QuoteStatus, string> = {
+    Draft: "Draft",
+    Sent: "Sent",
+    Accepted: "Accepted",
+    Declined: "Declined"
+  };
+
+  return labels[status];
+}
 
 function createQuoteId() {
   return `quote-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -840,6 +864,7 @@ function normalizeQuoteRequest(value: unknown): QuoteRequest | null {
     endDate: String(raw.endDate || ""),
     unitPrice: Number.isFinite(Number(raw.unitPrice)) ? Number(raw.unitPrice) : 0,
     notes: String(raw.notes || ""),
+    status: getQuoteStatus(raw.status),
     createdAt: String(raw.createdAt || new Date().toISOString())
   } as QuoteRequest;
 }
@@ -874,6 +899,12 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
   useEffect(() => {
     saveQuotesToBrowser(quotes);
   }, [quotes]);
+
+  function updateQuoteStatus(id: string, status: QuoteStatus) {
+    setQuotes((current) =>
+      current.map((quote) => (quote.id === id ? { ...quote, status } : quote))
+    );
+  }
 
   const quoteCategories = ["Villa", "Bateau", "Voiture", "Conciergerie"];
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
@@ -915,6 +946,7 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
     setField("startDate", prefilledLead.startDate);
     setField("endDate", prefilledLead.endDate);
     setField("notes", prefilledLead.notes);
+    setField("status", "Draft");
 
     quoteForm.querySelectorAll<HTMLInputElement>('input[name="categories"]').forEach((checkbox) => {
       checkbox.checked = checkbox.value === selectedCategory;
@@ -969,6 +1001,7 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
     setField("paymentTerms", quote.paymentTerms);
     setField("cancellationTerms", quote.cancellationTerms);
     setField("notes", quote.notes);
+    setField("status", getQuoteStatus(quote.status));
 
     const quoteItems = getQuoteItems(quote);
 
@@ -1011,6 +1044,7 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
     const included = String(form.get("included") ?? "").trim();
     const excluded = String(form.get("excluded") ?? "").trim();
     const notes = String(form.get("notes") ?? "").trim();
+    const status = getQuoteStatus(form.get("status"));
 
     const quoteItems: QuoteLine[] = selectedCategories.map((category) => ({
       id: createQuoteId(),
@@ -1060,6 +1094,7 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
       included,
       excluded,
       notes,
+      status,
       createdAt: editingQuoteId
         ? quotes.find((item) => item.id === editingQuoteId)?.createdAt ?? new Date().toISOString()
         : new Date().toISOString()
@@ -1122,6 +1157,16 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
                 </div>
 
                 <div className="quote-actions">
+                  <select
+                    value={getQuoteStatus(quote.status)}
+                    onChange={(event) => updateQuoteStatus(quote.id, getQuoteStatus(event.target.value))}
+                    aria-label="Quote status"
+                  >
+                    {quoteStatuses.map((status) => (
+                      <option key={status} value={status}>{getQuoteStatusLabel(status)}</option>
+                    ))}
+                  </select>
+
                   <button className="secondary-button" type="button" onClick={() => fillQuoteForm(quote)}>
                     Edit
                   </button>
