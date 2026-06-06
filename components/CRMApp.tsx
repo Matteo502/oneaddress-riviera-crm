@@ -1519,6 +1519,10 @@ export default function CRMApp() {
   }
 
   function resetDemo() {
+    const confirmed = window.confirm("Réinitialiser les données de démonstration ? Les données locales actuelles seront remplacées.");
+
+    if (!confirmed) return;
+
     setData(seedData);
     notify("Données de démonstration restaurées.");
   }
