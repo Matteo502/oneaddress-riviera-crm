@@ -331,6 +331,19 @@ type QuoteRequest = {
   createdAt: string;
 };
 
+type QuoteLeadDraft = {
+  key: string;
+  clientName: string;
+  category: string;
+  title: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  unitPrice: number;
+  notes: string;
+};
+
+
 function createQuoteId() {
   return `quote-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -855,7 +868,7 @@ function saveQuotesToBrowser(quotes: QuoteRequest[]) {
   window.localStorage.setItem(QUOTES_STORAGE_KEY, JSON.stringify(quotes));
 }
 
-function QuotesView({ contacts }: { contacts: Contact[] }) {
+function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefilledLead?: QuoteLeadDraft | null }) {
   const [quotes, setQuotes] = useState<QuoteRequest[]>(() => loadSavedQuotes());
 
   useEffect(() => {
@@ -864,6 +877,60 @@ function QuotesView({ contacts }: { contacts: Contact[] }) {
 
   const quoteCategories = ["Villa", "Bateau", "Voiture", "Conciergerie"];
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
+
+  // PREFILL_QUOTE_FROM_LEAD
+  useEffect(() => {
+    if (!prefilledLead) return;
+
+    const foundForm = document.querySelector<HTMLFormElement>('form[data-quote-form="true"]');
+
+    if (foundForm === null) {
+      return;
+    }
+
+    const quoteForm: HTMLFormElement = foundForm;
+
+    quoteForm.reset();
+    setEditingQuoteId(null);
+
+    function setField(name: string, value: string | number | undefined) {
+      const field = quoteForm.elements.namedItem(name);
+
+      if (
+        field instanceof HTMLInputElement ||
+        field instanceof HTMLSelectElement ||
+        field instanceof HTMLTextAreaElement
+      ) {
+        field.value = String(value ?? "");
+      }
+    }
+
+    const selectedCategory = quoteCategories.includes(prefilledLead.category)
+      ? prefilledLead.category
+      : "Villa";
+
+    setField("clientName", prefilledLead.clientName);
+    setField("title", prefilledLead.title);
+    setField("location", prefilledLead.location);
+    setField("startDate", prefilledLead.startDate);
+    setField("endDate", prefilledLead.endDate);
+    setField("notes", prefilledLead.notes);
+
+    quoteForm.querySelectorAll<HTMLInputElement>('input[name="categories"]').forEach((checkbox) => {
+      checkbox.checked = checkbox.value === selectedCategory;
+    });
+
+    setField(`description${selectedCategory}`, prefilledLead.title);
+    setField(`price${selectedCategory}`, prefilledLead.unitPrice);
+    setField(`unit${selectedCategory}`, "day");
+
+    window.setTimeout(() => {
+      quoteForm.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    }, 80);
+  }, [prefilledLead]);
 
   function fillQuoteForm(quote: QuoteRequest) {
     const foundForm = document.querySelector<HTMLFormElement>('form[data-quote-form="true"]');
@@ -1259,6 +1326,7 @@ export default function CRMApp() {
   const [leadDraftContactName, setLeadDraftContactName] = useState("");
   const [taskDraftLeadId, setTaskDraftLeadId] = useState("");
   const [taskDraftTitle, setTaskDraftTitle] = useState("");
+  const [quoteDraftFromLead, setQuoteDraftFromLead] = useState<QuoteLeadDraft | null>(null);
   const [query, setQuery] = useState("");
   const [data, setData] = useState<CRMData>(seedData);
   const [toast, setToast] = useState<Toast | null>(null);
@@ -1560,6 +1628,70 @@ export default function CRMApp() {
     }));
   }
 
+  function createQuoteDraftFromLead(lead: Lead) {
+    const property = lead.assetType === "Property"
+      ? data.properties.find((item) => item.id === lead.assetId)
+      : undefined;
+
+    const vehicle = lead.assetType === "Vehicle"
+      ? (data.vehicles ?? []).find((item) => item.id === lead.assetId)
+      : undefined;
+
+    const boat = lead.assetType === "Boat"
+      ? (data.boats ?? []).find((item) => item.id === lead.assetId)
+      : undefined;
+
+    const vehicleLabel = vehicle
+      ? vehicle.name || `${vehicle.brand} ${vehicle.model}`.trim()
+      : "";
+
+    const assetLabel = property
+      ? getPropertyDisplayName(property)
+      : vehicleLabel || boat?.name || "";
+
+    const location = property?.city || vehicle?.city || boat?.port || "";
+
+    const category =
+      lead.assetType === "Boat"
+        ? "Bateau"
+        : lead.assetType === "Vehicle"
+          ? "Voiture"
+          : lead.category || "Villa";
+
+    const title = assetLabel
+      ? `${category} · ${assetLabel}`
+      : `${category} · ${lead.contactName}`;
+
+    const notes = [
+      lead.nextAction ? `Next action: ${lead.nextAction}` : "",
+      lead.notes ? `Client request / internal notes: ${lead.notes}` : ""
+    ].filter(Boolean).join("\n\n");
+
+    setQuoteDraftFromLead({
+      key: `${lead.id}-${Date.now()}`,
+      clientName: lead.contactName,
+      category,
+      title,
+      location,
+      startDate: lead.rentalStartDate || "",
+      endDate: lead.rentalEndDate || "",
+      unitPrice: lead.value || 0,
+      notes
+    });
+
+    setActiveTab("quotes");
+
+    window.setTimeout(() => {
+      document.querySelector<HTMLFormElement>('form[data-quote-form="true"]')?.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    }, 160);
+
+    notify(`Devis prêt pour ${lead.contactName}.`);
+  }
+
+
   function updateTask(updatedTask: Task) {
     setData((current) => ({
       ...current,
@@ -1795,7 +1927,7 @@ export default function CRMApp() {
                 }} />
         )}
 
-        {activeTab === "quotes" && <QuotesView contacts={data.contacts} />}
+        {activeTab === "quotes" && <QuotesView contacts={data.contacts} prefilledLead={quoteDraftFromLead} />}
 
         {activeTab === "planning" && (
           <PlanningView
@@ -1807,7 +1939,7 @@ export default function CRMApp() {
         )}
 
         {activeTab === "leads" && (
-          <LeadsView leads={filteredLeads} contacts={data.contacts} tasks={data.tasks} properties={data.properties} vehicles={data.vehicles ?? []} boats={data.boats ?? []} preselectedContactName={leadDraftContactName} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} onCreateTask={(lead: Lead) => {
+          <LeadsView leads={filteredLeads} contacts={data.contacts} tasks={data.tasks} properties={data.properties} vehicles={data.vehicles ?? []} boats={data.boats ?? []} preselectedContactName={leadDraftContactName} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} onCreateQuote={createQuoteDraftFromLead} onCreateTask={(lead: Lead) => {
                   setTaskDraftLeadId(lead.id);
                   setTaskDraftTitle(lead.nextAction || `Relancer ${lead.contactName}`);
                   setActiveTab("tasks");
@@ -2902,6 +3034,7 @@ function LeadsView({
   onUpdate,
   onStatusChange,
   onDelete,
+  onCreateQuote,
   onCreateTask
 }: {
   leads: Lead[];
@@ -2915,6 +3048,7 @@ function LeadsView({
   onUpdate: (lead: Lead) => void;
   onStatusChange: (id: string, status: LeadStatus) => void;
   onDelete: (id: string) => void;
+  onCreateQuote: (lead: Lead) => void;
   onCreateTask: (lead: Lead) => void;
 }) {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -3263,6 +3397,10 @@ function LeadsView({
 
                         <button className="lead-detail-button" type="button" onClick={() => onCreateTask(lead)}>
                           Tâche
+                        </button>
+
+                        <button className="lead-detail-button" type="button" onClick={() => onCreateQuote(lead)}>
+                          Devis
                         </button>
 
                         <button className="lead-edit-button" type="button" onClick={() => openEdit(lead)}>
