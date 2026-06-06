@@ -1761,6 +1761,150 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     notify("Contact et lead créés depuis la saisie rapide.");
   }
 
+
+  function parseInventoryLine(line: string) {
+    return line
+      .split("|")
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+
+  function openQuickInventoryPrompt() {
+    const choice = window.prompt(
+      "Ajouter rapidement :\n\n1 = Bien / Villa\n2 = Voiture\n3 = Bateau / Yacht",
+      "1"
+    );
+
+    if (!choice) return;
+
+    const type = choice.trim();
+
+    const examples: Record<string, string> = {
+      "1": "Villa Kanupi | Villa | Super Cannes | 18000 | Disponible | Propriétaire à compléter | 5 chambres, piscine, vue mer",
+      "2": "Range Rover Sport | Range Rover | Sport | Cannes | 450 | Disponible | Propriétaire à compléter | livraison possible",
+      "3": "Yacht Princess 60 | Port Canto | Yacht | 3500 | Disponible | Propriétaire à compléter | journée charter"
+    };
+
+    const labels: Record<string, string> = {
+      "1": "Format bien : Nom | Type | Ville | Prix | Statut | Propriétaire | Notes",
+      "2": "Format voiture : Nom | Marque | Modèle | Ville | Prix/jour | Statut | Propriétaire | Notes",
+      "3": "Format bateau : Nom | Port | Type | Prix/jour | Statut | Propriétaire | Notes"
+    };
+
+    const raw = window.prompt(
+      `${labels[type] || labels["1"]}\n\nTu peux coller une seule ligne :`,
+      examples[type] || examples["1"]
+    );
+
+    if (!raw) return;
+
+    const parts = parseInventoryLine(raw);
+
+    if (parts.length < 3) {
+      window.alert("Ajout refusé : il manque des informations. Utilise les séparateurs |");
+      return;
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const priceFrom = (value?: string) => Number(String(value ?? "").replace(/[^\d]/g, "")) || 0;
+
+    if (type === "1") {
+      const [name, propertyType, city, price, status, owner, notes] = parts;
+
+      const property = {
+        id: crypto.randomUUID(),
+        name,
+        type: propertyType || "Villa",
+        city: city || "",
+        price: priceFrom(price),
+        status: status || "Disponible",
+        owner: owner || "",
+        bedrooms: notes?.match(/(\d+)\s*ch/i)?.[1] ? Number(notes.match(/(\d+)\s*ch/i)?.[1]) : 0,
+        surface: 0,
+        notes: notes || "",
+        createdAt: today
+      } as any;
+
+      if (!property.name) {
+        window.alert("Ajout refusé : nom du bien manquant.");
+        return;
+      }
+
+      setData((current: any) => ({
+        ...current,
+        properties: [property, ...(current.properties ?? [])]
+      }));
+
+      notify("Bien ajouté en express.");
+      return;
+    }
+
+    if (type === "2") {
+      const [name, brand, model, city, price, status, owner, notes] = parts;
+
+      const vehicle = {
+        id: crypto.randomUUID(),
+        name,
+        brand: brand || "",
+        model: model || "",
+        city: city || "",
+        price: priceFrom(price),
+        status: status || "Disponible",
+        owner: owner || "",
+        year: "",
+        mileage: "",
+        notes: notes || "",
+        createdAt: today
+      } as any;
+
+      if (!vehicle.name) {
+        window.alert("Ajout refusé : nom de la voiture manquant.");
+        return;
+      }
+
+      setData((current: any) => ({
+        ...current,
+        vehicles: [vehicle, ...(current.vehicles ?? [])]
+      }));
+
+      notify("Voiture ajoutée en express.");
+      return;
+    }
+
+    if (type === "3") {
+      const [name, port, boatType, price, status, owner, notes] = parts;
+
+      const boat = {
+        id: crypto.randomUUID(),
+        name,
+        port: port || "",
+        type: boatType || "Yacht",
+        price: priceFrom(price),
+        status: status || "Disponible",
+        owner: owner || "",
+        year: "",
+        length: "",
+        notes: notes || "",
+        createdAt: today
+      } as any;
+
+      if (!boat.name) {
+        window.alert("Ajout refusé : nom du bateau manquant.");
+        return;
+      }
+
+      setData((current: any) => ({
+        ...current,
+        boats: [boat, ...(current.boats ?? [])]
+      }));
+
+      notify("Bateau ajouté en express.");
+      return;
+    }
+
+    window.alert("Choix invalide. Utilise 1, 2 ou 3.");
+  }
+
   function openQuickEntryPrompt() {
     const choice = window.prompt(
       "Choisis un modèle :\n\n1 = Villa\n2 = Bateau / Yacht\n3 = Voiture\n4 = Conciergerie\n5 = Texte libre",
@@ -2324,6 +2468,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             <span className="muted-line">Connecté : {sessionEmail}</span>
             <button className="secondary-button" type="button" onClick={onLogout}>Déconnexion</button>
             <button className="secondary-button" type="button" onClick={openQuickEntryPrompt}>Saisie rapide</button>
+            <button className="secondary-button" type="button" onClick={openQuickInventoryPrompt}>Ajout express</button>
             <button className="secondary-button" onClick={exportJson}>Backup JSON</button>
             <button className="secondary-button" type="button" onClick={saveCrmBackupToSupabase}>Sauvegarder Supabase</button>
             
