@@ -2911,6 +2911,8 @@ function LeadsView({
       ...editingLead,
       category: String(form.get("category") ?? "Villa") as Lead["category"],
       contactName: String(form.get("contactName") ?? "").trim(),
+      assetType: assetSelection.assetType,
+      assetId: assetSelection.assetId,
       status: String(form.get("status") ?? "Nouveau") as LeadStatus,
       value: safeNumber(form.get("value")),
       priority: String(form.get("priority") ?? "Moyenne") as Lead["priority"],
