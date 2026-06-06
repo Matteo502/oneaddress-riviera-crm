@@ -368,6 +368,18 @@ function getQuoteStatusLabel(status: QuoteStatus) {
   return labels[status];
 }
 
+function getQuoteStatusFrenchLabel(status: QuoteStatus) {
+  const labels: Record<QuoteStatus, string> = {
+    Draft: "Brouillon",
+    Sent: "Envoyé",
+    Accepted: "Accepté",
+    Declined: "Refusé"
+  };
+
+  return labels[status];
+}
+
+
 function createQuoteId() {
   return `quote-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -451,6 +463,20 @@ function getQuoteCategoryLabel(category: string) {
     Yacht: "Yacht",
     Car: "Car",
     "Concierge services": "Concierge services"
+  };
+
+  return labels[category] ?? category;
+}
+
+function getQuoteCategoryFrenchLabel(category: string) {
+  const labels: Record<string, string> = {
+    Villa: "Villa",
+    Bateau: "Bateau",
+    Voiture: "Voiture",
+    Conciergerie: "Conciergerie",
+    Yacht: "Bateau",
+    Car: "Voiture",
+    "Concierge services": "Conciergerie"
   };
 
   return labels[category] ?? category;
@@ -1122,32 +1148,32 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
       <section id="quotes-list-panel" className="card">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Quote</p>
-            <h3>{quotes.length} quotes prepared</h3>
+            <p className="eyebrow">Devis</p>
+            <h3>{quotes.length} devis préparé{quotes.length > 1 ? "s" : ""}</h3>
           </div>
         </div>
 
         <div className="list-stack">
           {quotes.length === 0 ? (
-            <p className="muted-line">No quotes prepared yet.</p>
+            <p className="muted-line">No devis préparé yet.</p>
           ) : (
             quotes.map((quote) => (
               <article className="quote-card" key={quote.id}>
                 <div>
-                  <p className="eyebrow">{getQuoteItems(quote).map((item) => getQuoteCategoryLabel(item.category)).join(" · ")}</p>
+                  <p className="eyebrow">{getQuoteItems(quote).map((item) => getQuoteCategoryFrenchLabel(item.category)).join(" · ")}</p>
                   <h3>{quote.title || quote.clientName}</h3>
                   <p>{quote.clientName}</p>
                   <p>Du {formatQuoteDate(quote.startDate)} au {formatQuoteDate(quote.endDate)}</p>
                   <strong>{formatQuotePrice(getQuoteSubtotal(quote))}</strong>
 
                   {getQuoteDepositTotal(quote) > 0 && (
-                    <small>Security deposit : {formatQuotePrice(getQuoteDepositTotal(quote))}</small>
+                    <small>Caution : {formatQuotePrice(getQuoteDepositTotal(quote))}</small>
                   )}
 
                   <ul className="quote-line-preview">
                     {getQuoteItems(quote).map((item) => (
                       <li key={item.id}>
-                        <span>{getQuoteCategoryLabel(item.category)}</span>
+                        <span>{getQuoteCategoryFrenchLabel(item.category)}</span>
                         <strong>{formatQuotePrice(item.unitPrice)} {getQuoteUnitShortLabel(item.billingUnit)}</strong>
                       </li>
                     ))}
@@ -1160,31 +1186,31 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
                   <select
                     value={getQuoteStatus(quote.status)}
                     onChange={(event) => updateQuoteStatus(quote.id, getQuoteStatus(event.target.value))}
-                    aria-label="Quote status"
+                    aria-label="Devis status"
                   >
                     {quoteStatuses.map((status) => (
-                      <option key={status} value={status}>{getQuoteStatusLabel(status)}</option>
+                      <option key={status} value={status}>{getQuoteStatusFrenchLabel(status)}</option>
                     ))}
                   </select>
 
                   <button className="secondary-button" type="button" onClick={() => fillQuoteForm(quote)}>
-                    Edit
+                    Modifier
                   </button>
 
                   <button className="primary-button" type="button" onClick={() => openQuotePdf(quote)}>
-                    Generate PDF
+                    Générer PDF
                   </button>
 
                   <button
                     className="danger-link"
                     type="button"
                     onClick={() => {
-                      const confirmed = window.confirm("Delete this quote?");
+                      const confirmed = window.confirm("Supprimer this quote?");
                       if (!confirmed) return;
                       setQuotes((current) => current.filter((item) => item.id !== quote.id));
                     }}
                   >
-                    Delete
+                    Supprimer
                   </button>
                 </div>
               </article>
@@ -1194,13 +1220,13 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
       </section>
 
       <section className="card form-card">
-        <p className="eyebrow">{editingQuoteId ? "Editing" : "New"}</p>
-        <h3>{editingQuoteId ? "Edit quote" : "Create a quote"}</h3>
+        <p className="eyebrow">{editingQuoteId ? "Modifiering" : "Nouveau"}</p>
+        <h3>{editingQuoteId ? "Modifier le devis" : "Créer un devis"}</h3>
 
         <form className="form-grid" data-quote-form="true" onSubmit={addQuote}>
           <label>Client
             <select name="clientName" required>
-              <option value="">Select a client</option>
+              <option value="">Sélectionner un client</option>
               {contacts.map((contact) => (
                 <option key={contact.id} value={contact.name}>
                   {contact.name}
@@ -1209,77 +1235,77 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
             </select>
           </label>
 
-          <label>Quote title
-            <input name="title" placeholder="Villa stay, yacht charter, car rental, concierge services..." />
+          <label>Devis title
+            <input name="title" placeholder="Séjour villa, location bateau, voiture, conciergerie..." />
           </label>
 
-          <label>Location / destination
+          <label>Lieu / destination
             <input name="location" placeholder="Cannes, Saint-Tropez, Monaco..." />
           </label>
 
-          <label>Number of guests
-            <input name="guestCount" placeholder="E.g. 6 adults, 2 children" />
+          <label>Nombre de voyageurs
+            <input name="guestCount" placeholder="Ex : 6 adultes, 2 enfants" />
           </label>
 
-          <label>Requested start date
+          <label>Date début demandée
             <input name="startDate" type="date" required />
           </label>
 
-          <label>Requested end date
+          <label>Date fin demandée
             <input name="endDate" type="date" required />
           </label>
 
-          <label>Quote validity
+          <label>Devis validity
             <input name="validityDate" type="date" />
           </label>
 
           <fieldset className="full quote-category-box quote-lines-box">
-            <legend>Services, prix et cautions</legend>
+            <legend>Prestations, prix et cautions</legend>
 
             {quoteCategories.map((category) => (
               <div className="quote-line-input" key={category}>
                 <label>
                   <input type="checkbox" name="categories" value={category} />
-                  {getQuoteCategoryLabel(category)}
+                  {getQuoteCategoryFrenchLabel(category)}
                 </label>
 
-                <input name={`description${category}`} placeholder="Service details" />
+                <input name={`description${category}`} placeholder="Détail prestation" />
 
                 <input name={`price${category}`} type="number" min="0" placeholder="Price" />
 
                 <select name={`unit${category}`} defaultValue="day">
-                  <option value="day">Price / jour</option>
+                  <option value="day">Prix / jour</option>
                   <option value="week">Price / semaine</option>
-                  <option value="fixed">Fixed fee</option>
+                  <option value="fixed">Forfait</option>
                 </select>
 
-                <input name={`deposit${category}`} type="number" min="0" placeholder="Security deposit" />
+                <input name={`deposit${category}`} type="number" min="0" placeholder="Caution" />
               </div>
             ))}
           </fieldset>
 
           <label className="full">Included
-            <textarea name="included" placeholder="E.g. welcome service, linen, mid-stay cleaning, skipper, delivery..." />
+            <textarea name="included" placeholder="Ex : accueil, linge, ménage intermédiaire, skipper, livraison..." />
           </label>
 
           <label className="full">Not included
-            <textarea name="excluded" placeholder="E.g. fuel, extras, transfers, meals, tourist tax..." />
+            <textarea name="excluded" placeholder="Ex : carburant, extras, transferts, repas, taxe de séjour..." />
           </label>
 
           <label className="full">Payment terms
-            <textarea name="paymentTerms" placeholder="E.g. 50% upon booking, balance 30 days before arrival..." />
+            <textarea name="paymentTerms" placeholder="Ex : 50 % à la réservation, solde 30 jours avant arrivée..." />
           </label>
 
           <label className="full">Cancellation terms
-            <textarea name="cancellationTerms" placeholder="Terms according to season, availability and service providers..." />
+            <textarea name="cancellationTerms" placeholder="Conditions selon saison, disponibilité et prestataires..." />
           </label>
 
-          <label className="full">Internal notes / client details
-            <textarea name="notes" placeholder="Useful information, client preferences, special requests..." />
+          <label className="full">Notes internes / détails client
+            <textarea name="notes" placeholder="Informations utiles, préférences client, demandes spéciales..." />
           </label>
 
           <button className="primary-button" type="submit">
-            {editingQuoteId ? "Save changes" : "Create quote"}
+            {editingQuoteId ? "Enregistrer les modifications" : "Créer le devis"}
           </button>
 
           {editingQuoteId && (
@@ -1292,7 +1318,7 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
                 form?.reset();
               }}
             >
-              Cancel edit
+              Annuler la modification
             </button>
           )}
         </form>
@@ -1855,11 +1881,11 @@ export default function CRMApp() {
         setData(nextData);
 
         if (Array.isArray((parsed as { quotes?: unknown }).quotes)) {
-          const importedQuotes = ((parsed as { quotes?: unknown }).quotes as unknown[])
+          const importedDeviss = ((parsed as { quotes?: unknown }).quotes as unknown[])
             .map(normalizeQuoteRequest)
             .filter((quote): quote is QuoteRequest => Boolean(quote));
 
-          saveQuotesToBrowser(importedQuotes);
+          saveQuotesToBrowser(importedDeviss);
         }
 
         window.alert("Import JSON réussi. Recharge la page pour afficher les devis restaurés.");
@@ -1944,7 +1970,7 @@ export default function CRMApp() {
         )}
 
         {activeTab === "contacts" && (
-          <ContactsView contacts={filteredContacts} leads={data.leads} tasks={data.tasks} onAdd={addContact} onUpdate={updateContact} onDelete={deleteContact} onCreateLead={(contactName) => {
+          <ContactsView contacts={filteredContacts} leads={data.leads} tasks={data.tasks} onAdd={addContact} onUpdate={updateContact} onSupprimer={deleteContact} onCreateLead={(contactName) => {
                   setLeadDraftContactName(contactName);
                   setActiveTab("leads");
 
@@ -1972,7 +1998,7 @@ export default function CRMApp() {
                 }} />
         )}
 
-        {activeTab === "quotes" && <QuotesView contacts={data.contacts} prefilledLead={quoteDraftFromLead} />}
+        {activeTab === "quotes" && <DevissView contacts={data.contacts} prefilledLead={quoteDraftFromLead} />}
 
         {activeTab === "planning" && (
           <PlanningView
@@ -1984,7 +2010,7 @@ export default function CRMApp() {
         )}
 
         {activeTab === "leads" && (
-          <LeadsView leads={filteredLeads} contacts={data.contacts} tasks={data.tasks} properties={data.properties} vehicles={data.vehicles ?? []} boats={data.boats ?? []} preselectedContactName={leadDraftContactName} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} onCreateQuote={createQuoteDraftFromLead} onCreateTask={(lead: Lead) => {
+          <LeadsView leads={filteredLeads} contacts={data.contacts} tasks={data.tasks} properties={data.properties} vehicles={data.vehicles ?? []} boats={data.boats ?? []} preselectedContactName={leadDraftContactName} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onSupprimer={deleteLead} onCreateQuote={createQuoteDraftFromLead} onCreateTask={(lead: Lead) => {
                   setTaskDraftLeadId(lead.id);
                   setTaskDraftTitle(lead.nextAction || `Relancer ${lead.contactName}`);
                   setActiveTab("tasks");
@@ -2001,19 +2027,19 @@ export default function CRMApp() {
         )}
 
         {activeTab === "properties" && (
-          <PropertiesView properties={filteredProperties} leads={data.leads} onAdd={addProperty} onUpdate={updateProperty} onDelete={deleteProperty} />
+          <PropertiesView properties={filteredProperties} leads={data.leads} onAdd={addProperty} onUpdate={updateProperty} onSupprimer={deleteProperty} />
         )}
 
         {activeTab === "vehicles" && (
-          <VehiclesView vehicles={filteredVehicles} leads={data.leads} onAdd={addVehicle} onUpdate={updateVehicle} onDelete={deleteVehicle} />
+          <VehiclesView vehicles={filteredVehicles} leads={data.leads} onAdd={addVehicle} onUpdate={updateVehicle} onSupprimer={deleteVehicle} />
         )}
 
         {activeTab === "boats" && (
-          <BoatsView boats={filteredBoats} leads={data.leads} onAdd={addBoat} onUpdate={updateBoat} onDelete={deleteBoat} />
+          <BoatsView boats={filteredBoats} leads={data.leads} onAdd={addBoat} onUpdate={updateBoat} onSupprimer={deleteBoat} />
         )}
 
         {activeTab === "tasks" && (
-          <TasksView tasks={filteredTasks} leads={data.leads} preselectedLeadId={taskDraftLeadId} prefilledTitle={taskDraftTitle} onAdd={addTask} onUpdate={updateTask} onStatusChange={updateTaskStatus} onDelete={deleteTask} />
+          <TasksView tasks={filteredTasks} leads={data.leads} preselectedLeadId={taskDraftLeadId} prefilledTitle={taskDraftTitle} onAdd={addTask} onUpdate={updateTask} onStatusChange={updateTaskStatus} onSupprimer={deleteTask} />
         )}
       </section>
 
