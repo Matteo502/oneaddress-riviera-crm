@@ -2781,3 +2781,44 @@ textarea {
   }
 }
 
+
+
+/* SIDEBAR ICON POLISH */
+.nav-button {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.nav-button span:first-child {
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  line-height: 1;
+  color: #d6b16a;
+  opacity: 0.95;
+  border-radius: 999px;
+  background: rgba(214, 177, 106, 0.08);
+  border: 1px solid rgba(214, 177, 106, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+}
+
+.nav-button.active span:first-child {
+  background: rgba(214, 177, 106, 0.16);
+  border-color: rgba(214, 177, 106, 0.28);
+  color: #e2c27c;
+}
+
+.nav-button:hover span:first-child {
+  transform: scale(1.05);
+  transition: all 0.18s ease;
+}
+
+.nav-button {
+  letter-spacing: 0.18em;
+}
+
