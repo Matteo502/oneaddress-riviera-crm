@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 import { seedData } from "@/lib/seed";
 import type {
   CRMData,
@@ -1350,7 +1352,7 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
 }
 
 
-export default function CRMApp() {
+function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
 
   // AUTO_SCROLL_LEAD_DETAILS
@@ -1982,6 +1984,8 @@ export default function CRMApp() {
               placeholder="Rechercher client, bien, lead..."
               aria-label="Recherche"
             />
+            <span className="muted-line">Connecté : {sessionEmail}</span>
+            <button className="secondary-button" type="button" onClick={onLogout}>Déconnexion</button>
             <button className="secondary-button" onClick={exportJson}>Backup JSON</button>
             <label className="ghost-button import-json-button">
               Importer JSON
@@ -4990,3 +4994,118 @@ function TasksView({
 function Badge({ children }: { children: React.ReactNode }) {
   return <span className="badge">{children}</span>;
 }
+
+function LoginView() {
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const cleanEmail = email.trim();
+
+    if (!cleanEmail) {
+      setMessage("Renseigne ton email.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setMessage("");
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email: cleanEmail,
+      options: {
+        emailRedirectTo: window.location.origin,
+        shouldCreateUser: false
+      }
+    });
+
+    setIsSubmitting(false);
+
+    if (error) {
+      setMessage(`Erreur connexion : ${error.message}`);
+      return;
+    }
+
+    setMessage("Lien de connexion envoyé. Ouvre ta boîte mail et clique sur le lien.");
+  }
+
+  return (
+    <main className="crm-shell">
+      <section className="card form-card">
+        <p className="eyebrow">Accès sécurisé</p>
+        <h1>Connexion CRM</h1>
+        <p className="muted-line">
+          Entre ton email autorisé. Supabase t’enverra un lien de connexion sécurisé.
+        </p>
+
+        <form className="form-grid" onSubmit={handleLogin}>
+          <label className="full">Email
+            <input
+              type="email"
+              value={email}
+              placeholder="ton@email.com"
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+          </label>
+
+          <button className="primary-button" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Envoi..." : "Recevoir le lien"}
+          </button>
+        </form>
+
+        {message && <p className="muted-line">{message}</p>}
+      </section>
+    </main>
+  );
+}
+
+export default function CRMApp() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (!isMounted) return;
+
+      setSession(data.session);
+      setAuthLoading(false);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setAuthLoading(false);
+    });
+
+    return () => {
+      isMounted = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  async function logout() {
+    await supabase.auth.signOut();
+  }
+
+  if (authLoading) {
+    return (
+      <main className="crm-shell">
+        <section className="card">
+          <p className="eyebrow">Connexion</p>
+          <h1>Chargement...</h1>
+        </section>
+      </main>
+    );
+  }
+
+  if (!session) {
+    return <LoginView />;
+  }
+
+  return <CRMAppContent sessionEmail={session.user.email ?? "utilisateur"} onLogout={logout} />;
+}
+
