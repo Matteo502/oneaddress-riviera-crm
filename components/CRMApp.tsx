@@ -1769,6 +1769,124 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       .filter(Boolean);
   }
 
+
+  function parseExpressNumber(value?: string) {
+    const cleaned = String(value ?? "").trim();
+
+    if (!cleaned || /à compléter|a completer|n\/a|na/i.test(cleaned)) return 0;
+
+    return Number(cleaned.replace(/[^\d]/g, "")) || 0;
+  }
+
+  function parseExpressDateRange(value?: string) {
+    const raw = String(value ?? "");
+    const matches = [...raw.matchAll(/\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}/g)].map((m) => m[0]);
+
+    return {
+      start: matches[0] ? normalizeQuickEntryDate(matches[0]) : "",
+      end: matches[1] ? normalizeQuickEntryDate(matches[1]) : ""
+    };
+  }
+
+  function openQuickContactLeadPrompt() {
+    const choice = window.prompt(
+      "Ajouter rapidement :\n\n1 = Contact\n2 = Lead\n\nContact format : Nom | Email | Téléphone | Ville | Budget | Relation | Notes\n\nLead format : Client | Catégorie | Lieu/Bien | Dates | Budget | Statut | Prochaine action | Notes",
+      "1"
+    );
+
+    if (!choice) return;
+
+    const type = choice.trim();
+
+    const examples: Record<string, string> = {
+      "1": "Heily Aavik | À compléter | À compléter | Super Cannes | À compléter | Prospect | Villa Kanupi, disponibilité à vérifier du 11/07/2026 au 19/07/2026",
+      "2": "Heily Aavik | Villa | Villa Kanupi / Super Cannes | 11/07/2026 - 19/07/2026 | À compléter | Nouveau | Vérifier disponibilité Villa Kanupi et envoyer proposition privée | Budget et nombre de personnes à compléter"
+    };
+
+    const raw = window.prompt(
+      type === "2"
+        ? "Lead : Client | Catégorie | Lieu/Bien | Dates | Budget | Statut | Prochaine action | Notes"
+        : "Contact : Nom | Email | Téléphone | Ville | Budget | Relation | Notes",
+      examples[type] || examples["1"]
+    );
+
+    if (!raw) return;
+
+    const parts = raw.split("|").map((part) => part.trim());
+
+    if (type === "1") {
+      const [name, email, phone, city, budget, relationshipStatus, notes] = parts;
+
+      if (!name) {
+        window.alert("Ajout refusé : nom du contact manquant.");
+        return;
+      }
+
+      const contact = {
+        id: crypto.randomUUID(),
+        name,
+        kind: "Client",
+        email: /à compléter|a completer/i.test(email || "") ? "" : email || "",
+        phone: /à compléter|a completer/i.test(phone || "") ? "" : phone || "",
+        city: /à compléter|a completer/i.test(city || "") ? "" : city || "",
+        postalAddress: "",
+        budget: parseExpressNumber(budget),
+        source: "Ajout contact express",
+        notes: notes || "",
+        clientLevel: "Standard",
+        preferredLanguage: "Français",
+        relationshipStatus: relationshipStatus || "Prospect",
+        preferences: "",
+        importantNotes: "",
+        createdAt: new Date().toISOString().slice(0, 10)
+      } as any;
+
+      setData((current: any) => ({
+        ...current,
+        contacts: [contact, ...(current.contacts ?? [])]
+      }));
+
+      notify("Contact ajouté en express.");
+      return;
+    }
+
+    if (type === "2") {
+      const [contactName, category, assetLabel, dates, budget, status, nextAction, notes] = parts;
+      const parsedDates = parseExpressDateRange(dates);
+
+      if (!contactName) {
+        window.alert("Ajout refusé : nom du client manquant.");
+        return;
+      }
+
+      const lead = {
+        id: crypto.randomUUID(),
+        category: category || "Villa",
+        contactName,
+        assetType: "",
+        assetId: "",
+        status: status || "Nouveau",
+        value: parseExpressNumber(budget),
+        priority: "Moyenne",
+        nextAction: nextAction || "Qualifier la demande.",
+        notes: [assetLabel ? `Lieu / bien : ${assetLabel}` : "", notes || ""].filter(Boolean).join("\n\n"),
+        dueDate: new Date().toISOString().slice(0, 10),
+        rentalStartDate: parsedDates.start,
+        rentalEndDate: parsedDates.end
+      } as any;
+
+      setData((current: any) => ({
+        ...current,
+        leads: [lead, ...(current.leads ?? [])]
+      }));
+
+      notify("Lead ajouté en express.");
+      return;
+    }
+
+    window.alert("Choix invalide. Utilise 1 pour Contact ou 2 pour Lead.");
+  }
+
   function openQuickInventoryPrompt() {
     const choice = window.prompt(
       "Ajouter rapidement :\n\n1 = Bien / Villa\n2 = Voiture\n3 = Bateau / Yacht",
@@ -2468,7 +2586,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             <span className="muted-line">Connecté : {sessionEmail}</span>
             <button className="secondary-button" type="button" onClick={onLogout}>Déconnexion</button>
             <button className="secondary-button" type="button" onClick={openQuickEntryPrompt}>Saisie rapide</button>
-            <button className="secondary-button" type="button" onClick={openQuickInventoryPrompt}>Ajout express</button>
+            <button className="secondary-button" type="button" onClick={openQuickContactLeadPrompt}>Ajout contact/lead</button>
+            <button className="secondary-button" type="button" onClick={openQuickInventoryPrompt}>Ajout actif</button>
             <button className="secondary-button" onClick={exportJson}>Backup JSON</button>
             <button className="secondary-button" type="button" onClick={saveCrmBackupToSupabase}>Sauvegarder Supabase</button>
             
