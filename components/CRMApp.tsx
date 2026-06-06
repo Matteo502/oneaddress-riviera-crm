@@ -1518,14 +1518,6 @@ export default function CRMApp() {
     setToast({ message, tone });
   }
 
-  function resetDemo() {
-    const confirmed = window.confirm("Réinitialiser les données de démonstration ? Les données locales actuelles seront remplacées.");
-
-    if (!confirmed) return;
-
-    setData(seedData);
-    notify("Données de démonstration restaurées.");
-  }
 
   function exportJson() {
     const exportPayload = {
@@ -2004,7 +1996,7 @@ export default function CRMApp() {
               if (!confirmed) return;
               setData(seedData);
               notify("Données de démonstration réinitialisées.");
-            }}>Reset démo</button>
+            }}></button>
           </div>
         </header>
 
