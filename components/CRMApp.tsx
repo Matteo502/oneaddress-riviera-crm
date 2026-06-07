@@ -2969,13 +2969,6 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
 
         {activeTab === "dashboard" && (
           <>
-            <FollowUpsPanel
-              leads={data.leads}
-              tasks={data.tasks}
-              quotes={loadSavedQuotes()}
-              onCreateTask={createTaskDraftFromFollowUp}
-            />
-
             <Dashboard
               stats={stats}
               data={data}
@@ -2986,6 +2979,13 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
               onStartInventory={openQuickInventoryPrompt}
               onShowLeads={() => setActiveTab("leads")}
               onCloudBackup={saveCrmBackupToSupabase}
+            />
+
+            <FollowUpsPanel
+              leads={data.leads}
+              tasks={data.tasks}
+              quotes={loadSavedQuotes()}
+              onCreateTask={createTaskDraftFromFollowUp}
             />
           </>
         )}
@@ -3857,7 +3857,14 @@ function Dashboard({
         }}
       >
         <p className="eyebrow">Démarrer ici</p>
-        <h2>Que voulez-vous faire maintenant ?</h2>
+        <h2 style={{
+          margin: "8px 0 10px",
+          color: "#061b22",
+          fontSize: "clamp(28px, 3vw, 44px)",
+          lineHeight: 1.05
+        }}>
+          Que voulez-vous faire maintenant ?
+        </h2>
         <p className="muted-line">
           Créez rapidement les données, suivez les demandes et sauvegardez le CRM après chaque lot d’ajouts.
         </p>
