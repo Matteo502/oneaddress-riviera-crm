@@ -1790,7 +1790,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
 
   function openQuickContactLeadPrompt() {
     const choice = window.prompt(
-      "Ajouter rapidement :\n\n1 = Contact\n2 = Lead\n\nContact format : Nom | Email | Téléphone | Ville | Budget | Relation | Notes\n\nLead format : Client | Catégorie | Lieu/Bien | Dates | Budget | Statut | Prochaine action | Notes",
+      "Ajouter rapidement :\n\n1 = Contact complet\n2 = Lead complet\n\nContact : Nom | Type | Niveau client | Langue préférée | Relation | Email | Téléphone | Ville | Adresse postale | Budget | Source | Préférences | Notes importantes | Notes\n\nLead : Catégorie | Contact | Actif proposé | Début réservation | Fin réservation | Valeur | Statut | Priorité | Échéance réponse | Prochaine action | Notes internes",
       "1"
     );
 
@@ -1798,46 +1798,80 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
 
     const type = choice.trim();
 
-    const examples: Record<string, string> = {
-      "1": "Heily Aavik | À compléter | À compléter | Super Cannes | À compléter | Prospect | Villa Kanupi, disponibilité à vérifier du 11/07/2026 au 19/07/2026",
-      "2": "Heily Aavik | Villa | Villa Kanupi / Super Cannes | 11/07/2026 - 19/07/2026 | À compléter | Nouveau | Vérifier disponibilité Villa Kanupi et envoyer proposition privée | Budget et nombre de personnes à compléter"
-    };
+    const contactExample =
+      "Heily Aavik | Client | Standard | Français | Prospect | À compléter | À compléter | Super Cannes | À compléter | À compléter | Ancienne donnée récupérée | Villa Kanupi | Disponibilité Villa Kanupi à vérifier | Vérifier disponibilité du 11/07/2026 au 19/07/2026";
+
+    const leadExample =
+      "Villa | Heily Aavik | Villa Kanupi | 11/07/2026 | 19/07/2026 | À compléter | Nouveau | Moyenne | À compléter | Vérifier disponibilité Villa Kanupi et envoyer proposition privée | Budget, nombre de personnes et critères à compléter";
 
     const raw = window.prompt(
       type === "2"
-        ? "Lead : Client | Catégorie | Lieu/Bien | Dates | Budget | Statut | Prochaine action | Notes"
-        : "Contact : Nom | Email | Téléphone | Ville | Budget | Relation | Notes",
-      examples[type] || examples["1"]
+        ? "Lead complet : Catégorie | Contact | Actif proposé | Début réservation | Fin réservation | Valeur | Statut | Priorité | Échéance réponse | Prochaine action | Notes internes"
+        : "Contact complet : Nom | Type | Niveau client | Langue préférée | Relation | Email | Téléphone | Ville | Adresse postale | Budget | Source | Préférences | Notes importantes | Notes",
+      type === "2" ? leadExample : contactExample
     );
 
     if (!raw) return;
 
     const parts = raw.split("|").map((part) => part.trim());
 
-    if (type === "1") {
-      const [name, email, phone, city, budget, relationshipStatus, notes] = parts;
+    function cleanExpressValue(value?: string) {
+      const cleaned = String(value ?? "").trim();
 
-      if (!name) {
+      if (!cleaned || /à compléter|a completer|n\/a|na/i.test(cleaned)) {
+        return "";
+      }
+
+      return cleaned;
+    }
+
+    function cleanExpressDate(value?: string) {
+      const cleaned = cleanExpressValue(value);
+
+      if (!cleaned) return "";
+
+      return normalizeQuickEntryDate(cleaned) || cleaned;
+    }
+
+    if (type === "1") {
+      const [
+        name,
+        kind,
+        clientLevel,
+        preferredLanguage,
+        relationshipStatus,
+        email,
+        phone,
+        city,
+        postalAddress,
+        budget,
+        source,
+        preferences,
+        importantNotes,
+        notes
+      ] = parts;
+
+      if (!cleanExpressValue(name)) {
         window.alert("Ajout refusé : nom du contact manquant.");
         return;
       }
 
       const contact = {
         id: crypto.randomUUID(),
-        name,
-        kind: "Client",
-        email: /à compléter|a completer/i.test(email || "") ? "" : email || "",
-        phone: /à compléter|a completer/i.test(phone || "") ? "" : phone || "",
-        city: /à compléter|a completer/i.test(city || "") ? "" : city || "",
-        postalAddress: "",
+        name: cleanExpressValue(name),
+        kind: cleanExpressValue(kind) || "Client",
+        clientLevel: cleanExpressValue(clientLevel) || "Standard",
+        preferredLanguage: cleanExpressValue(preferredLanguage) || "Français",
+        relationshipStatus: cleanExpressValue(relationshipStatus) || "Prospect",
+        email: cleanExpressValue(email),
+        phone: cleanExpressValue(phone),
+        city: cleanExpressValue(city),
+        postalAddress: cleanExpressValue(postalAddress),
         budget: parseExpressNumber(budget),
-        source: "Ajout contact express",
-        notes: notes || "",
-        clientLevel: "Standard",
-        preferredLanguage: "Français",
-        relationshipStatus: relationshipStatus || "Prospect",
-        preferences: "",
-        importantNotes: "",
+        source: cleanExpressValue(source) || "Ajout contact express",
+        preferences: cleanExpressValue(preferences),
+        importantNotes: cleanExpressValue(importantNotes),
+        notes: cleanExpressValue(notes),
         createdAt: new Date().toISOString().slice(0, 10)
       } as any;
 
@@ -1846,33 +1880,81 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
         contacts: [contact, ...(current.contacts ?? [])]
       }));
 
-      notify("Contact ajouté en express.");
+      notify("Contact complet ajouté en express.");
       return;
     }
 
     if (type === "2") {
-      const [contactName, category, assetLabel, dates, budget, status, nextAction, notes] = parts;
-      const parsedDates = parseExpressDateRange(dates);
+      const [
+        category,
+        contactName,
+        assetLabel,
+        rentalStartDate,
+        rentalEndDate,
+        value,
+        status,
+        priority,
+        dueDate,
+        nextAction,
+        notes
+      ] = parts;
 
-      if (!contactName) {
-        window.alert("Ajout refusé : nom du client manquant.");
+      if (!cleanExpressValue(contactName)) {
+        window.alert("Ajout refusé : nom du contact manquant.");
         return;
       }
 
+      const wantedAsset = cleanExpressValue(assetLabel).toLowerCase();
+      let assetType = "";
+      let assetId = "";
+
+      if (wantedAsset) {
+        const property = data.properties.find((property: any) => {
+          const label = String(property.name ?? property.title ?? "").toLowerCase();
+          return label && (label === wantedAsset || label.includes(wantedAsset) || wantedAsset.includes(label));
+        });
+
+        const vehicle = !property ? (data.vehicles ?? []).find((vehicle: any) => {
+          const label = String(vehicle.name ?? `${vehicle.brand ?? ""} ${vehicle.model ?? ""}`).toLowerCase();
+          return label && (label === wantedAsset || label.includes(wantedAsset) || wantedAsset.includes(label));
+        }) : null;
+
+        const boat = !property && !vehicle ? (data.boats ?? []).find((boat: any) => {
+          const label = String(boat.name ?? "").toLowerCase();
+          return label && (label === wantedAsset || label.includes(wantedAsset) || wantedAsset.includes(label));
+        }) : null;
+
+        if (property) {
+          assetType = "Property";
+          assetId = property.id;
+        } else if (vehicle) {
+          assetType = "Vehicle";
+          assetId = vehicle.id;
+        } else if (boat) {
+          assetType = "Boat";
+          assetId = boat.id;
+        }
+      }
+
+      const leadNotes = [
+        cleanExpressValue(assetLabel) && !assetId ? `Actif proposé : ${cleanExpressValue(assetLabel)}` : "",
+        cleanExpressValue(notes)
+      ].filter(Boolean).join("\n\n");
+
       const lead = {
         id: crypto.randomUUID(),
-        category: category || "Villa",
-        contactName,
-        assetType: "",
-        assetId: "",
-        status: status || "Nouveau",
-        value: parseExpressNumber(budget),
-        priority: "Moyenne",
-        nextAction: nextAction || "Qualifier la demande.",
-        notes: [assetLabel ? `Lieu / bien : ${assetLabel}` : "", notes || ""].filter(Boolean).join("\n\n"),
-        dueDate: new Date().toISOString().slice(0, 10),
-        rentalStartDate: parsedDates.start,
-        rentalEndDate: parsedDates.end
+        category: cleanExpressValue(category) || "Villa",
+        contactName: cleanExpressValue(contactName),
+        assetType,
+        assetId,
+        status: cleanExpressValue(status) || "Nouveau",
+        value: parseExpressNumber(value),
+        priority: cleanExpressValue(priority) || "Moyenne",
+        dueDate: cleanExpressDate(dueDate),
+        nextAction: cleanExpressValue(nextAction) || "Qualifier la demande.",
+        notes: leadNotes,
+        rentalStartDate: cleanExpressDate(rentalStartDate),
+        rentalEndDate: cleanExpressDate(rentalEndDate)
       } as any;
 
       setData((current: any) => ({
@@ -1880,7 +1962,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
         leads: [lead, ...(current.leads ?? [])]
       }));
 
-      notify("Lead ajouté en express.");
+      notify("Lead complet ajouté en express.");
       return;
     }
 
