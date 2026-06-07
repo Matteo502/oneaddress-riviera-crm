@@ -2968,6 +2968,14 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
         </header>
 
         {activeTab === "dashboard" && (
+          <>
+            <FollowUpsPanel
+              leads={data.leads}
+              tasks={data.tasks}
+              quotes={loadSavedQuotes()}
+              onCreateTask={createTaskDraftFromFollowUp}
+            />
+
             <Dashboard
               stats={stats}
               data={data}
