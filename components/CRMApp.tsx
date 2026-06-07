@@ -1828,6 +1828,9 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       rentalEndDate: draft.rentalEndDate
     } as any;
 
+    if (!confirmDuplicateContact(newContact as Contact)) return;
+    if (!confirmDuplicateLead(newLead as Lead)) return;
+
     setData((current: any) => ({
       ...current,
       contacts: [newContact, ...(current.contacts ?? [])],
