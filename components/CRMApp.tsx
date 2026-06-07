@@ -2448,6 +2448,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
         return;
       }
 
+      if (!confirmDuplicateAsset("bien", property)) return;
+
       setData((current: any) => ({
         ...current,
         properties: [property, ...(current.properties ?? [])]
@@ -2480,6 +2482,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
         return;
       }
 
+      if (!confirmDuplicateAsset("voiture", vehicle)) return;
+
       setData((current: any) => ({
         ...current,
         vehicles: [vehicle, ...(current.vehicles ?? [])]
@@ -2510,6 +2514,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
         window.alert("Ajout refusé : nom du bateau manquant.");
         return;
       }
+
+      if (!confirmDuplicateAsset("bateau", boat)) return;
 
       setData((current: any) => ({
         ...current,
