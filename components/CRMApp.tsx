@@ -2169,6 +2169,92 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       return;
     }
 
+    const normalizeSafeImportDuplicate = (value?: string | number | null) =>
+      String(value ?? "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ");
+
+    const safeImportDuplicateCount =
+      type === "1"
+        ? payload.filter((item) => {
+            const name = normalizeSafeImportDuplicate(item.name);
+            const email = normalizeSafeImportDuplicate(item.email);
+
+            return data.contacts.some((existing) => {
+              const sameName = name && normalizeSafeImportDuplicate(existing.name) === name;
+              const sameEmail = email && normalizeSafeImportDuplicate(existing.email) === email;
+
+              return sameName || sameEmail;
+            });
+          }).length
+        : type === "2"
+          ? payload.filter((item) => {
+              const contactName = normalizeSafeImportDuplicate(item.contactName);
+              const category = normalizeSafeImportDuplicate(item.category);
+              const rentalStartDate = normalizeSafeImportDuplicate(item.rentalStartDate);
+              const rentalEndDate = normalizeSafeImportDuplicate(item.rentalEndDate);
+
+              return data.leads.some((existing) => {
+                const sameContact = normalizeSafeImportDuplicate(existing.contactName) === contactName;
+                const sameCategory = normalizeSafeImportDuplicate(existing.category) === category;
+                const sameAsset = Boolean(item.assetId && existing.assetId && existing.assetId === item.assetId);
+                const sameDates =
+                  Boolean(rentalStartDate || rentalEndDate) &&
+                  normalizeSafeImportDuplicate(existing.rentalStartDate) === rentalStartDate &&
+                  normalizeSafeImportDuplicate(existing.rentalEndDate) === rentalEndDate;
+
+                return sameContact && sameCategory && (sameAsset || sameDates);
+              });
+            }).length
+          : type === "3"
+            ? payload.filter((item) => {
+                const name = normalizeSafeImportDuplicate(item.name);
+                const city = normalizeSafeImportDuplicate(item.city);
+
+                return data.properties.some((existing) => {
+                  const sameName = normalizeSafeImportDuplicate(existing.name) === name;
+                  const sameCity = !city || !existing.city || normalizeSafeImportDuplicate(existing.city) === city;
+
+                  return sameName && sameCity;
+                });
+              }).length
+            : type === "4"
+              ? payload.filter((item) => {
+                  const name = normalizeSafeImportDuplicate(item.name);
+                  const city = normalizeSafeImportDuplicate(item.city);
+
+                  return (data.vehicles ?? []).some((existing) => {
+                    const sameName = normalizeSafeImportDuplicate(existing.name) === name;
+                    const sameCity = !city || !existing.city || normalizeSafeImportDuplicate(existing.city) === city;
+
+                    return sameName && sameCity;
+                  });
+                }).length
+              : type === "5"
+                ? payload.filter((item) => {
+                    const name = normalizeSafeImportDuplicate(item.name);
+                    const port = normalizeSafeImportDuplicate(item.port);
+
+                    return (data.boats ?? []).some((existing) => {
+                      const sameName = normalizeSafeImportDuplicate(existing.name) === name;
+                      const samePort = !port || !existing.port || normalizeSafeImportDuplicate(existing.port) === port;
+
+                      return sameName && samePort;
+                    });
+                  }).length
+                : 0;
+
+    if (safeImportDuplicateCount > 0) {
+      const continueWithDuplicates = window.confirm(
+        `${safeImportDuplicateCount} doublon(s) possible(s) détecté(s) dans cet import.\\n\\nContinuer quand même ?`
+      );
+
+      if (!continueWithDuplicates) return;
+    }
+
     const confirmed = window.confirm(
       `Aperçu import sécurisé\n\nLignes valides : ${payload.length}\n\n${preview}\n\nConfirmer l’ajout ?\n\nAucune donnée existante ne sera écrasée.`
     );
