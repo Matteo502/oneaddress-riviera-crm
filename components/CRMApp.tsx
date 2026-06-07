@@ -2981,6 +2981,11 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
               data={data}
               onLeadStatusChange={updateLeadStatus}
               onTaskStatusChange={updateTaskStatus}
+              onStartMessage={openQuickEntryPrompt}
+              onStartContactLead={openQuickContactLeadPrompt}
+              onStartInventory={openQuickInventoryPrompt}
+              onShowLeads={() => setActiveTab("leads")}
+              onCloudBackup={saveCrmBackupToSupabase}
             />
           </>
         )}
@@ -3821,18 +3826,69 @@ function Dashboard({
   stats,
   data,
   onLeadStatusChange,
-  onTaskStatusChange
+  onTaskStatusChange,
+  onStartMessage,
+  onStartContactLead,
+  onStartInventory,
+  onShowLeads,
+  onCloudBackup
 }: {
   stats: { pipeline: number; won: number; openTasks: number; availableProperties: number };
   data: CRMData;
   onLeadStatusChange: (id: string, status: LeadStatus) => void;
   onTaskStatusChange: (id: string, status: TaskStatus) => void;
+  onStartMessage: () => void;
+  onStartContactLead: () => void;
+  onStartInventory: () => void;
+  onShowLeads: () => void;
+  onCloudBackup: () => void;
 }) {
   const nextTasks = [...data.tasks].filter((task) => task.status !== "Terminé").sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   const hotLeads = [...data.leads].filter((lead) => lead.status !== "Perdu").sort((a, b) => b.value - a.value).slice(0, 4);
 
   return (
     <div className="stack">
+      <section
+        className="card"
+        style={{
+          padding: 24,
+          border: "1px solid rgba(160, 120, 70, 0.28)",
+          background: "rgba(247, 241, 231, 0.9)"
+        }}
+      >
+        <p className="eyebrow">Démarrer ici</p>
+        <h2>Que voulez-vous faire maintenant ?</h2>
+        <p className="muted-line">
+          Créez rapidement les données, suivez les demandes et sauvegardez le CRM après chaque lot d’ajouts.
+        </p>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 18 }}>
+          <button className="primary-button" type="button" onClick={onStartMessage}>
+            Créer depuis un message client
+          </button>
+
+          <button className="secondary-button" type="button" onClick={onStartContactLead}>
+            Ajouter contact / lead
+          </button>
+
+          <button className="secondary-button" type="button" onClick={onStartInventory}>
+            Ajouter bien / voiture / bateau
+          </button>
+
+          <button className="secondary-button" type="button" onClick={onShowLeads}>
+            Voir les leads
+          </button>
+
+          <button className="secondary-button" type="button" onClick={onCloudBackup}>
+            Sauvegarde cloud
+          </button>
+        </div>
+
+        <p className="muted-line" style={{ marginTop: 16 }}>
+          Conseil : après 5 à 10 ajouts, utilisez Backup fichier puis Sauvegarde cloud.
+        </p>
+      </section>
+
       <div className="stats-grid">
         <StatCard label="Pipeline actif" value={currency.format(stats.pipeline)} caption="Valeur des opportunités non perdues" />
         <StatCard label="CA gagné" value={currency.format(stats.won)} caption="Leads marqués comme gagnés" />
