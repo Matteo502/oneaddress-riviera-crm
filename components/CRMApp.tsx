@@ -4115,10 +4115,7 @@ function Dashboard({
             Voir les leads
           </button>
 
-          <button className="secondary-button" type="button" onClick={onCloudBackup}>
-            Sauvegarde cloud
-          </button>
-        </div>
+          </div>
 
         <p className="muted-line" style={{ marginTop: 16 }}>
           Conseil : après 5 à 10 ajouts, utilisez Backup fichier puis Sauvegarde cloud.
