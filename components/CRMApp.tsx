@@ -2968,66 +2968,12 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
         </header>
 
         {activeTab === "dashboard" && (
-          <div>
-            <section
-              style={{
-                marginBottom: 24,
-                padding: 24,
-                border: "1px solid rgba(160, 120, 70, 0.28)",
-                background: "rgba(247, 241, 231, 0.86)",
-                boxShadow: "0 18px 50px rgba(44, 31, 18, 0.08)"
-              }}
-            >
-              <div className="eyebrow">Démarrer ici</div>
-              <h2 style={{ marginTop: 6 }}>Que voulez-vous faire maintenant ?</h2>
-              <p className="muted-line" style={{ maxWidth: 760 }}>
-                Utilisez ces raccourcis pour créer rapidement les données, suivre les demandes et sauvegarder le CRM.
-              </p>
-
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 18 }}>
-                <button className="primary-button" type="button" onClick={openQuickEntryPrompt}>
-                  Créer depuis un message client
-                </button>
-
-                <button className="secondary-button" type="button" onClick={openQuickContactLeadPrompt}>
-                  Ajouter contact / lead
-                </button>
-
-                <button className="secondary-button" type="button" onClick={openQuickInventoryPrompt}>
-                  Ajouter bien / voiture / bateau
-                </button>
-
-                <button className="secondary-button" type="button" onClick={() => setActiveTab("leads")}>
-                  Voir les leads
-                </button>
-
-                <button className="secondary-button" type="button" onClick={saveCrmBackupToSupabase}>
-                  Sauvegarde cloud
-                </button>
-              </div>
-
-              <div style={{ marginTop: 18, display: "grid", gap: 8 }}>
-                <div className="muted-line">Conseil : après 5 à 10 ajouts, utilisez Backup fichier + Sauvegarde cloud.</div>
-                <div className="muted-line">Les imports sécurisés ajoutent des lignes sans écraser les données existantes.</div>
-              </div>
-            </section>
-
-
-          <>
-            <FollowUpsPanel
-              leads={data.leads}
-              tasks={data.tasks}
-              quotes={loadSavedQuotes()}
-              onCreateTask={createTaskDraftFromFollowUp}
-            />
-
             <Dashboard
               stats={stats}
               data={data}
               onLeadStatusChange={updateLeadStatus}
               onTaskStatusChange={updateTaskStatus}
             />
-          </div>
           </>
         )}
 
