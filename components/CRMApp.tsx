@@ -1603,6 +1603,85 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     setToast({ message, tone });
   }
 
+  function normalizeDuplicateKey(value?: string | number | null) {
+    return String(value ?? "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ");
+  }
+
+  function confirmDuplicateContact(contact: Contact) {
+    const candidateName = normalizeDuplicateKey(contact.name);
+    const candidateEmail = normalizeDuplicateKey(contact.email);
+
+    const duplicate = data.contacts.find((existing) => {
+      const sameName = candidateName && normalizeDuplicateKey(existing.name) === candidateName;
+      const sameEmail = candidateEmail && normalizeDuplicateKey(existing.email) === candidateEmail;
+
+      return sameName || sameEmail;
+    });
+
+    if (!duplicate) return true;
+
+    return window.confirm(
+      `Doublon possible détecté.\n\nContact existant : ${duplicate.name}${duplicate.email ? ` (${duplicate.email})` : ""}\nNouveau contact : ${contact.name}${contact.email ? ` (${contact.email})` : ""}\n\nCréer quand même ?`
+    );
+  }
+
+  function confirmDuplicateLead(lead: Lead) {
+    const candidateContact = normalizeDuplicateKey(lead.contactName);
+    const candidateCategory = normalizeDuplicateKey(lead.category);
+    const candidateStart = normalizeDuplicateKey(lead.rentalStartDate);
+    const candidateEnd = normalizeDuplicateKey(lead.rentalEndDate);
+
+    const duplicate = data.leads.find((existing) => {
+      const sameContact = normalizeDuplicateKey(existing.contactName) === candidateContact;
+      const sameCategory = normalizeDuplicateKey(existing.category) === candidateCategory;
+      const sameAsset = Boolean(lead.assetId && existing.assetId && existing.assetId === lead.assetId);
+      const sameDates =
+        Boolean(candidateStart || candidateEnd) &&
+        normalizeDuplicateKey(existing.rentalStartDate) === candidateStart &&
+        normalizeDuplicateKey(existing.rentalEndDate) === candidateEnd;
+
+      return sameContact && sameCategory && (sameAsset || sameDates);
+    });
+
+    if (!duplicate) return true;
+
+    return window.confirm(
+      `Lead similaire déjà existant.\n\nContact : ${duplicate.contactName}\nCatégorie : ${duplicate.category}\nDates : ${duplicate.rentalStartDate || "?"} → ${duplicate.rentalEndDate || "?"}\n\nCréer quand même ?`
+    );
+  }
+
+  function confirmDuplicateAsset(kind: "bien" | "voiture" | "bateau", item: { name?: string; city?: string; port?: string }) {
+    const candidateName = normalizeDuplicateKey(item.name);
+    const candidateLocation = normalizeDuplicateKey(item.city || item.port);
+
+    const source =
+      kind === "bien"
+        ? data.properties
+        : kind === "voiture"
+          ? (data.vehicles ?? [])
+          : (data.boats ?? []);
+
+    const duplicate = source.find((existing: any) => {
+      const sameName = normalizeDuplicateKey(existing.name) === candidateName;
+      const existingLocation = normalizeDuplicateKey(existing.city || existing.port);
+      const sameLocation = !candidateLocation || !existingLocation || existingLocation === candidateLocation;
+
+      return sameName && sameLocation;
+    });
+
+    if (!duplicate) return true;
+
+    return window.confirm(
+      `Doublon possible détecté.\n\n${kind.charAt(0).toUpperCase() + kind.slice(1)} existant : ${duplicate.name}\nNouveau : ${item.name}\n\nCréer quand même ?`
+    );
+  }
+
+
 
 
 
@@ -2526,6 +2605,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       createdAt: new Date().toISOString().slice(0, 10)
     };
     if (!contact.name) return notify("Ajoutez au minimum un nom de contact.", "warning");
+    if (!confirmDuplicateContact(contact)) return;
     setData((current) => ({ ...current, contacts: [contact, ...current.contacts] }));
     event.currentTarget.reset();
     notify("Contact ajouté.");
@@ -2553,6 +2633,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     };
 
     if (!lead.contactName) return notify("Sélectionnez un contact pour ce lead.", "warning");
+    if (!confirmDuplicateLead(lead)) return;
 
     setData((current) => ({ ...current, leads: [lead, ...current.leads] }));
     event.currentTarget.reset();
@@ -2575,6 +2656,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       surface: safeNumber(form.get("surface"))
     };
     if (!property.name) return notify("Ajoutez au minimum un nom de bien.", "warning");
+    if (!confirmDuplicateAsset("bien", property)) return;
     setData((current) => ({ ...current, properties: [property, ...current.properties] }));
     event.currentTarget.reset();
     notify("Bien ajouté.");
@@ -2596,6 +2678,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       mileage: safeNumber(form.get("mileage"))
     };
     if (!vehicle.name) return notify("Ajoutez au minimum un nom de voiture.", "warning");
+    if (!confirmDuplicateAsset("voiture", vehicle)) return;
     setData((current) => ({ ...current, vehicles: [vehicle, ...(current.vehicles ?? [])] }));
     event.currentTarget.reset();
     notify("Voiture ajoutée.");
@@ -2616,6 +2699,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       length: safeNumber(form.get("length"))
     };
     if (!boat.name) return notify("Ajoutez au minimum un nom de bateau.", "warning");
+    if (!confirmDuplicateAsset("bateau", boat)) return;
     setData((current) => ({ ...current, boats: [boat, ...(current.boats ?? [])] }));
     event.currentTarget.reset();
     notify("Bateau ajouté.");
