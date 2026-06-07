@@ -2289,6 +2289,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
         createdAt: new Date().toISOString().slice(0, 10)
       } as any;
 
+      if (!confirmDuplicateContact(contact as Contact)) return;
+
       setData((current: any) => ({
         ...current,
         contacts: [contact, ...(current.contacts ?? [])]
@@ -2370,6 +2372,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
         rentalStartDate: cleanExpressDate(rentalStartDate),
         rentalEndDate: cleanExpressDate(rentalEndDate)
       } as any;
+
+      if (!confirmDuplicateLead(lead as Lead)) return;
 
       setData((current: any) => ({
         ...current,
