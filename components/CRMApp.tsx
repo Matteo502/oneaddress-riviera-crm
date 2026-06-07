@@ -1259,7 +1259,7 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
 
         <div className="list-stack">
           {quotes.length === 0 ? (
-            <p className="muted-line">Aucun devis préparé pour le moment.</p>
+            <p className="muted-line">Aucun devis pour le moment. Créez d’abord un contact et un lead, puis générez un devis depuis le lead.</p>
           ) : (
             quotes.map((quote) => (
               <article className="quote-card" key={quote.id}>
@@ -3641,7 +3641,7 @@ function PlanningView({
 
         <div className="list-stack">
           {pendingBookings.length === 0 ? (
-            <p className="muted-line">Aucune option en cours. Un lead avec dates, actif lié et statut Devis / Négociation / Contacté apparaîtra ici.</p>
+            <p className="muted-line">Aucune option en cours. Ajoutez un lead avec dates, actif lié et statut Contacté / Devis / Négociation pour le voir ici.</p>
           ) : (
             pendingBookings.map((booking) => (
               <article className="mini-row" key={booking.id}>
@@ -3668,7 +3668,7 @@ function PlanningView({
 
         <div className="list-stack">
           {confirmedBookings.length === 0 ? (
-            <p className="muted-line">Aucune location confirmée pour le moment. Passe un lead en statut Gagné avec des dates et un actif lié pour l’afficher ici.</p>
+            <p className="muted-line">Aucune location confirmée pour le moment. Quand un lead est gagné avec dates et actif lié, il apparaîtra ici.</p>
           ) : (
             confirmedBookings.map((booking) => (
               <article className="mini-row" key={booking.id}>
@@ -3794,7 +3794,7 @@ function FollowUpsPanel({
 
       <div className="list-stack">
         {recommendations.length === 0 ? (
-          <p className="muted-line">Aucune relance urgente pour le moment.</p>
+          <p className="muted-line">Aucune relance urgente pour le moment. Les leads en retard, sans action ou les devis à suivre apparaîtront ici.</p>
         ) : (
           recommendations.map((recommendation) => (
             <article className="mini-row" key={recommendation.id}>
@@ -4074,6 +4074,17 @@ function ContactsView({
             </thead>
 
             <tbody>
+              {contacts.length === 0 && (
+                <tr>
+                  <td colSpan={5}>
+                    <div className="empty-state">
+                      <h3>Aucun contact pour le moment</h3>
+                      <p>Commencez par “Ajouter contact / lead” ou “Créer depuis un message client”.</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+
               {contacts.map((contact) => (
                 <tr key={contact.id}>
                   <td>
@@ -4717,7 +4728,17 @@ function LeadsView({
 
             <label>Statut
               <select name="status" defaultValue="Nouveau">
-                {leadStatuses.map((status) => (
+                
+        {visibleLeads.length === 0 && (
+          <div className="empty-state">
+            <h3>Aucun lead affiché</h3>
+            <p>
+              Ajoutez un lead avec “Ajouter contact / lead” ou modifiez les filtres si vous cherchez une demande existante.
+            </p>
+          </div>
+        )}
+
+{leadStatuses.map((status) => (
                   <option key={status}>{status}</option>
                 ))}
               </select>
@@ -5167,7 +5188,7 @@ function PropertiesView({
         {visibleProperties.length === 0 && (
           <div className="empty-state">
             <h3>Aucun bien trouvé</h3>
-            <p>Modifiez vos filtres pour afficher plus de résultats.</p>
+            <p>Ajoutez un bien avec “Ajouter bien / voiture / bateau” ou modifiez les filtres.</p>
           </div>
         )}
 
@@ -5410,7 +5431,7 @@ function VehiclesView({
         {visibleVehicles.length === 0 && (
           <div className="empty-state">
             <h3>Aucune voiture trouvée</h3>
-            <p>Modifiez vos filtres pour afficher plus de résultats.</p>
+            <p>Ajoutez un bien avec “Ajouter bien / voiture / bateau” ou modifiez les filtres.</p>
           </div>
         )}
 
@@ -5646,7 +5667,7 @@ function BoatsView({
         {visibleBoats.length === 0 && (
           <div className="empty-state">
             <h3>Aucun bateau trouvé</h3>
-            <p>Modifiez vos filtres pour afficher plus de résultats.</p>
+            <p>Ajoutez un bien avec “Ajouter bien / voiture / bateau” ou modifiez les filtres.</p>
           </div>
         )}
 
@@ -5870,7 +5891,7 @@ function TasksView({
         {tasks.length === 0 ? (
           <div className="empty-state">
             <h3>Aucune tâche pour le moment</h3>
-            <p>Ajoutez une tâche avec le formulaire à droite.</p>
+            <p>Ajoutez une tâche depuis un lead, un contact, ou utilisez le formulaire de création.</p>
           </div>
         ) : (
           <div className="pipeline-grid">
