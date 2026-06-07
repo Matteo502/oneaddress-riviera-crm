@@ -2956,6 +2956,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             <button className="secondary-button" type="button" onClick={openQuickEntryPrompt}>Saisie rapide</button>
             <button className="secondary-button" type="button" onClick={openQuickContactLeadPrompt}>Ajout contact/lead</button>
             <button className="secondary-button" type="button" onClick={openQuickInventoryPrompt}>Ajout actif</button>
+            <button className="secondary-button" type="button" onClick={openSafeCsvImportPrompt}>Import sécurisé</button>
             <button className="secondary-button" onClick={exportJson}>Backup JSON</button>
             <button className="secondary-button" type="button" onClick={saveCrmBackupToSupabase}>Sauvegarder Supabase</button>
             
