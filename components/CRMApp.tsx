@@ -4961,6 +4961,95 @@ function LeadsView({
     }, 50);
   }
 
+
+  async function draftAiReplyForLead(lead: Lead) {
+    const assetLabel = getLeadAssetLabel(lead);
+    const dates = formatReservationPeriod(lead.rentalStartDate, lead.rentalEndDate);
+
+    const clientMessage = window.prompt(
+      "Colle le message client ou laisse vide pour utiliser les notes du lead :",
+      lead.notes || ""
+    );
+
+    if (clientMessage === null) return;
+
+    try {
+      const response = await fetch("/api/ai/draft-client-reply", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          clientMessage,
+          contactName: lead.contactName,
+          leadCategory: lead.category,
+          dates,
+          budget: lead.value ? currency.format(lead.value) : "",
+          proposedAsset: assetLabel,
+          notes: lead.notes
+        })
+      });
+
+      const result: any = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        window.alert(result?.error || "Impossible de générer la réponse IA.");
+        return;
+      }
+
+      const preview = [
+        `Sujet : ${result.subject || "À compléter"}`,
+        "",
+        "Réponse client :",
+        result.clientReply || "À compléter",
+        "",
+        `Prochaine action : ${result.nextAction || "À compléter"}`,
+        `Priorité : ${result.priority || "Moyenne"}`,
+        "",
+        Array.isArray(result.missingInformation) && result.missingInformation.length
+          ? `Infos manquantes : ${result.missingInformation.join(", ")}`
+          : "",
+        result.internalNotes ? `Notes internes : ${result.internalNotes}` : ""
+      ].filter(Boolean).join("\n");
+
+      const confirmed = window.confirm(
+        `${preview}\n\nCopier la réponse client et mettre à jour la prochaine action ?`
+      );
+
+      if (!confirmed) return;
+
+      try {
+        await navigator.clipboard.writeText(result.clientReply || "");
+        window.alert("Réponse client copiée dans le presse-papiers.");
+      } catch {
+        window.prompt("Copie manuellement la réponse client :", result.clientReply || "");
+      }
+
+      const shouldUpdateLead = window.confirm("Mettre à jour ce lead avec la prochaine action IA ?");
+
+      if (!shouldUpdateLead) return;
+
+      const updatedLead = {
+        ...lead,
+        nextAction: result.nextAction || lead.nextAction,
+        priority: (result.priority || lead.priority || "Moyenne") as Lead["priority"],
+        notes: [
+          lead.notes,
+          result.internalNotes ? `Note IA : ${result.internalNotes}` : "",
+          Array.isArray(result.missingInformation) && result.missingInformation.length
+            ? `Informations manquantes IA : ${result.missingInformation.join(", ")}`
+            : ""
+        ].filter(Boolean).join("\n\n")
+      };
+
+      onUpdate(updatedLead);
+      setSelectedLead(updatedLead);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erreur IA inconnue.";
+      window.alert(`Erreur réponse IA : ${message}`);
+    }
+  }
+
   const visibleLeads = leads.filter((lead) => {
     const dueStatus = getDueStatus(lead.dueDate);
 
@@ -5318,7 +5407,15 @@ function LeadsView({
                 Fermer
               </button>
 
-              <button
+                              <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => draftAiReplyForLead(selectedLead)}
+                >
+                  Rédiger réponse IA
+                </button>
+
+<button
                 className="secondary-button"
                 type="button"
                 onClick={() => {
