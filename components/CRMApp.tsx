@@ -1788,6 +1788,292 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     };
   }
 
+
+  function openSafeCsvImportPrompt() {
+    const choice = window.prompt(
+      "Import sécurisé :\n\n1 = Contacts complets\n2 = Leads complets\n3 = Biens\n4 = Voitures\n5 = Bateaux\n\nChaque ligne doit utiliser le séparateur |.\nAucune donnée existante ne sera écrasée.",
+      "1"
+    );
+
+    if (!choice) return;
+
+    const type = choice.trim();
+
+    const examples: Record<string, string> = {
+      "1": "Nom | Type | Niveau client | Langue préférée | Relation | Email | Téléphone | Ville | Adresse postale | Budget | Source | Préférences | Notes importantes | Notes",
+      "2": "Catégorie | Contact | Actif proposé | Début réservation | Fin réservation | Valeur | Statut | Priorité | Échéance réponse | Prochaine action | Notes internes",
+      "3": "Nom | Type | Ville | Prix | Statut | Propriétaire | Notes",
+      "4": "Nom | Marque | Modèle | Ville | Prix/jour | Statut | Propriétaire | Notes",
+      "5": "Nom | Port | Type | Prix/jour | Statut | Propriétaire | Notes"
+    };
+
+    const raw = window.prompt(
+      `Colle les lignes à importer.\n\nFormat attendu :\n${examples[type] || examples["1"]}\n\nTu peux coller plusieurs lignes, une par ligne.`,
+      ""
+    );
+
+    if (!raw) return;
+
+    const lines = raw
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter((line) => line && line.includes("|"));
+
+    if (lines.length === 0) {
+      window.alert("Import refusé : aucune ligne valide avec séparateur |.");
+      return;
+    }
+
+    function cleanImportValue(value?: string) {
+      const cleaned = String(value ?? "").trim();
+
+      if (!cleaned || /à compléter|a completer|n\/a|na/i.test(cleaned)) {
+        return "";
+      }
+
+      return cleaned;
+    }
+
+    function numberImportValue(value?: string) {
+      const cleaned = cleanImportValue(value);
+      if (!cleaned) return 0;
+      return Number(cleaned.replace(/[^\d]/g, "")) || 0;
+    }
+
+    function dateImportValue(value?: string) {
+      const cleaned = cleanImportValue(value);
+      if (!cleaned) return "";
+      return normalizeQuickEntryDate(cleaned) || cleaned;
+    }
+
+    function findAsset(assetLabel?: string) {
+      const wantedAsset = cleanImportValue(assetLabel).toLowerCase();
+
+      if (!wantedAsset) {
+        return { assetType: "", assetId: "", unresolvedAsset: "" };
+      }
+
+      const property = data.properties.find((property: any) => {
+        const label = String(property.name ?? property.title ?? "").toLowerCase();
+        return label && (label === wantedAsset || label.includes(wantedAsset) || wantedAsset.includes(label));
+      });
+
+      if (property) {
+        return { assetType: "Property", assetId: property.id, unresolvedAsset: "" };
+      }
+
+      const vehicle = (data.vehicles ?? []).find((vehicle: any) => {
+        const label = String(vehicle.name ?? `${vehicle.brand ?? ""} ${vehicle.model ?? ""}`).toLowerCase();
+        return label && (label === wantedAsset || label.includes(wantedAsset) || wantedAsset.includes(label));
+      });
+
+      if (vehicle) {
+        return { assetType: "Vehicle", assetId: vehicle.id, unresolvedAsset: "" };
+      }
+
+      const boat = (data.boats ?? []).find((boat: any) => {
+        const label = String(boat.name ?? "").toLowerCase();
+        return label && (label === wantedAsset || label.includes(wantedAsset) || wantedAsset.includes(label));
+      });
+
+      if (boat) {
+        return { assetType: "Boat", assetId: boat.id, unresolvedAsset: "" };
+      }
+
+      return { assetType: "", assetId: "", unresolvedAsset: cleanImportValue(assetLabel) };
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = lines.map((line) => line.split("|").map((part) => part.trim()));
+
+    let preview = "";
+    let payload: any[] = [];
+
+    if (type === "1") {
+      payload = rows.map((parts) => {
+        const [
+          name,
+          kind,
+          clientLevel,
+          preferredLanguage,
+          relationshipStatus,
+          email,
+          phone,
+          city,
+          postalAddress,
+          budget,
+          source,
+          preferences,
+          importantNotes,
+          notes
+        ] = parts;
+
+        return {
+          id: crypto.randomUUID(),
+          name: cleanImportValue(name),
+          kind: cleanImportValue(kind) || "Client",
+          clientLevel: cleanImportValue(clientLevel) || "Standard",
+          preferredLanguage: cleanImportValue(preferredLanguage) || "Français",
+          relationshipStatus: cleanImportValue(relationshipStatus) || "Prospect",
+          email: cleanImportValue(email),
+          phone: cleanImportValue(phone),
+          city: cleanImportValue(city),
+          postalAddress: cleanImportValue(postalAddress),
+          budget: numberImportValue(budget),
+          source: cleanImportValue(source) || "Import sécurisé",
+          preferences: cleanImportValue(preferences),
+          importantNotes: cleanImportValue(importantNotes),
+          notes: cleanImportValue(notes),
+          createdAt: today
+        };
+      }).filter((contact) => contact.name);
+
+      preview = payload.slice(0, 5).map((item) => `- ${item.name} / ${item.email || "email à compléter"} / ${item.city || "ville à compléter"}`).join("\n");
+    }
+
+    if (type === "2") {
+      payload = rows.map((parts) => {
+        const [
+          category,
+          contactName,
+          assetLabel,
+          rentalStartDate,
+          rentalEndDate,
+          value,
+          status,
+          priority,
+          dueDate,
+          nextAction,
+          notes
+        ] = parts;
+
+        const asset = findAsset(assetLabel);
+
+        return {
+          id: crypto.randomUUID(),
+          category: cleanImportValue(category) || "Villa",
+          contactName: cleanImportValue(contactName),
+          assetType: asset.assetType,
+          assetId: asset.assetId,
+          status: cleanImportValue(status) || "Nouveau",
+          value: numberImportValue(value),
+          priority: cleanImportValue(priority) || "Moyenne",
+          dueDate: dateImportValue(dueDate),
+          nextAction: cleanImportValue(nextAction) || "Qualifier la demande.",
+          notes: [asset.unresolvedAsset ? `Actif proposé : ${asset.unresolvedAsset}` : "", cleanImportValue(notes)].filter(Boolean).join("\n\n"),
+          rentalStartDate: dateImportValue(rentalStartDate),
+          rentalEndDate: dateImportValue(rentalEndDate)
+        };
+      }).filter((lead) => lead.contactName);
+
+      preview = payload.slice(0, 5).map((item) => `- ${item.contactName} / ${item.category} / ${item.status}`).join("\n");
+    }
+
+    if (type === "3") {
+      payload = rows.map((parts) => {
+        const [name, propertyType, city, price, status, owner, notes] = parts;
+
+        return {
+          id: crypto.randomUUID(),
+          name: cleanImportValue(name),
+          type: cleanImportValue(propertyType) || "Villa",
+          city: cleanImportValue(city),
+          price: numberImportValue(price),
+          status: cleanImportValue(status) || "Disponible",
+          owner: cleanImportValue(owner),
+          bedrooms: cleanImportValue(notes)?.match(/(\d+)\s*ch/i)?.[1] ? Number(cleanImportValue(notes).match(/(\d+)\s*ch/i)?.[1]) : 0,
+          surface: 0,
+          notes: cleanImportValue(notes),
+          createdAt: today
+        };
+      }).filter((property) => property.name);
+
+      preview = payload.slice(0, 5).map((item) => `- ${item.name} / ${item.city || "ville à compléter"} / ${item.status}`).join("\n");
+    }
+
+    if (type === "4") {
+      payload = rows.map((parts) => {
+        const [name, brand, model, city, price, status, owner, notes] = parts;
+
+        return {
+          id: crypto.randomUUID(),
+          name: cleanImportValue(name),
+          brand: cleanImportValue(brand),
+          model: cleanImportValue(model),
+          city: cleanImportValue(city),
+          price: numberImportValue(price),
+          status: cleanImportValue(status) || "Disponible",
+          owner: cleanImportValue(owner),
+          year: "",
+          mileage: "",
+          notes: cleanImportValue(notes),
+          createdAt: today
+        };
+      }).filter((vehicle) => vehicle.name);
+
+      preview = payload.slice(0, 5).map((item) => `- ${item.name} / ${item.city || "ville à compléter"} / ${item.status}`).join("\n");
+    }
+
+    if (type === "5") {
+      payload = rows.map((parts) => {
+        const [name, port, boatType, price, status, owner, notes] = parts;
+
+        return {
+          id: crypto.randomUUID(),
+          name: cleanImportValue(name),
+          port: cleanImportValue(port),
+          type: cleanImportValue(boatType) || "Yacht",
+          price: numberImportValue(price),
+          status: cleanImportValue(status) || "Disponible",
+          owner: cleanImportValue(owner),
+          year: "",
+          length: "",
+          notes: cleanImportValue(notes),
+          createdAt: today
+        };
+      }).filter((boat) => boat.name);
+
+      preview = payload.slice(0, 5).map((item) => `- ${item.name} / ${item.port || "port à compléter"} / ${item.status}`).join("\n");
+    }
+
+    if (payload.length === 0) {
+      window.alert("Import refusé : aucune donnée exploitable trouvée.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Aperçu import sécurisé\n\nLignes valides : ${payload.length}\n\n${preview}\n\nConfirmer l’ajout ?\n\nAucune donnée existante ne sera écrasée.`
+    );
+
+    if (!confirmed) return;
+
+    setData((current: any) => {
+      if (type === "1") {
+        return { ...current, contacts: [...payload, ...(current.contacts ?? [])] };
+      }
+
+      if (type === "2") {
+        return { ...current, leads: [...payload, ...(current.leads ?? [])] };
+      }
+
+      if (type === "3") {
+        return { ...current, properties: [...payload, ...(current.properties ?? [])] };
+      }
+
+      if (type === "4") {
+        return { ...current, vehicles: [...payload, ...(current.vehicles ?? [])] };
+      }
+
+      if (type === "5") {
+        return { ...current, boats: [...payload, ...(current.boats ?? [])] };
+      }
+
+      return current;
+    });
+
+    notify(`${payload.length} ligne(s) importée(s) sans écrasement.`);
+  }
+
   function openQuickContactLeadPrompt() {
     const choice = window.prompt(
       "Ajouter rapidement :\n\n1 = Contact complet\n2 = Lead complet\n\nContact : Nom | Type | Niveau client | Langue préférée | Relation | Email | Téléphone | Ville | Adresse postale | Budget | Source | Préférences | Notes importantes | Notes\n\nLead : Catégorie | Contact | Actif proposé | Début réservation | Fin réservation | Valeur | Statut | Priorité | Échéance réponse | Prochaine action | Notes internes",
