@@ -1773,7 +1773,113 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     };
   }
 
-  function saveQuickEntryText(rawText: string) {
+  function cleanAiCrmValue(value?: unknown) {
+    const cleaned = String(value ?? "").trim();
+
+    if (!cleaned || /à compléter|a completer|n\/a|na/i.test(cleaned)) {
+      return "";
+    }
+
+    return cleaned;
+  }
+
+  async function buildAiQuickEntryDraft(cleanedText: string) {
+    try {
+      const response = await fetch("/api/ai/parse-client-message", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ message: cleanedText })
+      });
+
+      const ai: any = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(ai?.error || "Assistant IA indisponible.");
+      }
+
+      const contact = ai?.contact ?? {};
+      const lead = ai?.lead ?? {};
+
+      const fallbackDraft = parseQuickEntryText(cleanedText);
+
+      const contactName =
+        cleanAiCrmValue(contact.name) ||
+        cleanAiCrmValue(lead.contact) ||
+        fallbackDraft.contactName;
+
+      const email = cleanAiCrmValue(contact.email) || fallbackDraft.email;
+      const phone = cleanAiCrmValue(contact.phone) || fallbackDraft.phone;
+
+      const budgetText =
+        cleanAiCrmValue(contact.budget) ||
+        cleanAiCrmValue(lead.value);
+
+      const budget = budgetText
+        ? Number(String(budgetText).replace(/[^\d]/g, "")) || 0
+        : fallbackDraft.budget;
+
+      const destination =
+        cleanAiCrmValue(contact.city) ||
+        cleanAiCrmValue(lead.proposedAsset) ||
+        fallbackDraft.destination;
+
+      const category =
+        cleanAiCrmValue(lead.category) ||
+        fallbackDraft.category;
+
+      const rentalStartDate =
+        normalizeQuickEntryDate(cleanAiCrmValue(lead.rentalStartDate)) ||
+        cleanAiCrmValue(lead.rentalStartDate) ||
+        fallbackDraft.rentalStartDate;
+
+      const rentalEndDate =
+        normalizeQuickEntryDate(cleanAiCrmValue(lead.rentalEndDate)) ||
+        cleanAiCrmValue(lead.rentalEndDate) ||
+        fallbackDraft.rentalEndDate;
+
+      const nextAction =
+        cleanAiCrmValue(lead.nextAction) ||
+        fallbackDraft.nextAction;
+
+      const notes = [
+        `Message original :\n${cleanedText}`,
+        cleanAiCrmValue(contact.preferences) ? `Préférences : ${cleanAiCrmValue(contact.preferences)}` : "",
+        cleanAiCrmValue(contact.importantNotes) ? `Notes importantes : ${cleanAiCrmValue(contact.importantNotes)}` : "",
+        cleanAiCrmValue(lead.proposedAsset) ? `Actif proposé : ${cleanAiCrmValue(lead.proposedAsset)}` : "",
+        cleanAiCrmValue(lead.internalNotes) ? `Notes internes : ${cleanAiCrmValue(lead.internalNotes)}` : "",
+        Array.isArray(ai?.missingInformation) && ai.missingInformation.length
+          ? `Informations manquantes : ${ai.missingInformation.join(", ")}`
+          : "",
+        Array.isArray(ai?.warnings) && ai.warnings.length
+          ? `Alertes IA : ${ai.warnings.join(", ")}`
+          : ""
+      ].filter(Boolean).join("\n\n");
+
+      return {
+        contactName,
+        email,
+        phone,
+        budget,
+        destination,
+        category,
+        rentalStartDate,
+        rentalEndDate,
+        nextAction,
+        notes
+      };
+    } catch (error) {
+      console.warn("Assistant IA indisponible, parseur classique utilisé.", error);
+      notify("Assistant IA indisponible : parseur classique utilisé.", "warning");
+
+      return parseQuickEntryText(cleanedText);
+    }
+  }
+
+
+
+  async function saveQuickEntryText(rawText: string) {
     const cleanedText = rawText.trim();
 
     if (!cleanedText) {
@@ -1795,7 +1901,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       return;
     }
 
-    const draft = parseQuickEntryText(cleanedText);
+    const draft = await buildAiQuickEntryDraft(cleanedText);
 
     const weakNames = [
       "client",
@@ -1830,7 +1936,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     }
 
     const confirmed = window.confirm(
-      `Créer un contact + lead pour : ${draft.contactName} ?\n\nEmail : ${draft.email || "À compléter"}\nDestination : ${draft.destination || "À compléter"}\nBudget : ${draft.budget ? draft.budget.toLocaleString("fr-FR") + " €" : "À compléter"}`
+      `Créer un contact + lead pour : ${draft.contactName} ?\n\nEmail : ${draft.email || "À compléter"}\nCatégorie : ${draft.category || "À compléter"}\nDestination / actif : ${draft.destination || "À compléter"}\nDates : ${draft.rentalStartDate || "À compléter"} → ${draft.rentalEndDate || "À compléter"}\nBudget : ${draft.budget ? draft.budget.toLocaleString("fr-FR") + " €" : "À compléter"}\n\nProchaine action :\n${draft.nextAction || "À compléter"}`
     );
 
     if (!confirmed) return;
