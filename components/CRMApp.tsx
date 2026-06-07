@@ -1772,114 +1772,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       notes
     };
   }
-
-  function cleanAiCrmValue(value?: unknown) {
-    const cleaned = String(value ?? "").trim();
-
-    if (!cleaned || /à compléter|a completer|n\/a|na/i.test(cleaned)) {
-      return "";
-    }
-
-    return cleaned;
-  }
-
-  async function buildAiQuickEntryDraft(cleanedText: string) {
-    try {
-      const response = await fetch("/api/ai/parse-client-message", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ message: cleanedText })
-      });
-
-      const ai: any = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        throw new Error(ai?.error || "Assistant IA indisponible.");
-      }
-
-      const contact = ai?.contact ?? {};
-      const lead = ai?.lead ?? {};
-
-      const fallbackDraft = parseQuickEntryText(cleanedText);
-
-      const contactName =
-        cleanAiCrmValue(contact.name) ||
-        cleanAiCrmValue(lead.contact) ||
-        fallbackDraft.contactName;
-
-      const email = cleanAiCrmValue(contact.email) || fallbackDraft.email;
-      const phone = cleanAiCrmValue(contact.phone) || fallbackDraft.phone;
-
-      const budgetText =
-        cleanAiCrmValue(contact.budget) ||
-        cleanAiCrmValue(lead.value);
-
-      const budget = budgetText
-        ? Number(String(budgetText).replace(/[^\d]/g, "")) || 0
-        : fallbackDraft.budget;
-
-      const destination =
-        cleanAiCrmValue(contact.city) ||
-        cleanAiCrmValue(lead.proposedAsset) ||
-        fallbackDraft.destination;
-
-      const category =
-        cleanAiCrmValue(lead.category) ||
-        fallbackDraft.category;
-
-      const rentalStartDate =
-        normalizeQuickEntryDate(cleanAiCrmValue(lead.rentalStartDate)) ||
-        cleanAiCrmValue(lead.rentalStartDate) ||
-        fallbackDraft.rentalStartDate;
-
-      const rentalEndDate =
-        normalizeQuickEntryDate(cleanAiCrmValue(lead.rentalEndDate)) ||
-        cleanAiCrmValue(lead.rentalEndDate) ||
-        fallbackDraft.rentalEndDate;
-
-      const nextAction =
-        cleanAiCrmValue(lead.nextAction) ||
-        fallbackDraft.nextAction;
-
-      const notes = [
-        `Message original :\n${cleanedText}`,
-        cleanAiCrmValue(contact.preferences) ? `Préférences : ${cleanAiCrmValue(contact.preferences)}` : "",
-        cleanAiCrmValue(contact.importantNotes) ? `Notes importantes : ${cleanAiCrmValue(contact.importantNotes)}` : "",
-        cleanAiCrmValue(lead.proposedAsset) ? `Actif proposé : ${cleanAiCrmValue(lead.proposedAsset)}` : "",
-        cleanAiCrmValue(lead.internalNotes) ? `Notes internes : ${cleanAiCrmValue(lead.internalNotes)}` : "",
-        Array.isArray(ai?.missingInformation) && ai.missingInformation.length
-          ? `Informations manquantes : ${ai.missingInformation.join(", ")}`
-          : "",
-        Array.isArray(ai?.warnings) && ai.warnings.length
-          ? `Alertes IA : ${ai.warnings.join(", ")}`
-          : ""
-      ].filter(Boolean).join("\n\n");
-
-      return {
-        contactName,
-        email,
-        phone,
-        budget,
-        destination,
-        category,
-        rentalStartDate,
-        rentalEndDate,
-        nextAction,
-        notes
-      };
-    } catch (error) {
-      console.warn("Assistant IA indisponible, parseur classique utilisé.", error);
-      notify("Assistant IA indisponible : parseur classique utilisé.", "warning");
-
-      return parseQuickEntryText(cleanedText);
-    }
-  }
-
-
-
-  async function saveQuickEntryText(rawText: string) {
+  function saveQuickEntryText(rawText: string) {
     const cleanedText = rawText.trim();
 
     if (!cleanedText) {
@@ -1897,11 +1790,11 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     ];
 
     if (forbiddenPatterns.some((pattern) => pattern.test(cleanedText))) {
-      window.alert("Assistant message refusé : ce texte ressemble à du code ou à une commande terminal, pas à une demande client.");
+      window.alert("Créer depuis message refusé : ce texte ressemble à du code ou à une commande terminal, pas à une demande client.");
       return;
     }
 
-    const draft = await buildAiQuickEntryDraft(cleanedText);
+    const draft = parseQuickEntryText(cleanedText);
 
     const weakNames = [
       "client",
@@ -3288,7 +3181,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             />
             <span className="muted-line">Connecté : {sessionEmail}</span>
             <button className="secondary-button" type="button" onClick={onLogout}>Déconnexion</button>
-            <button className="secondary-button" type="button" onClick={openQuickEntryPrompt}>Assistant message</button>
+            <button className="secondary-button" type="button" onClick={openQuickEntryPrompt}>Créer depuis message</button>
             <button className="secondary-button" type="button" onClick={openQuickContactLeadPrompt}>Ajouter contact / lead</button>
             <button className="secondary-button" type="button" onClick={openQuickInventoryPrompt}>Ajouter bien / voiture / bateau</button>
             <button className="secondary-button" type="button" onClick={openSafeCsvImportPrompt}>Import sécurisé</button>
@@ -4962,95 +4855,7 @@ function LeadsView({
   }
 
 
-  async function draftAiReplyForLead(lead: Lead) {
-    const assetLabel = getLeadAssetLabel(lead);
-    const dates = formatReservationPeriod(lead.rentalStartDate, lead.rentalEndDate);
-
-    const clientMessage = window.prompt(
-      "Colle le message client ou laisse vide pour utiliser les notes du lead :",
-      lead.notes || ""
-    );
-
-    if (clientMessage === null) return;
-
-    try {
-      const response = await fetch("/api/ai/draft-client-reply", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          clientMessage,
-          contactName: lead.contactName,
-          leadCategory: lead.category,
-          dates,
-          budget: lead.value ? currency.format(lead.value) : "",
-          proposedAsset: assetLabel,
-          notes: lead.notes
-        })
-      });
-
-      const result: any = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        window.alert(result?.error || "Impossible de générer la réponse IA.");
-        return;
-      }
-
-      const preview = [
-        `Sujet : ${result.subject || "À compléter"}`,
-        "",
-        "Réponse client :",
-        result.clientReply || "À compléter",
-        "",
-        `Prochaine action : ${result.nextAction || "À compléter"}`,
-        `Priorité : ${result.priority || "Moyenne"}`,
-        "",
-        Array.isArray(result.missingInformation) && result.missingInformation.length
-          ? `Infos manquantes : ${result.missingInformation.join(", ")}`
-          : "",
-        result.internalNotes ? `Notes internes : ${result.internalNotes}` : ""
-      ].filter(Boolean).join("\n");
-
-      const confirmed = window.confirm(
-        `${preview}\n\nCopier la réponse client et mettre à jour la prochaine action ?`
-      );
-
-      if (!confirmed) return;
-
-      try {
-        await navigator.clipboard.writeText(result.clientReply || "");
-        window.alert("Réponse client copiée dans le presse-papiers.");
-      } catch {
-        window.prompt("Copie manuellement la réponse client :", result.clientReply || "");
-      }
-
-      const shouldUpdateLead = window.confirm("Mettre à jour ce lead avec la prochaine action IA ?");
-
-      if (!shouldUpdateLead) return;
-
-      const updatedLead = {
-        ...lead,
-        nextAction: result.nextAction || lead.nextAction,
-        priority: (result.priority || lead.priority || "Moyenne") as Lead["priority"],
-        notes: [
-          lead.notes,
-          result.internalNotes ? `Note IA : ${result.internalNotes}` : "",
-          Array.isArray(result.missingInformation) && result.missingInformation.length
-            ? `Informations manquantes IA : ${result.missingInformation.join(", ")}`
-            : ""
-        ].filter(Boolean).join("\n\n")
-      };
-
-      onUpdate(updatedLead);
-      setSelectedLead(updatedLead);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Erreur IA inconnue.";
-      window.alert(`Erreur réponse IA : ${message}`);
-    }
-  }
-
-  const visibleLeads = leads.filter((lead) => {
+const visibleLeads = leads.filter((lead) => {
     const dueStatus = getDueStatus(lead.dueDate);
 
     const categoryMatches = leadCategoryFilter === "Toutes" || lead.category === leadCategoryFilter;
@@ -5408,14 +5213,6 @@ function LeadsView({
               </button>
 
                               <button
-                  className="secondary-button"
-                  type="button"
-                  onClick={() => draftAiReplyForLead(selectedLead)}
-                >
-                  Rédiger réponse IA
-                </button>
-
-<button
                 className="secondary-button"
                 type="button"
                 onClick={() => {
