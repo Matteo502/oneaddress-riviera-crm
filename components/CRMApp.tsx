@@ -3857,14 +3857,18 @@ function Dashboard({
         }}
       >
         <p className="eyebrow">Démarrer ici</p>
-        <h2 style={{
-          margin: "8px 0 10px",
-          color: "#061b22",
-          fontSize: "clamp(28px, 3vw, 44px)",
-          lineHeight: 1.05
-        }}>
+        <div
+          style={{
+            margin: "8px 0 10px",
+            color: "#071f27",
+            fontSize: 26,
+            fontWeight: 600,
+            lineHeight: 1.2,
+            letterSpacing: "0.01em"
+          }}
+        >
           Que voulez-vous faire maintenant ?
-        </h2>
+        </div>
         <p className="muted-line">
           Créez rapidement les données, suivez les demandes et sauvegardez le CRM après chaque lot d’ajouts.
         </p>
