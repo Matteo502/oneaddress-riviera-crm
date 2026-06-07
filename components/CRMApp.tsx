@@ -66,6 +66,50 @@ function safeNumber(value: FormDataEntryValue | null) {
 }
 
 
+function contactToSupabaseRow(contact: Contact, userId: string) {
+  return {
+    id: contact.id,
+    user_id: userId,
+    name: contact.name,
+    kind: contact.kind || "Client",
+    client_level: contact.clientLevel || "Standard",
+    preferred_language: contact.preferredLanguage || "Français",
+    relationship_status: contact.relationshipStatus || "Prospect",
+    email: contact.email || "",
+    phone: contact.phone || "",
+    city: contact.city || "",
+    postal_address: contact.postalAddress || "",
+    budget: contact.budget || 0,
+    source: contact.source || "",
+    preferences: contact.preferences || "",
+    important_notes: contact.importantNotes || "",
+    notes: contact.notes || "",
+    updated_at: new Date().toISOString()
+  };
+}
+
+function contactFromSupabaseRow(row: any): Contact {
+  return {
+    id: String(row.id || makeId("contact")),
+    name: String(row.name || ""),
+    kind: String(row.kind || "Client") as ContactKind,
+    clientLevel: String(row.client_level || "Standard"),
+    preferredLanguage: String(row.preferred_language || "Français"),
+    relationshipStatus: String(row.relationship_status || "Prospect"),
+    email: String(row.email || ""),
+    phone: String(row.phone || ""),
+    city: String(row.city || ""),
+    postalAddress: String(row.postal_address || ""),
+    budget: Number(row.budget || 0),
+    source: String(row.source || ""),
+    preferences: String(row.preferences || ""),
+    importantNotes: String(row.important_notes || ""),
+    notes: String(row.notes || ""),
+    createdAt: String(row.created_at || new Date().toISOString()).slice(0, 10)
+  };
+}
+
+
 
 function isOpenLead(lead: Lead) {
   return lead.status !== "Gagné" && lead.status !== "Perdu";
@@ -2647,6 +2691,124 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
   }
 
 
+  async function getCurrentCrmUserId() {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !userData.user) {
+      notify("Contact cloud non synchronisé : utilisateur Supabase non connecté.", "warning");
+      return "";
+    }
+
+    return userData.user.id;
+  }
+
+  async function upsertContactToSupabase(contact: Contact) {
+    const userId = await getCurrentCrmUserId();
+
+    if (!userId) return false;
+
+    const { error } = await supabase
+      .from("crm_contacts")
+      .upsert(contactToSupabaseRow(contact, userId), { onConflict: "id" });
+
+    if (error) {
+      notify(`Contact non sauvegardé dans Supabase : ${error.message}`, "warning");
+      return false;
+    }
+
+    return true;
+  }
+
+  async function deleteContactFromSupabase(id: string) {
+    const userId = await getCurrentCrmUserId();
+
+    if (!userId) return false;
+
+    const { error } = await supabase
+      .from("crm_contacts")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId);
+
+    if (error) {
+      notify(`Contact non supprimé dans Supabase : ${error.message}`, "warning");
+      return false;
+    }
+
+    return true;
+  }
+
+  async function loadContactsFromSupabaseOnce(isCancelled: () => boolean) {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !userData.user || isCancelled()) return;
+
+    const { data: rows, error } = await supabase
+      .from("crm_contacts")
+      .select("*")
+      .eq("user_id", userData.user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      notify(`Contacts cloud non chargés : ${error.message}`, "warning");
+      return;
+    }
+
+    const cloudContacts = Array.isArray(rows) ? rows.map(contactFromSupabaseRow).filter((contact) => contact.name) : [];
+
+    if (cloudContacts.length > 0) {
+      setData((current) => ({
+        ...current,
+        contacts: cloudContacts
+      }));
+
+      notify("Contacts chargés depuis Supabase.");
+      return;
+    }
+
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    const localContacts = Array.isArray(parsed?.contacts) ? parsed.contacts as Contact[] : [];
+
+    if (localContacts.length === 0) return;
+
+    const confirmed = window.confirm(
+      `La table Contacts Supabase est vide.\n\nCopier ${localContacts.length} contact(s) locaux vers Supabase maintenant ?\n\nClique OK seulement si les contacts affichés dans le CRM sont les bons.`
+    );
+
+    if (!confirmed) return;
+
+    const payload = localContacts
+      .filter((contact) => contact?.id && contact?.name)
+      .map((contact) => contactToSupabaseRow(contact, userData.user.id));
+
+    if (payload.length === 0) return;
+
+    const { error: upsertError } = await supabase
+      .from("crm_contacts")
+      .upsert(payload, { onConflict: "id" });
+
+    if (upsertError) {
+      notify(`Migration contacts impossible : ${upsertError.message}`, "warning");
+      return;
+    }
+
+    notify(`${payload.length} contact(s) copiés dans Supabase.`);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const timer = window.setTimeout(() => {
+      void loadContactsFromSupabaseOnce(() => cancelled);
+    }, 700);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, []);
+
   async function saveCrmBackupToSupabase() {
     const currentData = data as any;
 
@@ -2751,6 +2913,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     if (!contact.name) return notify("Ajoutez au minimum un nom de contact.", "warning");
     if (!confirmDuplicateContact(contact)) return;
     setData((current) => ({ ...current, contacts: [contact, ...current.contacts] }));
+    void upsertContactToSupabase(contact);
     event.currentTarget.reset();
     notify("Contact ajouté.");
   }
@@ -3025,11 +3188,15 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       )
     }));
 
+    void upsertContactToSupabase(updatedContact);
+
     notify("Contact mis à jour.");
   }
 
   function deleteContact(id: string) {
     setData((current) => ({ ...current, contacts: current.contacts.filter((contact) => contact.id !== id) }));
+    void deleteContactFromSupabase(id);
+
     notify("Contact supprimé.");
   }
 
