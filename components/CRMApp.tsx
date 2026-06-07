@@ -1781,10 +1781,56 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       return;
     }
 
+    const forbiddenPatterns = [
+      /git\s+(add|commit|push|checkout|status)/i,
+      /npm\s+(run|install|build)/i,
+      /components\/CRMApp\.tsx/i,
+      /function\s+\w+/i,
+      /const\s+\w+\s*=/i,
+      /<button|<div|<section/i
+    ];
+
+    if (forbiddenPatterns.some((pattern) => pattern.test(cleanedText))) {
+      window.alert("Assistant message refusé : ce texte ressemble à du code ou à une commande terminal, pas à une demande client.");
+      return;
+    }
+
     const draft = parseQuickEntryText(cleanedText);
 
+    const weakNames = [
+      "client",
+      "hello",
+      "bonjour",
+      "one address riviera",
+      "oneaddress riviera",
+      "à compléter",
+      "a completer",
+      "git add",
+      "npm run"
+    ];
+
+    const currentName = String(draft.contactName || "").trim();
+    const nameLooksWeak =
+      !currentName ||
+      currentName.length < 3 ||
+      weakNames.some((weakName) => currentName.toLowerCase().includes(weakName));
+
+    if (nameLooksWeak) {
+      const manualName = window.prompt(
+        "Nom du client non détecté clairement. Indique le nom complet du client avant de créer la fiche :",
+        draft.email ? draft.email.split("@")[0] : ""
+      );
+
+      if (!manualName?.trim()) {
+        window.alert("Création annulée : nom client obligatoire.");
+        return;
+      }
+
+      draft.contactName = manualName.trim();
+    }
+
     const confirmed = window.confirm(
-      `Créer un contact + lead pour : ${draft.contactName} ?`
+      `Créer un contact + lead pour : ${draft.contactName} ?\n\nEmail : ${draft.email || "À compléter"}\nDestination : ${draft.destination || "À compléter"}\nBudget : ${draft.budget ? draft.budget.toLocaleString("fr-FR") + " €" : "À compléter"}`
     );
 
     if (!confirmed) return;
