@@ -2932,8 +2932,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
 
         <div className="sidebar-card">
           <p className="eyebrow">MVP</p>
-          <strong>Données locales</strong>
-          <span>Cette version garde les données dans le navigateur. Prêt à connecter une DB ensuite.</span>
+          <strong>Sauvegardes</strong>
+          <span>Utilisez Backup fichier et Sauvegarde cloud après chaque lot d’ajouts. Prêt à connecter une DB ensuite.</span>
         </div>
       </aside>
 
@@ -2953,17 +2953,17 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             />
             <span className="muted-line">Connecté : {sessionEmail}</span>
             <button className="secondary-button" type="button" onClick={onLogout}>Déconnexion</button>
-            <button className="secondary-button" type="button" onClick={openQuickEntryPrompt}>Saisie rapide</button>
-            <button className="secondary-button" type="button" onClick={openQuickContactLeadPrompt}>Ajout contact/lead</button>
-            <button className="secondary-button" type="button" onClick={openQuickInventoryPrompt}>Ajout actif</button>
+            <button className="secondary-button" type="button" onClick={openQuickEntryPrompt}>Assistant message</button>
+            <button className="secondary-button" type="button" onClick={openQuickContactLeadPrompt}>Ajouter contact / lead</button>
+            <button className="secondary-button" type="button" onClick={openQuickInventoryPrompt}>Ajouter bien / voiture / bateau</button>
             <button className="secondary-button" type="button" onClick={openSafeCsvImportPrompt}>Import sécurisé</button>
-            <button className="secondary-button" onClick={exportJson}>Backup JSON</button>
-            <button className="secondary-button" type="button" onClick={saveCrmBackupToSupabase}>Sauvegarder Supabase</button>
+            <button className="secondary-button" onClick={exportJson}>Backup fichier</button>
+            <button className="secondary-button" type="button" onClick={saveCrmBackupToSupabase}>Sauvegarde cloud</button>
             
             <button className="secondary-button" onClick={() => {
             exportCRMAsCsv(data);
             notify("Export CSV téléchargé.");
-          }}>Exporter CSV</button>
+          }}>Export CSV</button>
           </div>
         </header>
 
