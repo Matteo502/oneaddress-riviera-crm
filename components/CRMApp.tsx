@@ -21,6 +21,7 @@ import type {
 
 const STORAGE_KEY = "oneaddress-riviera-crm-v1";
 const QUOTES_STORAGE_KEY = "oneaddress-riviera-crm-quotes-v1";
+const SHARED_WORKSPACE_ID = "oneaddress-riviera";
 const leadStatuses: LeadStatus[] = ["Nouveau", "Contacté", "Devis", "Négociation", "Gagné", "Perdu"];
 const propertyStatuses: PropertyStatus[] = ["Disponible", "Mandat en cours", "Loué", "Vendu"];
 const vehicleStatuses: VehicleStatus[] = ["Disponible", "En location", "En maintenance", "Vendu"];
@@ -39,6 +40,40 @@ const emptyData: CRMData = {
   boats: [],
   tasks: []
 };
+
+
+function normalizeSharedCRMData(payload: any): CRMData {
+  return {
+    contacts: Array.isArray(payload?.contacts) ? payload.contacts : [],
+    leads: Array.isArray(payload?.leads) ? payload.leads : [],
+    properties: Array.isArray(payload?.properties) ? payload.properties : [],
+    vehicles: Array.isArray(payload?.vehicles) ? payload.vehicles : [],
+    boats: Array.isArray(payload?.boats) ? payload.boats : [],
+    tasks: Array.isArray(payload?.tasks) ? payload.tasks : []
+  };
+}
+
+function crmDataHasContent(value: CRMData) {
+  return (
+    value.contacts.length > 0 ||
+    value.leads.length > 0 ||
+    value.properties.length > 0 ||
+    value.vehicles.length > 0 ||
+    value.boats.length > 0 ||
+    value.tasks.length > 0
+  );
+}
+
+function readLocalCRMDataSafely() {
+  if (typeof window === "undefined") return emptyData;
+
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return normalizeSharedCRMData(raw ? JSON.parse(raw) : null);
+  } catch {
+    return emptyData;
+  }
+}
 
 type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "planning" | "properties" | "vehicles" | "boats";
 
@@ -1551,6 +1586,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
   const [quoteDraftFromLead, setQuoteDraftFromLead] = useState<QuoteLeadDraft | null>(null);
   const [query, setQuery] = useState("");
   const [data, setData] = useState<CRMData>(emptyData);
+  const [sharedWorkspaceReady, setSharedWorkspaceReady] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
 
   useEffect(() => {
@@ -1598,6 +1634,121 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     const timer = window.setTimeout(() => setToast(null), 2600);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSharedWorkspaceState() {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+
+      if (cancelled) return;
+
+      if (userError || !userData.user) {
+        window.alert("Base CRM partagée non chargée : utilisateur Supabase non connecté.");
+        setSharedWorkspaceReady(false);
+        return;
+      }
+
+      const { data: row, error } = await supabase
+        .from("crm_workspace_state")
+        .select("payload")
+        .eq("workspace_id", SHARED_WORKSPACE_ID)
+        .single();
+
+      if (cancelled) return;
+
+      if (error) {
+        window.alert(`Base CRM partagée non chargée : ${error.message}`);
+        setSharedWorkspaceReady(false);
+        return;
+      }
+
+      const sharedData = normalizeSharedCRMData(row?.payload);
+
+      if (crmDataHasContent(sharedData)) {
+        setData(sharedData);
+        setSharedWorkspaceReady(true);
+        return;
+      }
+
+      const localData = readLocalCRMDataSafely();
+
+      if (!crmDataHasContent(localData)) {
+        setData(emptyData);
+        setSharedWorkspaceReady(true);
+        return;
+      }
+
+      const shouldSeedSharedWorkspace = window.confirm(
+        "La base CRM partagée est vide.\n\nCopier CETTE version locale dans la base commune pour toi et Vincent ?\n\nClique OK uniquement si les données visibles dans TON CRM sont les bonnes. Si tu vois une démo, clique Annuler."
+      );
+
+      if (!shouldSeedSharedWorkspace) {
+        setData(emptyData);
+        setSharedWorkspaceReady(true);
+        return;
+      }
+
+      const { error: seedError } = await supabase
+        .from("crm_workspace_state")
+        .upsert({
+          workspace_id: SHARED_WORKSPACE_ID,
+          payload: localData,
+          updated_at: new Date().toISOString(),
+          updated_by: userData.user.id
+        }, { onConflict: "workspace_id" });
+
+      if (seedError) {
+        window.alert(`Base CRM partagée non initialisée : ${seedError.message}`);
+        setSharedWorkspaceReady(false);
+        return;
+      }
+
+      setData(localData);
+      setSharedWorkspaceReady(true);
+    }
+
+    const timer = window.setTimeout(() => {
+      void loadSharedWorkspaceState();
+    }, 700);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!sharedWorkspaceReady) return;
+
+    const timer = window.setTimeout(() => {
+      async function saveSharedWorkspaceState() {
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+
+        if (userError || !userData.user) return;
+
+        const { error } = await supabase
+          .from("crm_workspace_state")
+          .upsert({
+            workspace_id: SHARED_WORKSPACE_ID,
+            payload: data,
+            updated_at: new Date().toISOString(),
+            updated_by: userData.user.id
+          }, { onConflict: "workspace_id" });
+
+        if (error) {
+          console.warn(`Base CRM partagée non sauvegardée : ${error.message}`);
+        }
+      }
+
+      void saveSharedWorkspaceState();
+    }, 900);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [data, sharedWorkspaceReady]);
 
   const stats = useMemo(() => {
     const pipeline = data.leads
@@ -2800,7 +2951,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     let cancelled = false;
 
     const timer = window.setTimeout(() => {
-      void loadContactsFromSupabaseOnce(() => cancelled);
+      void Promise.resolve(); // crm_contacts désactivé : crm_workspace_state est la base partagée
     }, 700);
 
     return () => {
