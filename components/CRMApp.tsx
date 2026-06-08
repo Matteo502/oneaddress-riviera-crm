@@ -718,7 +718,7 @@ function openQuotePdf(quote: QuoteRequest) {
     : "";
 
   popup.document.open();
-  popup.document.write(`<!doctype html>
+  popup.document.write(addQuoteDownloadToolbar(`<!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
@@ -1054,7 +1054,7 @@ function openQuotePdf(quote: QuoteRequest) {
     };
   </script>
 </body>
-</html>`);
+</html>`));
   popup.document.close();
 }
 
