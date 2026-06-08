@@ -718,7 +718,7 @@ function openQuotePdf(quote: QuoteRequest) {
     : "";
 
   popup.document.open();
-  popup.document.write(`<!doctype html>
+  popup.document.write(addQuoteDownloadToolbar(`<!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
@@ -1054,7 +1054,7 @@ function openQuotePdf(quote: QuoteRequest) {
     };
   </script>
 </body>
-</html>`);
+</html>`));
   popup.document.close();
 }
 
@@ -1102,6 +1102,76 @@ function saveQuotesToBrowser(quotes: QuoteRequest[]) {
   window.localStorage.setItem(QUOTES_STORAGE_KEY, JSON.stringify(quotes));
 }
 
+
+
+function addQuoteDownloadToolbar(html: string) {
+  const toolbar = `
+    <style>
+      .quote-actions-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 99999;
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        padding: 14px 18px;
+        background: #071f27;
+        border-bottom: 1px solid rgba(201, 161, 86, 0.35);
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+      }
+
+      .quote-actions-bar button {
+        appearance: none;
+        border: 1px solid #c9a156;
+        background: transparent;
+        color: #f7f1e8;
+        padding: 12px 18px;
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+
+      .quote-actions-bar button:first-child {
+        background: #c9a156;
+        color: #071f27;
+      }
+
+      body {
+        padding-top: 72px;
+      }
+
+      @media print {
+        .quote-actions-bar {
+          display: none !important;
+        }
+
+        body {
+          padding-top: 0 !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+      }
+    </style>
+
+    <div class="quote-actions-bar">
+      <button type="button" onclick="window.print()">Télécharger / imprimer le devis</button>
+      <button type="button" onclick="window.close()">Fermer</button>
+    </div>
+  `;
+
+  if (html.includes("quote-actions-bar")) return html;
+
+  if (html.includes("<body")) {
+    return html.replace(/<body([^>]*)>/i, `<body$1>${toolbar}`);
+  }
+
+  return toolbar + html;
+}
 
 function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefilledLead?: QuoteLeadDraft | null }) {
   const [quotes, setQuotes] = useState<QuoteRequest[]>(() => loadSavedQuotes());
