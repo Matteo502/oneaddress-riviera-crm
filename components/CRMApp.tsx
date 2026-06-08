@@ -3064,7 +3064,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     if (!contact.name) return notify("Ajoutez au minimum un nom de contact.", "warning");
     if (!confirmDuplicateContact(contact)) return;
     setData((current) => ({ ...current, contacts: [contact, ...current.contacts] }));
-    void upsertContactToSupabase(contact);
+    // Ancienne synchro contact désactivée : crm_workspace_state sauvegarde tout le CRM.
     event.currentTarget.reset();
     notify("Contact ajouté.");
   }
@@ -3339,14 +3339,14 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       )
     }));
 
-    void upsertContactToSupabase(updatedContact);
+    // Ancienne synchro contact désactivée : crm_workspace_state sauvegarde tout le CRM.
 
     notify("Contact mis à jour.");
   }
 
   function deleteContact(id: string) {
     setData((current) => ({ ...current, contacts: current.contacts.filter((contact) => contact.id !== id) }));
-    void deleteContactFromSupabase(id);
+    // Ancienne suppression contact désactivée : crm_workspace_state sauvegarde tout le CRM.
 
     notify("Contact supprimé.");
   }
