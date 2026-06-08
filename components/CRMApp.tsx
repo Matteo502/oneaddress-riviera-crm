@@ -6596,6 +6596,7 @@ function Badge({ children }: { children: React.ReactNode }) {
 
 function LoginView() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -6609,15 +6610,17 @@ function LoginView() {
       return;
     }
 
+    if (!password) {
+      setMessage("Renseigne ton mot de passe.");
+      return;
+    }
+
     setIsSubmitting(true);
     setMessage("");
 
-    const { error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signInWithPassword({
       email: cleanEmail,
-      options: {
-        emailRedirectTo: window.location.origin,
-        shouldCreateUser: false
-      }
+      password
     });
 
     setIsSubmitting(false);
@@ -6627,7 +6630,7 @@ function LoginView() {
       return;
     }
 
-    setMessage("Lien de connexion envoyé. Ouvre ta boîte mail et clique sur le lien.");
+    setMessage("Connexion réussie.");
   }
 
   return (
@@ -6636,7 +6639,7 @@ function LoginView() {
         <p className="eyebrow">Accès sécurisé</p>
         <h1>Connexion CRM</h1>
         <p className="muted-line">
-          Entre ton email autorisé. Supabase t’enverra un lien de connexion sécurisé.
+          Entre ton email et ton mot de passe autorisés pour accéder au CRM.
         </p>
 
         <form className="form-grid" onSubmit={handleLogin}>
@@ -6650,8 +6653,18 @@ function LoginView() {
             />
           </label>
 
+          <label className="full">Mot de passe
+            <input
+              type="password"
+              value={password}
+              placeholder="Mot de passe"
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+          </label>
+
           <button className="primary-button" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Envoi..." : "Recevoir le lien"}
+            {isSubmitting ? "Envoi..." : "Se connecter"}
           </button>
         </form>
 
