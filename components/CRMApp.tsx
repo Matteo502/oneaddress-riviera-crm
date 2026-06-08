@@ -6688,9 +6688,36 @@ export default function CRMApp() {
       setAuthLoading(false);
     });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
       setAuthLoading(false);
+
+      if (event === "PASSWORD_RECOVERY") {
+        window.setTimeout(async () => {
+          const newPassword = window.prompt("Choisis ton nouveau mot de passe CRM :");
+
+          if (!newPassword) {
+            window.alert("Mot de passe non modifié.");
+            return;
+          }
+
+          if (newPassword.length < 8) {
+            window.alert("Le mot de passe doit contenir au moins 8 caractères.");
+            return;
+          }
+
+          const { error } = await supabase.auth.updateUser({
+            password: newPassword
+          });
+
+          if (error) {
+            window.alert(`Mot de passe non modifié : ${error.message}`);
+            return;
+          }
+
+          window.alert("Mot de passe CRM enregistré. Tu peux maintenant te connecter avec email + mot de passe.");
+        }, 300);
+      }
     });
 
     return () => {
