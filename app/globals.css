@@ -2850,3 +2850,49 @@ textarea {
   color: #e2c27c;
 }
 
+/* CRM sidebar compact fix after adding Réservations */
+.sidebar {
+  height: 100vh !important;
+  overflow-y: auto !important;
+  padding: 24px 22px 18px !important;
+  gap: 18px !important;
+}
+
+.brand-block {
+  gap: 12px !important;
+}
+
+.brand-mark {
+  width: 52px !important;
+  height: 52px !important;
+}
+
+.brand-block h1 {
+  font-size: 1.9rem !important;
+  line-height: 0.95 !important;
+}
+
+.nav-list {
+  gap: 4px !important;
+}
+
+.nav-button {
+  min-height: 40px !important;
+  padding: 9px 12px !important;
+  font-size: 0.7rem !important;
+  line-height: 1 !important;
+}
+
+.sidebar-card {
+  margin-top: 10px !important;
+  padding: 14px !important;
+}
+
+.sidebar-card strong {
+  font-size: 1.2rem !important;
+}
+
+.sidebar-card span {
+  display: none !important;
+}
+
