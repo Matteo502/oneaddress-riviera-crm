@@ -77,7 +77,7 @@ function readLocalCRMDataSafely() {
   }
 }
 
-type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "quickReplies" | "planning" | "properties" | "vehicles" | "boats";
+type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "bookings" | "quickReplies" | "planning" | "properties" | "vehicles" | "boats";
 
 type Toast = {
   message: string;
@@ -1633,6 +1633,58 @@ function QuotesView({
   );
 }
 
+
+
+function BookingsView({ quotes }: { quotes: QuoteRequest[] }) {
+  const confirmedQuotes = quotes.filter((quote) => getQuoteStatus(quote.status) === "Accepted");
+
+  return (
+    <section className="card">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Services confirmés</p>
+          <h3>{confirmedQuotes.length} réservation{confirmedQuotes.length > 1 ? "s" : ""}</h3>
+        </div>
+        <p className="muted-line">
+          Les devis gagnés apparaissent ici automatiquement pour préparer l’exécution.
+        </p>
+      </div>
+
+      {confirmedQuotes.length === 0 ? (
+        <p className="muted-line">Aucune réservation confirmée pour le moment.</p>
+      ) : (
+        <div className="list-stack">
+          {confirmedQuotes.map((quote) => {
+            const services = getQuoteItems(quote)
+              .map((item) => getQuoteCategoryFrenchLabel(item.category))
+              .join(" · ");
+
+            return (
+              <article className="item-card" key={quote.id}>
+                <div>
+                  <p className="eyebrow">{services || "Service confirmé"}</p>
+                  <h3>{quote.clientName}</h3>
+                  <p>{quote.title || "Réservation confirmée"}</p>
+                  <p className="muted-line">
+                    Du {formatQuoteDate(quote.startDate)} au {formatQuoteDate(quote.endDate)}
+                  </p>
+                </div>
+
+                <div className="item-actions">
+                  <strong>{formatQuotePrice(getQuoteTotal(quote))}</strong>
+                  <span className="status-pill">À préparer</span>
+                  <button className="secondary-button" type="button" onClick={() => openQuotePdf(quote)}>
+                    Ouvrir devis
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
 
 function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
@@ -3658,6 +3710,7 @@ function createQuoteDraftFromLead(lead: Lead) {
         <NavButton label="Leads" icon="🎯" active={activeTab === "leads"} onClick={() => setActiveTab("leads")} />
         <NavButton label="Tâches" icon="✓" active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} />
         <NavButton label="Devis" icon="🧾" active={activeTab === "quotes"} onClick={() => setActiveTab("quotes")} />
+        <NavButton label="Réservations" icon="✓" active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} />
         <NavButton label="Réponses rapides" icon="💬" active={activeTab === "quickReplies"} onClick={() => setActiveTab("quickReplies")} />
         <NavButton label="Planning" icon="🗓" active={activeTab === "planning"} onClick={() => setActiveTab("planning")} />
         <NavButton label="Biens" icon="🏠" active={activeTab === "properties"} onClick={() => setActiveTab("properties")} />
@@ -3765,6 +3818,10 @@ function createQuoteDraftFromLead(lead: Lead) {
           />
         )}
 
+        {activeTab === "bookings" && (
+          <BookingsView quotes={mergeQuoteRequests((data as any).quotes ?? [], loadSavedQuotes())} />
+        )}
+
         {activeTab === "planning" && (
           <PlanningView
             leads={data.leads}
@@ -3829,6 +3886,7 @@ function titleForTab(tab: Tab) {
     leads: "Pipeline leads",
     tasks: "Tâches",
     quotes: "Devis",
+    bookings: "Réservations",
     quickReplies: "Réponses rapides",
     planning: "Planning",
     properties: "Biens",
