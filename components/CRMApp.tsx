@@ -485,8 +485,8 @@ function getQuoteStatusFrenchLabel(status: QuoteStatus) {
   const labels: Record<QuoteStatus, string> = {
     Draft: "Brouillon",
     Sent: "Envoyé",
-    Accepted: "Accepté",
-    Declined: "Refusé"
+    Accepted: "Gagné",
+    Declined: "Perdu"
   };
 
   return labels[status];
@@ -1132,6 +1132,7 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
 
   const quoteCategories = ["Villa", "Bateau", "Voiture", "Conciergerie"];
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<QuoteStatus | "Tous">("Tous");
 
   // PREFILL_QUOTE_FROM_LEAD
   useEffect(() => {
@@ -1341,21 +1342,40 @@ function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefille
 
   }
 
+  const visibleQuotes =
+    statusFilter === "Tous"
+      ? quotes
+      : quotes.filter((quote) => getQuoteStatus(quote.status) === statusFilter);
+
+
   return (
     <div className="two-columns wide-left">
       <section id="quotes-list-panel" className="card">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Devis</p>
-            <h3>{quotes.length} devis préparé{quotes.length > 1 ? "s" : ""}</h3>
+            <h3>{visibleQuotes.length} devis affiché{visibleQuotes.length > 1 ? "s" : ""}{statusFilter !== "Tous" ? ` · ${quotes.length} total` : ""}</h3>
           </div>
         </div>
 
         <div className="list-stack">
-          {quotes.length === 0 ? (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 22 }}>
+          {(["Tous", ...quoteStatuses] as Array<QuoteStatus | "Tous">).map((status) => (
+            <button
+              key={status}
+              type="button"
+              className={statusFilter === status ? "primary-button" : "secondary-button"}
+              onClick={() => setStatusFilter(status)}
+            >
+              {status === "Tous" ? "Tous" : getQuoteStatusFrenchLabel(status)}
+            </button>
+          ))}
+        </div>
+
+        {visibleQuotes.length === 0 ? (
             <p className="muted-line">Aucun devis pour le moment. Créez d’abord un contact et un lead, puis générez un devis depuis le lead.</p>
           ) : (
-            quotes.map((quote) => (
+            visibleQuotes.map((quote) => (
               <article className="quote-card" key={quote.id}>
                 <div>
                   <p className="eyebrow">{getQuoteItems(quote).map((item) => getQuoteCategoryFrenchLabel(item.category)).join(" · ")}</p>
