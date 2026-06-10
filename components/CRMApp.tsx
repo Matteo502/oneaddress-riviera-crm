@@ -497,10 +497,12 @@ function getQuoteStatusFrenchLabel(status: QuoteStatus) {
 
 
 function getLeadStatusFromQuoteStatus(status: QuoteStatus): LeadStatus {
+  if (status === "Draft") return "Nouveau";
+  if (status === "Sent") return "Contacté";
   if (status === "Accepted") return "Gagné";
   if (status === "Declined") return "Perdu";
 
-  return "Devis";
+  return "Nouveau";
 }
 
 function createQuoteId() {
