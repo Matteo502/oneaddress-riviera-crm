@@ -1010,6 +1010,18 @@ function normalizeQuoteRequest(value: unknown): QuoteRequest | null {
   } as QuoteRequest;
 }
 
+
+function mergeQuoteRequests(sharedQuotes: QuoteRequest[], localQuotes: QuoteRequest[]) {
+  const byId = new Map<string, QuoteRequest>();
+
+  sharedQuotes.forEach((quote) => byId.set(quote.id, quote));
+  localQuotes.forEach((quote) => byId.set(quote.id, quote));
+
+  return Array.from(byId.values()).sort((a, b) => {
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+}
+
 function loadSavedQuotes() {
   if (typeof window === "undefined") return [] as QuoteRequest[];
 
