@@ -424,7 +424,7 @@ type QuoteLine = {
   deposit: number;
 };
 
-type QuoteStatus = "Draft" | "Sent" | "Accepted" | "Declined";
+type QuoteStatus = "Draft" | "Sent" | "Negotiation" | "Accepted" | "Declined";
 
 type QuoteRequest = {
   id: string;
@@ -462,10 +462,10 @@ type QuoteLeadDraft = {
 };
 
 
-const quoteStatuses: QuoteStatus[] = ["Draft", "Sent", "Accepted", "Declined"];
+const quoteStatuses: QuoteStatus[] = ["Draft", "Sent", "Negotiation", "Accepted", "Declined"];
 
 function getQuoteStatus(value: unknown): QuoteStatus {
-  if (value === "Sent" || value === "Accepted" || value === "Declined" || value === "Draft") {
+  if (value === "Sent" || value === "Negotiation" || value === "Accepted" || value === "Declined" || value === "Draft") {
     return value;
   }
 
@@ -476,6 +476,7 @@ function getQuoteStatusLabel(status: QuoteStatus) {
   const labels: Record<QuoteStatus, string> = {
     Draft: "Draft",
     Sent: "Sent",
+    Negotiation: "Negotiation",
     Accepted: "Accepted",
     Declined: "Declined"
   };
@@ -487,6 +488,7 @@ function getQuoteStatusFrenchLabel(status: QuoteStatus) {
   const labels: Record<QuoteStatus, string> = {
     Draft: "Brouillon",
     Sent: "Envoyé",
+    Negotiation: "Négociation",
     Accepted: "Gagné",
     Declined: "Perdu"
   };
@@ -499,6 +501,7 @@ function getQuoteStatusFrenchLabel(status: QuoteStatus) {
 function getLeadStatusFromQuoteStatus(status: QuoteStatus): LeadStatus {
   if (status === "Draft") return "Nouveau";
   if (status === "Sent") return "Contacté";
+  if (status === "Negotiation") return "Négociation";
   if (status === "Accepted") return "Gagné";
   if (status === "Declined") return "Perdu";
 
