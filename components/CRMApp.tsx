@@ -1117,12 +1117,23 @@ function addQuoteDownloadToolbar(html: string) {
   return toolbar + html;
 }
 
-function QuotesView({ contacts, prefilledLead }: { contacts: Contact[]; prefilledLead?: QuoteLeadDraft | null }) {
-  const [quotes, setQuotes] = useState<QuoteRequest[]>(() => loadSavedQuotes());
+function QuotesView({
+  contacts,
+  prefilledLead,
+  quotes,
+  onChange
+}: {
+  contacts: Contact[];
+  prefilledLead?: QuoteLeadDraft | null;
+  quotes: QuoteRequest[];
+  onChange: (quotes: QuoteRequest[]) => void;
+}) {
+  function setQuotes(update: QuoteRequest[] | ((current: QuoteRequest[]) => QuoteRequest[])) {
+    const nextQuotes = typeof update === "function" ? update(quotes) : update;
 
-  useEffect(() => {
-    saveQuotesToBrowser(quotes);
-  }, [quotes]);
+    onChange(nextQuotes);
+    saveQuotesToBrowser(nextQuotes);
+  }
 
   function updateQuoteStatus(id: string, status: QuoteStatus) {
     setQuotes((current) =>
@@ -3004,7 +3015,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     const vehiclesCount = Array.isArray(currentData.vehicles) ? currentData.vehicles.length : 0;
     const boatsCount = Array.isArray(currentData.boats) ? currentData.boats.length : 0;
     const tasksCount = Array.isArray(currentData.tasks) ? currentData.tasks.length : 0;
-    const visibleQuotes = mergeQuoteRequests(currentData.quotes ?? [], loadSavedQuotes());
+    const visibleQuotes = mergeQuoteRequests((currentData as any).quotes ?? [], loadSavedQuotes());
     const currentDataWithVisibleQuotes: CRMData = {
       ...currentData,
       quotes: visibleQuotes
@@ -3084,7 +3095,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
   function exportJson() {
     const exportPayload = {
       ...data,
-      quotes: loadSavedQuotes()
+      quotes: mergeQuoteRequests((data as any).quotes ?? [], loadSavedQuotes())
     };
 
     const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: "application/json" });
@@ -3585,7 +3596,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             <FollowUpsPanel
               leads={data.leads}
               tasks={data.tasks}
-              quotes={loadSavedQuotes()}
+              quotes={mergeQuoteRequests((data as any).quotes ?? [], loadSavedQuotes())}
               onCreateTask={createTaskDraftFromFollowUp}
             />
           </>
@@ -3624,7 +3635,14 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
           <QuickRepliesView />
         )}
 
-{activeTab === "quotes" && <QuotesView contacts={data.contacts} prefilledLead={quoteDraftFromLead} />}
+{activeTab === "quotes" && (
+          <QuotesView
+            contacts={data.contacts}
+            prefilledLead={quoteDraftFromLead}
+            quotes={mergeQuoteRequests((data as any).quotes ?? [], loadSavedQuotes())}
+            onChange={(nextQuotes) => setData((current) => ({ ...current, quotes: nextQuotes }))}
+          />
+        )}
 
         {activeTab === "planning" && (
           <PlanningView
