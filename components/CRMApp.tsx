@@ -75,7 +75,7 @@ function readLocalCRMDataSafely() {
   }
 }
 
-type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "planning" | "properties" | "vehicles" | "boats";
+type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "quickReplies" | "planning" | "properties" | "vehicles" | "boats";
 
 type Toast = {
   message: string;
@@ -3471,6 +3471,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
         <NavButton label="Leads" icon="🎯" active={activeTab === "leads"} onClick={() => setActiveTab("leads")} />
         <NavButton label="Tâches" icon="✓" active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} />
         <NavButton label="Devis" icon="🧾" active={activeTab === "quotes"} onClick={() => setActiveTab("quotes")} />
+        <NavButton label="Réponses rapides" icon="💬" active={activeTab === "quickReplies"} onClick={() => setActiveTab("quickReplies")} />
         <NavButton label="Planning" icon="🗓" active={activeTab === "planning"} onClick={() => setActiveTab("planning")} />
         <NavButton label="Biens" icon="🏠" active={activeTab === "properties"} onClick={() => setActiveTab("properties")} />
         <NavButton label="Voitures" icon="🚗" active={activeTab === "vehicles"} onClick={() => setActiveTab("vehicles")} />
@@ -3563,7 +3564,11 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
                 }} />
         )}
 
-        {activeTab === "quotes" && <QuotesView contacts={data.contacts} prefilledLead={quoteDraftFromLead} />}
+                {activeTab === "quickReplies" && (
+          <QuickRepliesView />
+        )}
+
+{activeTab === "quotes" && <QuotesView contacts={data.contacts} prefilledLead={quoteDraftFromLead} />}
 
         {activeTab === "planning" && (
           <PlanningView
@@ -3629,6 +3634,7 @@ function titleForTab(tab: Tab) {
     leads: "Pipeline leads",
     tasks: "Tâches",
     quotes: "Devis",
+    quickReplies: "Réponses rapides",
     planning: "Planning",
     properties: "Biens",
     vehicles: "Voitures",
@@ -4362,6 +4368,23 @@ function FollowUpsPanel({
           ))
         )}
       </div>
+    </section>
+  );
+}
+
+
+function QuickRepliesView() {
+  return (
+    <section className="card">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Traitement rapide</p>
+          <h3>Réponses rapides</h3>
+        </div>
+      </div>
+      <p className="muted-line">
+        Module interne prêt. Les templates seront ajoutés à l’étape suivante.
+      </p>
     </section>
   );
 }
