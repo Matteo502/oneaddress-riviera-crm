@@ -1,5 +1,7 @@
 "use client";
 
+import QuickRepliesView from "./QuickRepliesView";
+
 import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
@@ -4372,22 +4374,6 @@ function FollowUpsPanel({
   );
 }
 
-
-function QuickRepliesView() {
-  return (
-    <section className="card">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Traitement rapide</p>
-          <h3>Réponses rapides</h3>
-        </div>
-      </div>
-      <p className="muted-line">
-        Module interne prêt. Les templates seront ajoutés à l’étape suivante.
-      </p>
-    </section>
-  );
-}
 
 function Dashboard({
   stats,
