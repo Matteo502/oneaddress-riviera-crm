@@ -428,6 +428,7 @@ type QuoteStatus = "Draft" | "Sent" | "Accepted" | "Declined";
 
 type QuoteRequest = {
   id: string;
+  leadId?: string;
   clientName: string;
   title: string;
   location: string;
@@ -1047,6 +1048,51 @@ function saveQuotesToBrowser(quotes: QuoteRequest[]) {
 }
 
 
+
+
+function getQuoteCategoryFromLead(lead: Lead) {
+  if (lead.assetType === "Boat") return "Bateau";
+  if (lead.assetType === "Vehicle") return "Voiture";
+
+  return lead.category || "Villa";
+}
+
+function createDraftQuoteFromLead(lead: Lead): QuoteRequest {
+  const category = getQuoteCategoryFromLead(lead);
+  const value = Number(lead.value || 0);
+  const title = `${category} · ${lead.contactName}`;
+
+  return {
+    id: createQuoteId(),
+    leadId: lead.id,
+    clientName: lead.contactName,
+    title,
+    location: "",
+    guestCount: "",
+    categories: [category],
+    items: [
+      {
+        id: createQuoteId(),
+        category,
+        description: title,
+        unitPrice: value,
+        billingUnit: "fixed",
+        deposit: 0
+      }
+    ],
+    startDate: lead.rentalStartDate || "",
+    endDate: lead.rentalEndDate || "",
+    unitPrice: value,
+    validityDate: "",
+    paymentTerms: "",
+    cancellationTerms: "",
+    included: "",
+    excluded: "",
+    notes: lead.notes || "",
+    status: "Draft",
+    createdAt: new Date().toISOString()
+  };
+}
 
 function addQuoteDownloadToolbar(html: string) {
   const toolbar = `
@@ -3161,7 +3207,16 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     if (!lead.contactName) return notify("Sélectionnez un contact pour ce lead.", "warning");
     if (!confirmDuplicateLead(lead)) return;
 
-    setData((current) => ({ ...current, leads: [lead, ...current.leads] }));
+    const draftQuote = createDraftQuoteFromLead(lead);
+    const nextLocalQuotes = mergeQuoteRequests(loadSavedQuotes(), [draftQuote]);
+
+    saveQuotesToBrowser(nextLocalQuotes);
+
+    setData((current) => ({
+      ...current,
+      leads: [lead, ...current.leads],
+      quotes: mergeQuoteRequests((((current as any).quotes ?? []) as QuoteRequest[]), [draftQuote])
+    }));
     event.currentTarget.reset();
     setLeadDraftContactName("");
     notify("Lead ajouté au pipeline.");
