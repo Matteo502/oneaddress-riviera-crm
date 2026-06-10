@@ -100,4 +100,5 @@ export type CRMData = {
   vehicles: Vehicle[];
   boats: Boat[];
   tasks: Task[];
+  quotes?: any[];
 };
