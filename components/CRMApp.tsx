@@ -2972,7 +2972,12 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     const vehiclesCount = Array.isArray(currentData.vehicles) ? currentData.vehicles.length : 0;
     const boatsCount = Array.isArray(currentData.boats) ? currentData.boats.length : 0;
     const tasksCount = Array.isArray(currentData.tasks) ? currentData.tasks.length : 0;
-    const quotesCount = Array.isArray(currentData.quotes) ? currentData.quotes.length : 0;
+    const visibleQuotes = mergeQuoteRequests(currentData.quotes ?? [], loadSavedQuotes());
+    const currentDataWithVisibleQuotes: CRMData = {
+      ...currentData,
+      quotes: visibleQuotes
+    };
+    const quotesCount = visibleQuotes.length;
 
     const total =
       contactsCount +
@@ -2993,6 +2998,23 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     );
 
     if (!confirmed) return;
+
+    const { error: sharedQuotesError } = await supabase
+      .from("crm_workspace_state")
+      .upsert({
+        workspace_id: SHARED_WORKSPACE_ID,
+        payload: currentDataWithVisibleQuotes,
+        updated_at: new Date().toISOString()
+      });
+
+    if (sharedQuotesError) {
+      window.alert(`Sauvegarde devis impossible : ${sharedQuotesError.message}`);
+      return;
+    }
+
+    setData(currentDataWithVisibleQuotes);
+    saveQuotesToBrowser(visibleQuotes);
+
 
     const { data: userData, error: userError } = await supabase.auth.getUser();
 
