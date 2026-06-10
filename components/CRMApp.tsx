@@ -3236,6 +3236,11 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     };
 
     if (!lead.contactName) return notify("Sélectionnez un contact pour ce lead.", "warning");
+
+    if (isOpenLead(lead) && (!lead.nextAction.trim() || !lead.dueDate)) {
+      return notify("Un lead ouvert doit avoir une prochaine action et une échéance.", "warning");
+    }
+
     if (!confirmDuplicateLead(lead)) return;
 
     const draftQuote = createDraftQuoteFromLead(lead);
@@ -5344,6 +5349,11 @@ function LeadsView({
     };
 
     if (!updatedLead.contactName) return;
+
+    if (isOpenLead(updatedLead) && (!updatedLead.nextAction.trim() || !updatedLead.dueDate)) {
+      window.alert("Un lead ouvert doit avoir une prochaine action et une échéance.");
+      return;
+    }
 
     onUpdate(updatedLead);
     setEditingLead(null);
