@@ -450,6 +450,7 @@ type QuoteRequest = {
 
 type QuoteLeadDraft = {
   key: string;
+  leadId?: string;
   clientName: string;
   category: string;
   title: string;
@@ -493,6 +494,14 @@ function getQuoteStatusFrenchLabel(status: QuoteStatus) {
   return labels[status];
 }
 
+
+
+function getLeadStatusFromQuoteStatus(status: QuoteStatus): LeadStatus {
+  if (status === "Accepted") return "Gagné";
+  if (status === "Declined") return "Perdu";
+
+  return "Devis";
+}
 
 function createQuoteId() {
   return `quote-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -1000,6 +1009,7 @@ function normalizeQuoteRequest(value: unknown): QuoteRequest | null {
   return {
     ...raw,
     id: String(raw.id || createQuoteId()),
+    leadId: raw.leadId ? String(raw.leadId) : undefined,
     clientName: String(raw.clientName || ""),
     categories: Array.isArray(raw.categories) ? raw.categories.map(String) : [],
     startDate: String(raw.startDate || ""),
@@ -1167,12 +1177,14 @@ function QuotesView({
   contacts,
   prefilledLead,
   quotes,
-  onChange
+  onChange,
+  onQuoteChange
 }: {
   contacts: Contact[];
   prefilledLead?: QuoteLeadDraft | null;
   quotes: QuoteRequest[];
   onChange: (quotes: QuoteRequest[]) => void;
+  onQuoteChange?: (quote: QuoteRequest) => void;
 }) {
   function setQuotes(update: QuoteRequest[] | ((current: QuoteRequest[]) => QuoteRequest[])) {
     const nextQuotes = typeof update === "function" ? update(quotes) : update;
@@ -1182,9 +1194,16 @@ function QuotesView({
   }
 
   function updateQuoteStatus(id: string, status: QuoteStatus) {
+    const currentQuote = quotes.find((quote) => quote.id === id);
+    const updatedQuote = currentQuote ? { ...currentQuote, status } : null;
+
     setQuotes((current) =>
       current.map((quote) => (quote.id === id ? { ...quote, status } : quote))
     );
+
+    if (updatedQuote) {
+      onQuoteChange?.(updatedQuote);
+    }
   }
 
   const quoteCategories = ["Villa", "Bateau", "Voiture", "Conciergerie"];
@@ -1222,6 +1241,7 @@ function QuotesView({
       ? prefilledLead.category
       : "Villa";
 
+    setField("leadId", prefilledLead.leadId || "");
     setField("clientName", prefilledLead.clientName);
     setField("title", prefilledLead.title);
     setField("location", prefilledLead.location);
@@ -1271,6 +1291,7 @@ function QuotesView({
 
     setEditingQuoteId(quote.id);
 
+    setField("leadId", quote.leadId || "");
     setField("clientName", quote.clientName);
     setField("title", quote.title);
     setField("location", quote.location);
@@ -1327,6 +1348,7 @@ function QuotesView({
     const excluded = String(form.get("excluded") ?? "").trim();
     const notes = String(form.get("notes") ?? "").trim();
     const status = getQuoteStatus(form.get("status"));
+    const leadId = String(form.get("leadId") ?? "").trim();
 
     const quoteItems: QuoteLine[] = selectedCategories.map((category) => ({
       id: createQuoteId(),
@@ -1361,6 +1383,7 @@ function QuotesView({
 
     const quote: QuoteRequest = {
       id: editingQuoteId ?? createQuoteId(),
+      leadId: leadId || undefined,
       clientName,
       title,
       location,
@@ -1388,6 +1411,8 @@ function QuotesView({
     } else {
       setQuotes((current) => [quote, ...current]);
     }
+
+    onQuoteChange?.(quote);
 
     formElement.reset();
     window.setTimeout(() => {
@@ -1499,6 +1524,7 @@ function QuotesView({
         <h3>{editingQuoteId ? "Modifier le devis" : "Créer un devis"}</h3>
 
         <form className="form-grid" data-quote-form="true" onSubmit={addQuote}>
+          <input type="hidden" name="leadId" />
           <label>Client
             <select name="clientName" required>
               <option value="">Sélectionner un client</option>
@@ -3356,7 +3382,36 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     }));
   }
 
-  function createQuoteDraftFromLead(lead: Lead) {
+  
+  function syncLeadFromQuote(quote: QuoteRequest) {
+    if (!quote.leadId) return;
+
+    const quoteItems = getQuoteItems(quote);
+    const mainCategory = quoteItems[0]?.category || quote.categories?.[0] || "";
+    const quoteValue = getQuoteTotal(quote);
+    const leadStatus = getLeadStatusFromQuoteStatus(quote.status);
+
+    setData((current) => ({
+      ...current,
+      quotes: mergeQuoteRequests((((current as any).quotes ?? []) as QuoteRequest[]), [quote]),
+      leads: current.leads.map((lead) =>
+        lead.id === quote.leadId
+          ? {
+              ...lead,
+              category: (mainCategory || lead.category) as Lead["category"],
+              rentalStartDate: quote.startDate || lead.rentalStartDate,
+              rentalEndDate: quote.endDate || lead.rentalEndDate,
+              value: quoteValue,
+              status: leadStatus
+            }
+          : lead
+      )
+    }));
+
+    saveQuotesToBrowser(mergeQuoteRequests(loadSavedQuotes(), [quote]));
+  }
+
+function createQuoteDraftFromLead(lead: Lead) {
     const property = lead.assetType === "Property"
       ? data.properties.find((item) => item.id === lead.assetId)
       : undefined;
@@ -3696,6 +3751,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             prefilledLead={quoteDraftFromLead}
             quotes={mergeQuoteRequests((data as any).quotes ?? [], loadSavedQuotes())}
             onChange={(nextQuotes) => setData((current) => ({ ...current, quotes: nextQuotes }))}
+            onQuoteChange={syncLeadFromQuote}
           />
         )}
 
