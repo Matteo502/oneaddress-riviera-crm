@@ -30,10 +30,11 @@ const propertyStatuses: PropertyStatus[] = ["Disponible", "Mandat en cours", "Lo
 const vehicleStatuses: VehicleStatus[] = ["Disponible", "En location", "En maintenance", "Vendu"];
 const boatStatuses: BoatStatus[] = ["Disponible", "En charter", "En maintenance", "Vendu"];
 const taskStatuses: TaskStatus[] = ["À faire", "En cours", "Terminé"];
-const contactKinds: ContactKind[] = ["Client", "Propriétaire", "Partenaire"];
+const contactKinds: ContactKind[] = ["Client", "Fournisseur", "Propriétaire", "Partenaire"];
 const contactLevels = ["Standard", "VIP", "Ultra VIP"] as const;
 const contactLanguages = ["Français", "Anglais", "Italien", "Autre"] as const;
 const contactRelationshipStatuses = ["Prospect", "Actif", "Dormant"] as const;
+const supplierCategories = ["Villa", "Voiture", "Bateau", "Chauffeur", "Chef", "Sécurité", "Conciergerie", "Paysagiste", "Gestion nuisibles", "Pisciniste", "Femme de ménage", "Nounou", "Artisan rénovation", "Lavage voiture", "Garage / mécanicien", "Jardinier", "Autre"] as const;
 
 const emptyData: CRMData = {
   contacts: [],
@@ -47,21 +48,97 @@ const emptyData: CRMData = {
 };
 
 
-function normalizeSharedCRMData(payload: any): CRMData {
+function isSupplierContact(contact: Contact) {
+  return contact.kind === "Fournisseur" || Boolean(contact.supplierCategory);
+}
+
+function getContactSupplierCategory(contact: Contact) {
+  return contact.supplierCategory || "Autre";
+}
+
+function getContactSupplierZone(contact: Contact) {
+  return contact.supplierZone || contact.city || "";
+}
+
+function supplierToContact(supplier: Supplier): Contact {
+  const supplierName = String(supplier.name || "").trim();
+  const contactName = String(supplier.contactName || "").trim();
+  const notes = [
+    supplier.notes ? supplier.notes : "",
+    supplier.priceNotes ? `Prix : ${supplier.priceNotes}` : "",
+    supplier.commissionNotes ? `Commission / marge : ${supplier.commissionNotes}` : ""
+  ].filter(Boolean).join("\n");
+
   return {
-    contacts: Array.isArray(payload?.contacts) ? payload.contacts : [],
+    id: `contact-${supplier.id}`,
+    name: supplierName || contactName || "Fournisseur à compléter",
+    kind: "Fournisseur",
+    email: supplier.email || "",
+    phone: supplier.phone || "",
+    city: supplier.zone || "",
+    postalAddress: supplier.zone || "",
+    budget: 0,
+    source: "Ancien module Fournisseurs",
+    notes,
+    clientLevel: "Standard",
+    preferredLanguage: "Français",
+    relationshipStatus: supplier.status === "Inactif" ? "Dormant" : supplier.status === "À vérifier" ? "Prospect" : "Actif",
+    preferences: supplier.category || "",
+    importantNotes: supplier.reliability === "À éviter" ? "À éviter" : "",
+    supplierCategory: supplier.category || "Autre",
+    supplierContactName: contactName,
+    supplierZone: supplier.zone || "",
+    supplierQuality: supplier.quality || "Standard",
+    supplierReliability: supplier.reliability || "À tester",
+    supplierPriceNotes: supplier.priceNotes || "",
+    supplierCommissionNotes: supplier.commissionNotes || "",
+    supplierStatus: supplier.status || "Actif",
+    createdAt: String(supplier.createdAt || new Date().toISOString()).slice(0, 10)
+  };
+}
+
+function mergeContactsWithLegacySuppliers(contacts: Contact[], suppliers: Supplier[]) {
+  const merged = [...contacts];
+  const existingKeys = new Set(
+    merged.map((contact) => [contact.id, contact.name, contact.email, contact.phone].map((value) => String(value || "").trim().toLowerCase()).join("|"))
+  );
+
+  suppliers.forEach((supplier) => {
+    const contact = supplierToContact(supplier);
+    const key = [contact.id, contact.name, contact.email, contact.phone].map((value) => String(value || "").trim().toLowerCase()).join("|");
+    const looseDuplicate = merged.some((existing) => {
+      const sameName = existing.name && contact.name && existing.name.trim().toLowerCase() === contact.name.trim().toLowerCase();
+      const sameEmail = existing.email && contact.email && existing.email.trim().toLowerCase() === contact.email.trim().toLowerCase();
+      const samePhone = existing.phone && contact.phone && existing.phone.trim().toLowerCase() === contact.phone.trim().toLowerCase();
+      return sameName || sameEmail || samePhone;
+    });
+
+    if (!existingKeys.has(key) && !looseDuplicate) {
+      merged.push(contact);
+      existingKeys.add(key);
+    }
+  });
+
+  return merged;
+}
+
+function normalizeSharedCRMData(payload: any): CRMData {
+  const contacts = Array.isArray(payload?.contacts) ? payload.contacts as Contact[] : [];
+  const legacySuppliers = Array.isArray(payload?.suppliers) ? payload.suppliers as Supplier[] : [];
+
+  return {
+    contacts: mergeContactsWithLegacySuppliers(contacts, legacySuppliers),
     leads: Array.isArray(payload?.leads) ? payload.leads : [],
     properties: Array.isArray(payload?.properties) ? payload.properties : [],
     vehicles: Array.isArray(payload?.vehicles) ? payload.vehicles : [],
     boats: Array.isArray(payload?.boats) ? payload.boats : [],
     tasks: Array.isArray(payload?.tasks) ? payload.tasks : [],
-    suppliers: Array.isArray(payload?.suppliers) ? payload.suppliers : [],
+    suppliers: [],
     quotes: Array.isArray(payload?.quotes)
       ? payload.quotes.map(normalizeQuoteRequest).filter((quote: QuoteRequest | null): quote is QuoteRequest => Boolean(quote))
       : []
   };
 }
-
 function crmDataHasContent(value: CRMData) {
   return (
     value.contacts.length > 0 ||
@@ -86,7 +163,7 @@ function readLocalCRMDataSafely() {
   }
 }
 
-type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "bookings" | "quickReplies" | "planning" | "properties" | "suppliers" | "vehicles" | "boats";
+type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "bookings" | "quickReplies" | "planning" | "properties" | "vehicles" | "boats";
 
 type Toast = {
   message: string;
@@ -462,6 +539,7 @@ type QuoteRequest = {
   detailsSent?: boolean;
   serviceCompleted?: boolean;
   operationNotes?: string;
+  assignedContactId?: string;
   validityDate: string;
   paymentTerms: string;
   cancellationTerms: string;
@@ -1060,6 +1138,7 @@ function normalizeQuoteRequest(value: unknown): QuoteRequest | null {
     detailsSent: Boolean(raw.detailsSent),
     serviceCompleted: Boolean(raw.serviceCompleted),
     operationNotes: String(raw.operationNotes || ""),
+    assignedContactId: String(raw.assignedContactId || ""),
     createdAt: String(raw.createdAt || new Date().toISOString())
   } as QuoteRequest;
 }
@@ -1915,12 +1994,19 @@ function SuppliersView({
 
 function BookingsView({
   quotes,
+  contacts = [],
   onChange
 }: {
   quotes: QuoteRequest[];
+  contacts?: Contact[];
   onChange: (quotes: QuoteRequest[]) => void;
 }) {
   const confirmedQuotes = quotes.filter((quote) => getQuoteStatus(quote.status) === "Accepted");
+  const providerContacts = contacts.filter(isSupplierContact);
+
+  function getAssignedProvider(quote: QuoteRequest) {
+    return providerContacts.find((contact) => contact.id === quote.assignedContactId);
+  }
 
   function getPaymentRemaining(quote: QuoteRequest) {
     const total = getQuoteTotal(quote);
@@ -1971,7 +2057,8 @@ function BookingsView({
       balanceConfirmed: form.get("balanceConfirmed") === "on",
       detailsSent: form.get("detailsSent") === "on",
       serviceCompleted: form.get("serviceCompleted") === "on",
-      operationNotes: String(form.get("operationNotes") ?? "").trim()
+      operationNotes: String(form.get("operationNotes") ?? "").trim(),
+      assignedContactId: String(form.get("assignedContactId") ?? "")
     };
 
     const nextQuotes = quotes.map((item) => (item.id === quote.id ? updatedQuote : item));
@@ -2010,6 +2097,7 @@ function BookingsView({
             const remainingBalance = Math.max(clientPrice - depositReceived - balanceReceived, 0);
             const paymentStatus = getPaymentStatus(quote);
             const marginPercent = getMarginPercent(quote);
+            const assignedProvider = getAssignedProvider(quote);
 
             return (
               <article className="item-card" key={quote.id}>
@@ -2056,6 +2144,27 @@ function BookingsView({
                     </div>
                   </div>
 
+                  {assignedProvider && (
+                    <div className="asset-detail-grid" style={{ marginTop: 18 }}>
+                      <div>
+                        <span>Prestataire affecté</span>
+                        <strong>{assignedProvider.name}</strong>
+                      </div>
+                      <div>
+                        <span>Service</span>
+                        <strong>{getContactSupplierCategory(assignedProvider)}</strong>
+                      </div>
+                      <div>
+                        <span>Téléphone</span>
+                        <strong>{assignedProvider.phone || "—"}</strong>
+                      </div>
+                      <div>
+                        <span>Email</span>
+                        <strong>{assignedProvider.email || "—"}</strong>
+                      </div>
+                    </div>
+                  )}
+
                   <form className="form-grid" onSubmit={(event) => updateBookingFinance(event, quote)} style={{ marginTop: 20 }}>
                     <label>Statut paiement
                       <select name="paymentStatus" defaultValue={quote.paymentStatus || getPaymentStatus(quote)}>
@@ -2089,6 +2198,17 @@ function BookingsView({
 
                     <label>Notes paiement
                       <textarea name="paymentNotes" defaultValue={quote.paymentNotes || ""} placeholder="Ex : acompte reçu par virement, solde attendu avant arrivée" />
+                    </label>
+
+                    <label>Prestataire affecté
+                      <select name="assignedContactId" defaultValue={quote.assignedContactId || ""}>
+                        <option value="">Non affecté</option>
+                        {providerContacts.map((contact) => (
+                          <option key={contact.id} value={contact.id}>
+                            {contact.name} · {getContactSupplierCategory(contact)}{getContactSupplierZone(contact) ? ` · ${getContactSupplierZone(contact)}` : ""}
+                          </option>
+                        ))}
+                      </select>
                     </label>
 
                     <label>Statut opérationnel
@@ -2409,7 +2529,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
   }, [data]);
 
   const filteredContacts = useMemo(() => {
-    return data.contacts.filter((contact) => searchMatch(query, [contact.name, contact.kind, contact.email, contact.phone, contact.city, contact.postalAddress ?? ""]));
+    return data.contacts.filter((contact) => searchMatch(query, [contact.name, contact.kind, contact.email, contact.phone, contact.city, contact.postalAddress ?? "", contact.supplierCategory ?? "", contact.supplierZone ?? "", contact.supplierReliability ?? ""]));
   }, [data.contacts, query]);
 
   const filteredLeads = useMemo(() => {
@@ -3756,6 +3876,14 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
       relationshipStatus: String(form.get("relationshipStatus") ?? "Prospect") as NonNullable<Contact["relationshipStatus"]>,
       preferences: String(form.get("preferences") ?? "").trim(),
       importantNotes: String(form.get("importantNotes") ?? "").trim(),
+      supplierCategory: String(form.get("supplierCategory") ?? "").trim() as Contact["supplierCategory"],
+      supplierContactName: String(form.get("supplierContactName") ?? "").trim(),
+      supplierZone: String(form.get("supplierZone") ?? "").trim(),
+      supplierQuality: String(form.get("supplierQuality") ?? "Standard") as Contact["supplierQuality"],
+      supplierReliability: String(form.get("supplierReliability") ?? "À tester") as Contact["supplierReliability"],
+      supplierPriceNotes: String(form.get("supplierPriceNotes") ?? "").trim(),
+      supplierCommissionNotes: String(form.get("supplierCommissionNotes") ?? "").trim(),
+      supplierStatus: String(form.get("supplierStatus") ?? "Actif") as Contact["supplierStatus"],
       createdAt: new Date().toISOString().slice(0, 10)
     };
     if (!contact.name) return notify("Ajoutez au minimum un nom de contact.", "warning");
@@ -4243,7 +4371,6 @@ function createQuoteDraftFromLead(lead: Lead) {
         <NavButton label="Tâches" icon="✓" active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} />
         <NavButton label="Devis" icon="🧾" active={activeTab === "quotes"} onClick={() => setActiveTab("quotes")} />
         <NavButton label="Réservations" icon="✓" active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} />
-        <NavButton label="Fournisseurs" icon="🤝" active={activeTab === "suppliers"} onClick={() => setActiveTab("suppliers")} />
         <NavButton label="Réponses rapides" icon="💬" active={activeTab === "quickReplies"} onClick={() => setActiveTab("quickReplies")} />
         <NavButton label="Planning" icon="🗓" active={activeTab === "planning"} onClick={() => setActiveTab("planning")} />
         <NavButton label="Biens" icon="🏠" active={activeTab === "properties"} onClick={() => setActiveTab("properties")} />
@@ -4337,15 +4464,6 @@ function createQuoteDraftFromLead(lead: Lead) {
                 }} />
         )}
 
-                {activeTab === "suppliers" && (
-          <SuppliersView
-            suppliers={(((data as any).suppliers ?? []) as Supplier[])}
-            onAdd={addSupplier}
-            onUpdate={updateSupplier}
-            onDelete={deleteSupplier}
-          />
-        )}
-
         {activeTab === "quickReplies" && (
           <QuickRepliesView />
         )}
@@ -4363,6 +4481,7 @@ function createQuoteDraftFromLead(lead: Lead) {
         {activeTab === "bookings" && (
           <BookingsView
             quotes={mergeQuoteRequests((data as any).quotes ?? [], loadSavedQuotes())}
+            contacts={data.contacts}
             onChange={(nextQuotes) => setData((current) => ({ ...current, quotes: nextQuotes }))}
           />
         )}
@@ -4432,7 +4551,6 @@ function titleForTab(tab: Tab) {
     tasks: "Tâches",
     quotes: "Devis",
     bookings: "Réservations",
-    suppliers: "Fournisseurs",
     quickReplies: "Réponses rapides",
     planning: "Planning",
     properties: "Biens",
@@ -5457,8 +5575,12 @@ function ContactsView({
   onCreateLead: (contactName: string) => void;
   onCreateTask: (contactName: string) => void;
 }) {
+  const [contactFilter, setContactFilter] = useState("Tous");
+  const [supplierCategoryFilter, setSupplierCategoryFilter] = useState("Toutes");
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+
+  const filterOptions = ["Tous", "Clients", "Fournisseurs", "Propriétaires", "Partenaires"];
 
   function getContactLeads(contact: Contact) {
     return leads.filter((lead) => lead.contactName === contact.name);
@@ -5471,17 +5593,24 @@ function ContactsView({
     return tasks.filter((task) => leadIds.has(task.linkedTo));
   }
 
-  function getPropertyLeads(property: Property) {
-    return leads.filter((lead) => lead.assetType === "Property" && lead.assetId === property.id);
-  }
+  const visibleContacts = contacts.filter((contact) => {
+    const supplier = isSupplierContact(contact);
+    const matchesType =
+      contactFilter === "Tous" ||
+      (contactFilter === "Clients" && contact.kind === "Client" && !supplier) ||
+      (contactFilter === "Fournisseurs" && supplier) ||
+      (contactFilter === "Propriétaires" && contact.kind === "Propriétaire") ||
+      (contactFilter === "Partenaires" && contact.kind === "Partenaire");
 
-  function getVehicleLeads(vehicle: Vehicle) {
-    return leads.filter((lead) => lead.assetType === "Vehicle" && lead.assetId === vehicle.id);
-  }
+    const matchesSupplierCategory = supplierCategoryFilter === "Toutes" || getContactSupplierCategory(contact) === supplierCategoryFilter;
 
-  function getBoatLeads(boat: Boat) {
-    return leads.filter((lead) => lead.assetType === "Boat" && lead.assetId === boat.id);
-  }
+    return matchesType && (contactFilter === "Fournisseurs" ? matchesSupplierCategory : true);
+  });
+
+  const clientCount = contacts.filter((contact) => contact.kind === "Client" && !isSupplierContact(contact)).length;
+  const supplierCount = contacts.filter(isSupplierContact).length;
+  const ownerCount = contacts.filter((contact) => contact.kind === "Propriétaire").length;
+  const partnerCount = contacts.filter((contact) => contact.kind === "Partenaire").length;
 
   function submitEdit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -5505,7 +5634,15 @@ function ContactsView({
       preferredLanguage: String(form.get("preferredLanguage") ?? getContactPreferredLanguage(editingContact)) as NonNullable<Contact["preferredLanguage"]>,
       relationshipStatus: String(form.get("relationshipStatus") ?? getContactRelationshipStatus(editingContact)) as NonNullable<Contact["relationshipStatus"]>,
       preferences: String(form.get("preferences") ?? "").trim(),
-      importantNotes: String(form.get("importantNotes") ?? "").trim()
+      importantNotes: String(form.get("importantNotes") ?? "").trim(),
+      supplierCategory: String(form.get("supplierCategory") ?? "").trim() as Contact["supplierCategory"],
+      supplierContactName: String(form.get("supplierContactName") ?? "").trim(),
+      supplierZone: String(form.get("supplierZone") ?? "").trim(),
+      supplierQuality: String(form.get("supplierQuality") ?? "Standard") as Contact["supplierQuality"],
+      supplierReliability: String(form.get("supplierReliability") ?? "À tester") as Contact["supplierReliability"],
+      supplierPriceNotes: String(form.get("supplierPriceNotes") ?? "").trim(),
+      supplierCommissionNotes: String(form.get("supplierCommissionNotes") ?? "").trim(),
+      supplierStatus: String(form.get("supplierStatus") ?? "Actif") as Contact["supplierStatus"]
     };
 
     if (!updatedContact.name) return;
@@ -5526,384 +5663,229 @@ function ContactsView({
     }, 50);
   }
 
+  function typeLabel(contact: Contact) {
+    return isSupplierContact(contact) ? "Fournisseur" : contact.kind;
+  }
+
   return (
-    <div className="two-columns wide-left">
+    <div className="stack">
       <section className="card">
-        <p className="eyebrow">Base client</p>
-        <h3>{contacts.length} contacts</h3>
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Contacts</p>
+            <h3>{visibleContacts.length} contact{visibleContacts.length > 1 ? "s" : ""}</h3>
+          </div>
+          <p className="muted-line">Clients et réseau fournisseurs au même endroit. Filtrez vite, ouvrez uniquement si nécessaire.</p>
+        </div>
 
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Nom</th>
-                <th>Type</th>
-                <th>Ville / adresse</th>
-                <th>Budget</th>
-                <th>Contact</th>
-              </tr>
-            </thead>
+        <div className="stats-grid">
+          <StatCard label="Clients" value={String(clientCount)} caption="Demandes et leads" />
+          <StatCard label="Fournisseurs" value={String(supplierCount)} caption="Prestataires activables" />
+          <StatCard label="Propriétaires" value={String(ownerCount)} caption="Actifs privés" />
+          <StatCard label="Partenaires" value={String(partnerCount)} caption="Apporteurs / réseau" />
+        </div>
 
-            <tbody>
-              {contacts.length === 0 && (
-                <tr>
-                  <td colSpan={5}>
-                    <div className="empty-state">
-                      <h3>Aucun contact pour le moment</h3>
-                      <p>Commencez par “Ajouter contact / lead” ou “Créer depuis un message client”.</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 20 }}>
+          {filterOptions.map((option) => (
+            <button
+              key={option}
+              type="button"
+              className={contactFilter === option ? "primary-button" : "secondary-button"}
+              onClick={() => setContactFilter(option)}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
 
-              {contacts.map((contact) => (
-                <tr key={contact.id}>
-                  <td>
-                    <strong>{contact.name}</strong>
-                    <small>{contact.source || "Source non renseignée"}</small>
-                    <small>{getContactClientLevel(contact)} · {getContactPreferredLanguage(contact)} · {getContactRelationshipStatus(contact)}</small>
-                    <small>
-                      {getContactLeads(contact).length} lead{getContactLeads(contact).length > 1 ? "s" : ""} · {getContactTasks(contact).length} tâche{getContactTasks(contact).length > 1 ? "s" : ""}
-                    </small>
+        {contactFilter === "Fournisseurs" && (
+          <div style={{ marginTop: 16 }}>
+            <label>Service fournisseur
+              <select value={supplierCategoryFilter} onChange={(event) => setSupplierCategoryFilter(event.target.value)}>
+                <option>Toutes</option>
+                {supplierCategories.map((category) => (
+                  <option key={category}>{category}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
+      </section>
 
-                    <div className="contact-row-actions">
-                      <button
-                        className="contact-detail-button"
-                        type="button"
-                        onClick={() => {
-                          setSelectedContact(contact);
-                          setTimeout(() => {
-                            document.getElementById("contact-detail-panel")?.scrollIntoView({
-                              behavior: "smooth",
-                              block: "center"
-                            });
-                          }, 50);
-                        }}
-                      >
-                        Détails
-                      </button>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(320px, 0.8fr)", gap: 24, alignItems: "start" }}>
+        <section className="card">
+          {visibleContacts.length === 0 ? (
+            <p className="muted-line">Aucun contact dans ce filtre.</p>
+          ) : (
+            <div className="list-stack">
+              {visibleContacts.map((contact) => (
+                <article className="item-card" key={contact.id}>
+                  <div>
+                    <p className="eyebrow">
+                      {typeLabel(contact)}{isSupplierContact(contact) ? ` · ${getContactSupplierCategory(contact)}` : ""}
+                    </p>
+                    <h3>{contact.name}</h3>
+                    <p className="muted-line">
+                      {contact.city || getContactSupplierZone(contact) || "Ville / zone à compléter"}
+                    </p>
+                    <p className="muted-line">
+                      {contact.email || "Email à compléter"} · {contact.phone || "Téléphone à compléter"}
+                    </p>
+                    {isSupplierContact(contact) ? (
+                      <p className="muted-line">
+                        Fiabilité : {contact.supplierReliability || "À tester"} · Statut : {contact.supplierStatus || "Actif"}
+                      </p>
+                    ) : (
+                      <p className="muted-line">
+                        {getContactClientLevel(contact)} · {getContactRelationshipStatus(contact)} · {getContactLeads(contact).length} lead{getContactLeads(contact).length > 1 ? "s" : ""}
+                      </p>
+                    )}
+                  </div>
 
-                      <button
-                        className="contact-detail-button"
-                        type="button"
-                        onClick={() => onCreateTask(contact.name)}
-                      >
-                        Tâche
-                      </button>
-
-                      <button
-                        className="contact-detail-button"
-                        type="button"
-                        onClick={() => onCreateLead(contact.name)}
-                      >
+                  <div className="item-actions">
+                    {contact.phone && <a className="secondary-button" href={`tel:${contact.phone}`}>Appeler</a>}
+                    {contact.email && <a className="secondary-button" href={`mailto:${contact.email}`}>Email</a>}
+                    {!isSupplierContact(contact) && (
+                      <button className="secondary-button" type="button" onClick={() => onCreateLead(contact.name)}>
                         Lead
                       </button>
-
-                      <button
-                        className="contact-edit-button"
-                        type="button"
-                        onClick={() => openEdit(contact)}
-                      >
-                        Modifier
-                      </button>
-
-                      <button
-                        className="contact-delete-button"
-                        type="button"
-                        onClick={() => {
-                          const confirmed = window.confirm(
-                            `Confirmer la suppression de "${contact.name}" ?\n\nCette action supprimera le contact de la base client.`
-                          );
-
-                          if (confirmed) {
-                            onDelete(contact.id);
-                          }
-                        }}
-                      >
-                        Supprimer
-                      </button>
-                    </div>
-                  </td>
-
-                  <td>
-                    <Badge>{contact.kind}</Badge>
-                  </td>
-
-                  <td>
-                    <span className="muted-line">{contact.city || "—"}</span>
-                    <span className="muted-line">{contact.postalAddress || "Adresse non renseignée"}</span>
-                  </td>
-
-                  <td>{contact.budget ? currency.format(contact.budget) : "—"}</td>
-
-                  <td>
-                    <span className="muted-line">{contact.email || "—"}</span>
-                    <span className="muted-line">{contact.phone || "—"}</span>
-                  </td>
-                </tr>
+                    )}
+                    <button className="secondary-button" type="button" onClick={() => setSelectedContact(contact)}>
+                      Détails
+                    </button>
+                    <button className="secondary-button" type="button" onClick={() => openEdit(contact)}>
+                      Modifier
+                    </button>
+                    <button
+                      className="danger-button"
+                      type="button"
+                      onClick={() => {
+                        const confirmed = window.confirm(`Supprimer "${contact.name}" ?`);
+                        if (confirmed) onDelete(contact.id);
+                      }}
+                    >
+                      Supprimer
+                    </button>
+                  </div>
+                </article>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+            </div>
+          )}
+        </section>
 
-      <section className="card form-card">
-        <p className="eyebrow">Nouveau</p>
-        <h3>Ajouter un contact</h3>
+        <section className="card form-card" style={{ position: "sticky", top: 20 }}>
+          <p className="eyebrow">Nouveau</p>
+          <h3>Ajouter un contact</h3>
 
-        <form className="form-grid" onSubmit={onAdd}>
-          <label>Nom<input name="name" placeholder="Nom complet" /></label>
+          <form className="form-grid" onSubmit={onAdd}>
+            <label>Nom<input name="name" placeholder="Nom ou société" /></label>
+            <label>Type
+              <select name="kind" defaultValue="Client">
+                {contactKinds.map((kind) => <option key={kind}>{kind}</option>)}
+              </select>
+            </label>
+            <label>Email<input name="email" type="email" placeholder="email@example.com" /></label>
+            <label>Téléphone<input name="phone" placeholder="+33..." /></label>
+            <label>Ville / zone<input name="city" placeholder="Cannes, Monaco..." /></label>
+            <label>Budget<input name="budget" type="number" min="0" placeholder="Si client" /></label>
+            <label>Source<input name="source" placeholder="Site, recommandation, réseau..." /></label>
+            <label>Relation
+              <select name="relationshipStatus" defaultValue="Prospect">
+                {contactRelationshipStatuses.map((status) => <option key={status}>{status}</option>)}
+              </select>
+            </label>
 
-          <label>Type
-            <select name="kind">
-              <option>Client</option>
-              <option>Propriétaire</option>
-              <option>Partenaire</option>
-            </select>
-          </label>
+            <label>Service fournisseur
+              <select name="supplierCategory" defaultValue="">
+                <option value="">—</option>
+                {supplierCategories.map((category) => <option key={category}>{category}</option>)}
+              </select>
+            </label>
+            <label>Fiabilité
+              <select name="supplierReliability" defaultValue="À tester">
+                <option>À tester</option>
+                <option>Fiable</option>
+                <option>Très fiable</option>
+                <option>À éviter</option>
+              </select>
+            </label>
+            <label>Contact fournisseur<input name="supplierContactName" placeholder="Nom du contact" /></label>
+            <label>Statut fournisseur
+              <select name="supplierStatus" defaultValue="Actif">
+                <option>Actif</option>
+                <option>À vérifier</option>
+                <option>Inactif</option>
+              </select>
+            </label>
 
-          <label>Niveau client
-            <select name="clientLevel" defaultValue="Standard">
-              {contactLevels.map((level) => (
-                <option key={level} value={level}>{level}</option>
-              ))}
-            </select>
-          </label>
+            <label className="full">Notes prix / accord
+              <textarea name="supplierPriceNotes" placeholder="Tarifs, minimum spend, conditions..." />
+            </label>
+            <label className="full">Notes
+              <textarea name="notes" placeholder="Contexte, préférences, infos utiles" />
+            </label>
 
-          <label>Langue préférée
-            <select name="preferredLanguage" defaultValue="Français">
-              {contactLanguages.map((language) => (
-                <option key={language} value={language}>{language}</option>
-              ))}
-            </select>
-          </label>
-
-          <label>Relation
-            <select name="relationshipStatus" defaultValue="Prospect">
-              {contactRelationshipStatuses.map((status) => (
-                <option key={status} value={status}>{status}</option>
-              ))}
-            </select>
-          </label>
-
-          <label>Email<input name="email" type="email" placeholder="email@example.com" /></label>
-          <label>Téléphone<input name="phone" placeholder="+33..." /></label>
-          <label>Ville<input name="city" placeholder="Cannes" /></label>
-          <label>Adresse postale<input name="postalAddress" placeholder="12 Boulevard de la Croisette, 06400 Cannes" /></label>
-          <label>Budget<input name="budget" type="number" min="0" placeholder="2500000" /></label>
-          <label>Source<input name="source" placeholder="Site web, recommandation..." /></label>
-
-          <label className="full">Préférences
-            <textarea name="preferences" placeholder="Villa, bateau, voiture, chauffeur, chef privé, sécurité..." />
-          </label>
-
-          <label className="full">Notes importantes
-            <textarea name="importantNotes" placeholder="Informations à voir immédiatement avant de contacter ce client." />
-          </label>
-
-          <label className="full">Notes
-            <textarea name="notes" placeholder="Besoins, contexte, prochaines infos à retenir" />
-          </label>
-
-          <button className="primary-button" type="submit">Ajouter</button>
-        </form>
-      </section>
+            <button className="primary-button" type="submit">Ajouter</button>
+          </form>
+        </section>
+      </div>
 
       {selectedContact && (
         <div className="confirm-backdrop">
           <div id="contact-detail-panel" className="confirm-dialog contact-detail-dialog" role="dialog" aria-modal="true">
-            <p className="eyebrow">Fiche client</p>
+            <p className="eyebrow">Fiche contact</p>
             <h3>{selectedContact.name}</h3>
 
             <div className="contact-detail-grid">
-              <div>
-                <span>Type</span>
-                <strong>{selectedContact.kind}</strong>
-              </div>
+              <div><span>Type</span><strong>{typeLabel(selectedContact)}</strong></div>
+              <div><span>Email</span><strong>{selectedContact.email || "Non renseigné"}</strong></div>
+              <div><span>Téléphone</span><strong>{selectedContact.phone || "Non renseigné"}</strong></div>
+              <div><span>Ville / zone</span><strong>{selectedContact.city || getContactSupplierZone(selectedContact) || "Non renseignée"}</strong></div>
 
-              <div>
-                <span>Budget</span>
-                <strong>{selectedContact.budget ? currency.format(selectedContact.budget) : "Non renseigné"}</strong>
-              </div>
+              {isSupplierContact(selectedContact) ? (
+                <>
+                  <div><span>Service</span><strong>{getContactSupplierCategory(selectedContact)}</strong></div>
+                  <div><span>Fiabilité</span><strong>{selectedContact.supplierReliability || "À tester"}</strong></div>
+                  <div><span>Qualité</span><strong>{selectedContact.supplierQuality || "Standard"}</strong></div>
+                  <div><span>Statut</span><strong>{selectedContact.supplierStatus || "Actif"}</strong></div>
+                  <div className="full"><span>Notes prix</span><p>{selectedContact.supplierPriceNotes || "Aucune note prix."}</p></div>
+                  <div className="full"><span>Commission / marge</span><p>{selectedContact.supplierCommissionNotes || "Aucune note commission."}</p></div>
+                </>
+              ) : (
+                <>
+                  <div><span>Budget</span><strong>{selectedContact.budget ? currency.format(selectedContact.budget) : "Non renseigné"}</strong></div>
+                  <div><span>Relation</span><strong>{getContactRelationshipStatus(selectedContact)}</strong></div>
+                  <div><span>Niveau</span><strong>{getContactClientLevel(selectedContact)}</strong></div>
+                  <div><span>Langue</span><strong>{getContactPreferredLanguage(selectedContact)}</strong></div>
+                </>
+              )}
 
-              <div>
-                <span>Niveau client</span>
-                <strong>{getContactClientLevel(selectedContact)}</strong>
-              </div>
-
-              <div>
-                <span>Langue préférée</span>
-                <strong>{getContactPreferredLanguage(selectedContact)}</strong>
-              </div>
-
-              <div>
-                <span>Relation</span>
-                <strong>{getContactRelationshipStatus(selectedContact)}</strong>
-              </div>
-
-              <div>
-                <span>Email</span>
-                <strong>{selectedContact.email || "Non renseigné"}</strong>
-              </div>
-
-              <div>
-                <span>Téléphone</span>
-                <strong>{selectedContact.phone || "Non renseigné"}</strong>
-              </div>
-
-              <div>
-                <span>Ville</span>
-                <strong>{selectedContact.city || "Non renseignée"}</strong>
-              </div>
-
-              <div>
-                <span>Source</span>
-                <strong>{selectedContact.source || "Non renseignée"}</strong>
-              </div>
-
-              <div className="full">
-                <span>Adresse postale</span>
-                <strong>{selectedContact.postalAddress || "Non renseignée"}</strong>
-              </div>
-
-              <div className="full">
-                <span>Préférences</span>
-                <p>{selectedContact.preferences || "Aucune préférence renseignée."}</p>
-              </div>
-
-              <div className="full">
-                <span>Notes importantes</span>
-                <p>{selectedContact.importantNotes || "Aucune note importante."}</p>
-              </div>
-
-              <div className="full">
-                <span>Notes client</span>
-                <p>{selectedContact.notes || "Aucune note pour ce contact."}</p>
-              </div>
+              <div className="full"><span>Notes</span><p>{selectedContact.notes || "Aucune note."}</p></div>
             </div>
 
-            <div className="contact-related-section">
-              <p className="eyebrow">Synthèse commerciale</p>
-
-              <div className="list-stack">
-                <article className="mini-row">
-                  <div>
-                    <strong>Pipeline actif</strong>
-                    <span>
-                      {getContactLeads(selectedContact).filter((lead) => lead.status !== "Gagné" && lead.status !== "Perdu").length} lead{getContactLeads(selectedContact).filter((lead) => lead.status !== "Gagné" && lead.status !== "Perdu").length > 1 ? "s" : ""} ouvert{getContactLeads(selectedContact).filter((lead) => lead.status !== "Gagné" && lead.status !== "Perdu").length > 1 ? "s" : ""}
-                    </span>
-                  </div>
-                  <strong>
-                    {currency.format(
-                      getContactLeads(selectedContact)
-                        .filter((lead) => lead.status !== "Gagné" && lead.status !== "Perdu")
-                        .reduce((sum, lead) => sum + lead.value, 0)
-                    )}
-                  </strong>
-                </article>
-
-                <article className="mini-row">
-                  <div>
-                    <strong>Gagné</strong>
-                    <span>Valeur déjà gagnée avec ce contact</span>
-                  </div>
-                  <strong>
-                    {currency.format(
-                      getContactLeads(selectedContact)
-                        .filter((lead) => lead.status === "Gagné")
-                        .reduce((sum, lead) => sum + lead.value, 0)
-                    )}
-                  </strong>
-                </article>
-
-                <article className="mini-row">
-                  <div>
-                    <strong>Tâches ouvertes</strong>
-                    <span>Actions restantes liées à ce contact</span>
-                  </div>
-                  <Badge>
-                    {getContactTasks(selectedContact).filter((task) => task.status !== "Terminé").length}
-                  </Badge>
-                </article>
-              </div>
-            </div>
-
-            <div className="contact-related-section">
-              <p className="eyebrow">Leads liés</p>
-
-              <div className="list-stack">
-                {getContactLeads(selectedContact).length === 0 && (
-                  <p className="muted-line">Aucun lead lié à ce contact.</p>
-                )}
-
-                {getContactLeads(selectedContact).map((lead) => (
-                  <article className="mini-row" key={lead.id}>
-                    <div>
-                      <strong>{lead.category} • {lead.status}</strong>
-                      <span>{lead.nextAction || "Aucune prochaine action"}</span>
-                    </div>
-                    <Badge>{lead.priority}</Badge>
+            {!isSupplierContact(selectedContact) && (
+              <div className="contact-related-section">
+                <p className="eyebrow">Synthèse commerciale</p>
+                <div className="list-stack">
+                  <article className="mini-row">
+                    <div><strong>Leads liés</strong><span>{getContactLeads(selectedContact).length} lead{getContactLeads(selectedContact).length > 1 ? "s" : ""}</span></div>
+                    <Badge>{getContactLeads(selectedContact).filter((lead) => lead.status !== "Perdu").length}</Badge>
                   </article>
-                ))}
-              </div>
-            </div>
-
-            <div className="contact-related-section">
-              <p className="eyebrow">Tâches liées</p>
-
-              <div className="list-stack">
-                {getContactTasks(selectedContact).length === 0 && (
-                  <p className="muted-line">Aucune tâche liée aux leads de ce contact.</p>
-                )}
-
-                {getContactTasks(selectedContact).map((task) => (
-                  <article className="mini-row" key={task.id}>
-                    <div>
-                      <strong>{task.title}</strong>
-                      <span>{task.owner || "Responsable non renseigné"} · {task.dueDate || "Sans échéance"}</span>
-                    </div>
-                    <Badge>{task.status}</Badge>
+                  <article className="mini-row">
+                    <div><strong>Tâches ouvertes</strong><span>Actions restantes</span></div>
+                    <Badge>{getContactTasks(selectedContact).filter((task) => task.status !== "Terminé").length}</Badge>
                   </article>
-                ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="confirm-actions">
-              <button className="ghost-button" type="button" onClick={() => setSelectedContact(null)}>
-                Fermer
-              </button>
-
-              <button
-                className="secondary-button"
-                type="button"
-                onClick={() => {
-                  const contactName = selectedContact.name;
-                  setSelectedContact(null);
-                  onCreateLead(contactName);
-                }}
-              >
-                Créer un lead
-              </button>
-
-              <button
-                className="secondary-button"
-                type="button"
-                onClick={() => {
-                  const contactName = selectedContact.name;
-                  setSelectedContact(null);
-                  onCreateTask(contactName);
-                }}
-              >
-                Créer une tâche
-              </button>
-
-              <button
-                className="primary-button"
-                type="button"
-                onClick={() => openEdit(selectedContact)}
-              >
-                Modifier
-              </button>
+              <button className="ghost-button" type="button" onClick={() => setSelectedContact(null)}>Fermer</button>
+              {!isSupplierContact(selectedContact) && (
+                <button className="secondary-button" type="button" onClick={() => { const name = selectedContact.name; setSelectedContact(null); onCreateLead(name); }}>Créer un lead</button>
+              )}
+              <button className="secondary-button" type="button" onClick={() => { const name = selectedContact.name; setSelectedContact(null); onCreateTask(name); }}>Créer une tâche</button>
+              <button className="primary-button" type="button" onClick={() => openEdit(selectedContact)}>Modifier</button>
             </div>
           </div>
         </div>
@@ -5917,70 +5899,80 @@ function ContactsView({
 
             <form className="form-grid" onSubmit={submitEdit}>
               <label>Nom<input name="name" defaultValue={editingContact.name} /></label>
-
               <label>Type
                 <select name="kind" defaultValue={editingContact.kind}>
-                  <option>Client</option>
-                  <option>Propriétaire</option>
-                  <option>Partenaire</option>
+                  {contactKinds.map((kind) => <option key={kind}>{kind}</option>)}
                 </select>
               </label>
-
-              <label>Niveau client
-                <select name="clientLevel" defaultValue={getContactClientLevel(editingContact)}>
-                  {contactLevels.map((level) => (
-                    <option key={level} value={level}>{level}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label>Langue préférée
-                <select name="preferredLanguage" defaultValue={getContactPreferredLanguage(editingContact)}>
-                  {contactLanguages.map((language) => (
-                    <option key={language} value={language}>{language}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label>Relation
-                <select name="relationshipStatus" defaultValue={getContactRelationshipStatus(editingContact)}>
-                  {contactRelationshipStatuses.map((status) => (
-                    <option key={status} value={status}>{status}</option>
-                  ))}
-                </select>
-              </label>
-
               <label>Email<input name="email" type="email" defaultValue={editingContact.email} /></label>
               <label>Téléphone<input name="phone" defaultValue={editingContact.phone} /></label>
-              <label>Ville<input name="city" defaultValue={editingContact.city} /></label>
-              <label>Adresse postale<input name="postalAddress" defaultValue={editingContact.postalAddress} /></label>
+              <label>Ville / zone<input name="city" defaultValue={editingContact.city} /></label>
               <label>Budget<input name="budget" type="number" min="0" defaultValue={editingContact.budget || ""} /></label>
               <label>Source<input name="source" defaultValue={editingContact.source} /></label>
+              <label>Relation
+                <select name="relationshipStatus" defaultValue={getContactRelationshipStatus(editingContact)}>
+                  {contactRelationshipStatuses.map((status) => <option key={status}>{status}</option>)}
+                </select>
+              </label>
+              <label>Niveau client
+                <select name="clientLevel" defaultValue={getContactClientLevel(editingContact)}>
+                  {contactLevels.map((level) => <option key={level}>{level}</option>)}
+                </select>
+              </label>
+              <label>Langue
+                <select name="preferredLanguage" defaultValue={getContactPreferredLanguage(editingContact)}>
+                  {contactLanguages.map((language) => <option key={language}>{language}</option>)}
+                </select>
+              </label>
 
+              <label>Service fournisseur
+                <select name="supplierCategory" defaultValue={editingContact.supplierCategory || ""}>
+                  <option value="">—</option>
+                  {supplierCategories.map((category) => <option key={category}>{category}</option>)}
+                </select>
+              </label>
+              <label>Contact fournisseur<input name="supplierContactName" defaultValue={editingContact.supplierContactName || ""} /></label>
+              <label>Fiabilité
+                <select name="supplierReliability" defaultValue={editingContact.supplierReliability || "À tester"}>
+                  <option>À tester</option>
+                  <option>Fiable</option>
+                  <option>Très fiable</option>
+                  <option>À éviter</option>
+                </select>
+              </label>
+              <label>Statut fournisseur
+                <select name="supplierStatus" defaultValue={editingContact.supplierStatus || "Actif"}>
+                  <option>Actif</option>
+                  <option>À vérifier</option>
+                  <option>Inactif</option>
+                </select>
+              </label>
+              <label>Qualité
+                <select name="supplierQuality" defaultValue={editingContact.supplierQuality || "Standard"}>
+                  <option>Standard</option>
+                  <option>Premium</option>
+                  <option>Très premium</option>
+                </select>
+              </label>
+              <label className="full">Notes prix
+                <textarea name="supplierPriceNotes" defaultValue={editingContact.supplierPriceNotes || ""} />
+              </label>
+              <label className="full">Commission / marge
+                <textarea name="supplierCommissionNotes" defaultValue={editingContact.supplierCommissionNotes || ""} />
+              </label>
               <label className="full">Préférences
                 <textarea name="preferences" defaultValue={editingContact.preferences ?? ""} />
               </label>
-
               <label className="full">Notes importantes
                 <textarea name="importantNotes" defaultValue={editingContact.importantNotes ?? ""} />
               </label>
-
               <label className="full">Notes
                 <textarea name="notes" defaultValue={editingContact.notes} />
               </label>
 
               <div className="confirm-actions full">
-                <button
-                  className="ghost-button"
-                  type="button"
-                  onClick={() => setEditingContact(null)}
-                >
-                  Annuler
-                </button>
-
-                <button className="primary-button" type="submit">
-                  Enregistrer
-                </button>
+                <button className="ghost-button" type="button" onClick={() => setEditingContact(null)}>Annuler</button>
+                <button className="primary-button" type="submit">Enregistrer</button>
               </div>
             </form>
           </div>
@@ -5989,7 +5981,6 @@ function ContactsView({
     </div>
   );
 }
-
 
 function LeadsView({
   leads,

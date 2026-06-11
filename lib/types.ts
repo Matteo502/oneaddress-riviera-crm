@@ -1,4 +1,8 @@
-export type ContactKind = "Client" | "Propriétaire" | "Partenaire";
+export type ContactKind = "Client" | "Propriétaire" | "Partenaire" | "Fournisseur";
+export type SupplierCategory = "Villa" | "Voiture" | "Bateau" | "Chauffeur" | "Chef" | "Sécurité" | "Conciergerie" | "Paysagiste" | "Gestion nuisibles" | "Pisciniste" | "Femme de ménage" | "Nounou" | "Artisan rénovation" | "Lavage voiture" | "Garage / mécanicien" | "Jardinier" | "Autre";
+export type SupplierQuality = "Standard" | "Premium" | "Très premium";
+export type SupplierReliability = "À tester" | "Fiable" | "Très fiable" | "À éviter";
+export type SupplierStatus = "Actif" | "À vérifier" | "Inactif";
 export type ContactLevel = "Standard" | "VIP" | "Ultra VIP";
 export type ContactLanguage = "Français" | "Anglais" | "Italien" | "Autre";
 export type ContactRelationshipStatus = "Prospect" | "Actif" | "Dormant";
@@ -24,6 +28,14 @@ export type Contact = {
   relationshipStatus?: ContactRelationshipStatus;
   preferences?: string;
   importantNotes?: string;
+  supplierCategory?: SupplierCategory;
+  supplierContactName?: string;
+  supplierZone?: string;
+  supplierQuality?: SupplierQuality;
+  supplierReliability?: SupplierReliability;
+  supplierPriceNotes?: string;
+  supplierCommissionNotes?: string;
+  supplierStatus?: SupplierStatus;
   createdAt: string;
 };
 
@@ -97,17 +109,17 @@ export type Task = {
 export type Supplier = {
   id: string;
   name: string;
-  category: "Villa" | "Voiture" | "Bateau" | "Chauffeur" | "Chef" | "Sécurité" | "Conciergerie" | "Paysagiste" | "Gestion nuisibles" | "Pisciniste" | "Femme de ménage" | "Nounou" | "Artisan rénovation" | "Lavage voiture" | "Garage / mécanicien" | "Jardinier" | "Autre";
+  category: SupplierCategory;
   contactName: string;
   email: string;
   phone: string;
   zone: string;
-  quality: "Standard" | "Premium" | "Très premium";
-  reliability: "À tester" | "Fiable" | "Très fiable" | "À éviter";
+  quality: SupplierQuality;
+  reliability: SupplierReliability;
   priceNotes: string;
   commissionNotes: string;
   notes: string;
-  status: "Actif" | "À vérifier" | "Inactif";
+  status: SupplierStatus;
   createdAt: string;
 };
 
