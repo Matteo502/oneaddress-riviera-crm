@@ -445,6 +445,14 @@ type QuoteRequest = {
   depositReceived?: number;
   balanceReceived?: number;
   paymentNotes?: string;
+  bookingStatus?: "À préparer" | "Prestataire à confirmer" | "Confirmé" | "En cours" | "Terminé" | "Annulé";
+  clientConfirmed?: boolean;
+  depositConfirmed?: boolean;
+  supplierConfirmed?: boolean;
+  balanceConfirmed?: boolean;
+  detailsSent?: boolean;
+  serviceCompleted?: boolean;
+  operationNotes?: string;
   validityDate: string;
   paymentTerms: string;
   cancellationTerms: string;
@@ -1032,6 +1040,14 @@ function normalizeQuoteRequest(value: unknown): QuoteRequest | null {
     notes: String(raw.notes || ""),
     status: getQuoteStatus(raw.status),
     statusUpdatedAt: String(raw.statusUpdatedAt || raw.createdAt || new Date().toISOString()),
+    bookingStatus: String(raw.bookingStatus || "À préparer") as QuoteRequest["bookingStatus"],
+    clientConfirmed: Boolean(raw.clientConfirmed),
+    depositConfirmed: Boolean(raw.depositConfirmed),
+    supplierConfirmed: Boolean(raw.supplierConfirmed),
+    balanceConfirmed: Boolean(raw.balanceConfirmed),
+    detailsSent: Boolean(raw.detailsSent),
+    serviceCompleted: Boolean(raw.serviceCompleted),
+    operationNotes: String(raw.operationNotes || ""),
     createdAt: String(raw.createdAt || new Date().toISOString())
   } as QuoteRequest;
 }
@@ -1898,19 +1914,28 @@ function BookingsView({
     event.preventDefault();
 
     const form = new FormData(event.currentTarget);
+
     const updatedQuote: QuoteRequest = {
       ...quote,
       supplierCost: readQuoteNumber(form.get("supplierCost")),
       depositReceived: readQuoteNumber(form.get("depositReceived")),
       balanceReceived: readQuoteNumber(form.get("balanceReceived")),
-      paymentNotes: String(form.get("paymentNotes") ?? "").trim()
+      paymentNotes: String(form.get("paymentNotes") ?? "").trim(),
+      bookingStatus: String(form.get("bookingStatus") ?? "À préparer") as QuoteRequest["bookingStatus"],
+      clientConfirmed: form.get("clientConfirmed") === "on",
+      depositConfirmed: form.get("depositConfirmed") === "on",
+      supplierConfirmed: form.get("supplierConfirmed") === "on",
+      balanceConfirmed: form.get("balanceConfirmed") === "on",
+      detailsSent: form.get("detailsSent") === "on",
+      serviceCompleted: form.get("serviceCompleted") === "on",
+      operationNotes: String(form.get("operationNotes") ?? "").trim()
     };
 
     const nextQuotes = quotes.map((item) => (item.id === quote.id ? updatedQuote : item));
 
     onChange(nextQuotes);
     saveQuotesToBrowser(nextQuotes);
-    window.alert("Suivi financier enregistré.");
+    window.alert("Réservation enregistrée.");
   }
 
   return (
@@ -1921,7 +1946,7 @@ function BookingsView({
           <h3>{confirmedQuotes.length} réservation{confirmedQuotes.length > 1 ? "s" : ""}</h3>
         </div>
         <p className="muted-line">
-          Suivez ici les devis gagnés, la marge estimée et les paiements reçus.
+          Suivez ici les devis gagnés, la marge estimée, les paiements reçus et la préparation opérationnelle.
         </p>
       </div>
 
@@ -1987,14 +2012,63 @@ function BookingsView({
                       <textarea name="paymentNotes" defaultValue={quote.paymentNotes || ""} placeholder="Ex : acompte reçu par virement, solde attendu avant arrivée" />
                     </label>
 
+                    <label>Statut opérationnel
+                      <select name="bookingStatus" defaultValue={quote.bookingStatus || "À préparer"}>
+                        <option>À préparer</option>
+                        <option>Prestataire à confirmer</option>
+                        <option>Confirmé</option>
+                        <option>En cours</option>
+                        <option>Terminé</option>
+                        <option>Annulé</option>
+                      </select>
+                    </label>
+
+                    <div className="card" style={{ boxShadow: "none", padding: 16 }}>
+                      <p className="eyebrow">Checklist opérationnelle</p>
+
+                      <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <input name="clientConfirmed" type="checkbox" defaultChecked={Boolean(quote.clientConfirmed)} />
+                        Client confirmé
+                      </label>
+
+                      <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <input name="depositConfirmed" type="checkbox" defaultChecked={Boolean(quote.depositConfirmed)} />
+                        Acompte reçu
+                      </label>
+
+                      <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <input name="supplierConfirmed" type="checkbox" defaultChecked={Boolean(quote.supplierConfirmed)} />
+                        Prestataire confirmé
+                      </label>
+
+                      <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <input name="balanceConfirmed" type="checkbox" defaultChecked={Boolean(quote.balanceConfirmed)} />
+                        Solde reçu
+                      </label>
+
+                      <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <input name="detailsSent" type="checkbox" defaultChecked={Boolean(quote.detailsSent)} />
+                        Détails envoyés au client
+                      </label>
+
+                      <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <input name="serviceCompleted" type="checkbox" defaultChecked={Boolean(quote.serviceCompleted)} />
+                        Service terminé
+                      </label>
+                    </div>
+
+                    <label>Notes opérationnelles
+                      <textarea name="operationNotes" defaultValue={quote.operationNotes || ""} placeholder="Horaires, adresse, contact sur place, contraintes, préférences client..." />
+                    </label>
+
                     <button className="primary-button" type="submit">
-                      Enregistrer paiement
+                      Enregistrer réservation
                     </button>
                   </form>
                 </div>
 
                 <div className="item-actions">
-                  <span className="status-pill">À préparer</span>
+                  <span className="status-pill">{quote.bookingStatus || "À préparer"}</span>
                   <button className="secondary-button" type="button" onClick={() => openQuotePdf(quote)}>
                     Ouvrir devis
                   </button>
