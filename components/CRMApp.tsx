@@ -19,7 +19,8 @@ import type {
   BoatStatus,
   Task,
   TaskStatus,
-  Supplier,} from "@/lib/types";
+  Supplier,
+} from "@/lib/types";
 
 const STORAGE_KEY = "oneaddress-riviera-crm-v1";
 const QUOTES_STORAGE_KEY = "oneaddress-riviera-crm-quotes-v1";
@@ -41,7 +42,8 @@ const emptyData: CRMData = {
   vehicles: [],
   boats: [],
   tasks: [],
-  suppliers: []
+  suppliers: [],
+  quotes: []
 };
 
 
@@ -53,7 +55,10 @@ function normalizeSharedCRMData(payload: any): CRMData {
     vehicles: Array.isArray(payload?.vehicles) ? payload.vehicles : [],
     boats: Array.isArray(payload?.boats) ? payload.boats : [],
     tasks: Array.isArray(payload?.tasks) ? payload.tasks : [],
-    suppliers: Array.isArray(payload?.suppliers) ? payload.suppliers : []
+    suppliers: Array.isArray(payload?.suppliers) ? payload.suppliers : [],
+    quotes: Array.isArray(payload?.quotes)
+      ? payload.quotes.map(normalizeQuoteRequest).filter((quote: QuoteRequest | null): quote is QuoteRequest => Boolean(quote))
+      : []
   };
 }
 
@@ -65,7 +70,8 @@ function crmDataHasContent(value: CRMData) {
     value.vehicles.length > 0 ||
     value.boats.length > 0 ||
     value.tasks.length > 0 ||
-    (((value as any).suppliers ?? []) as Supplier[]).length > 0
+    (((value as any).suppliers ?? []) as Supplier[]).length > 0 ||
+    (((value as any).quotes ?? []) as QuoteRequest[]).length > 0
   );
 }
 
@@ -2254,16 +2260,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<CRMData>;
-        setData({
-          ...emptyData,
-          ...parsed,
-          contacts: parsed.contacts ?? emptyData.contacts,
-          leads: parsed.leads ?? emptyData.leads,
-          properties: parsed.properties ?? emptyData.properties,
-          vehicles: parsed.vehicles ?? emptyData.vehicles,
-          boats: parsed.boats ?? emptyData.boats,
-          tasks: parsed.tasks ?? emptyData.tasks
-        });
+        setData(normalizeSharedCRMData(parsed));
       }
     } catch {
       setToast({ message: "Impossible de lire la sauvegarde locale.", tone: "warning" });
@@ -2373,11 +2370,17 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
 
         if (userError || !userData.user) return;
 
+        const visibleQuotes = mergeQuoteRequests((((data as any).quotes ?? []) as QuoteRequest[]), loadSavedQuotes());
+        const dataWithVisibleQuotes: CRMData = {
+          ...data,
+          quotes: visibleQuotes
+        };
+
         const { error } = await supabase
           .from("crm_workspace_state")
           .upsert({
             workspace_id: SHARED_WORKSPACE_ID,
-            payload: data,
+            payload: dataWithVisibleQuotes,
             updated_at: new Date().toISOString(),
             updated_by: userData.user.id
           }, { onConflict: "workspace_id" });
@@ -3668,7 +3671,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     const payload = {
       version: "oneaddress-riviera-crm-v1",
       savedAt: new Date().toISOString(),
-      data: currentData
+      data: currentDataWithVisibleQuotes
     };
 
     const { error } = await supabase.from("crm_backups").insert({
@@ -4189,7 +4192,7 @@ function createQuoteDraftFromLead(lead: Lead) {
           throw new Error("Format JSON invalide.");
         }
 
-        const knownKeys = ["contacts", "leads", "properties", "vehicles", "boats", "tasks", "quotes"];
+        const knownKeys = ["contacts", "leads", "properties", "vehicles", "boats", "tasks", "suppliers", "quotes"];
         const hasKnownData = knownKeys.some((key) => Array.isArray((parsed as Record<string, unknown>)[key]));
 
         if (!hasKnownData) {
