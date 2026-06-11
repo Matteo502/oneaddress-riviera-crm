@@ -3892,6 +3892,13 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
     // Ancienne synchro contact désactivée : crm_workspace_state sauvegarde tout le CRM.
     event.currentTarget.reset();
     notify("Contact ajouté.");
+
+    window.setTimeout(() => {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+    }, 80);
   }
 
   function addLead(event: React.FormEvent<HTMLFormElement>) {
