@@ -97,7 +97,7 @@ export type Task = {
 export type Supplier = {
   id: string;
   name: string;
-  category: "Villa" | "Voiture" | "Bateau" | "Chauffeur" | "Chef" | "Sécurité" | "Conciergerie" | "Autre";
+  category: "Villa" | "Voiture" | "Bateau" | "Chauffeur" | "Chef" | "Sécurité" | "Conciergerie" | "Paysagiste" | "Gestion nuisibles" | "Pisciniste" | "Femme de ménage" | "Nounou" | "Artisan rénovation" | "Lavage voiture" | "Garage / mécanicien" | "Jardinier" | "Autre";
   contactName: string;
   email: string;
   phone: string;

@@ -1657,7 +1657,7 @@ function SuppliersView({
   const [categoryFilter, setCategoryFilter] = useState("Tous");
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
 
-  const categories = ["Tous", "Villa", "Voiture", "Bateau", "Chauffeur", "Chef", "Sécurité", "Conciergerie", "Autre"];
+  const categories = ["Tous", "Villa", "Voiture", "Bateau", "Chauffeur", "Chef", "Sécurité", "Conciergerie", "Paysagiste", "Gestion nuisibles", "Pisciniste", "Femme de ménage", "Nounou", "Artisan rénovation", "Lavage voiture", "Garage / mécanicien", "Jardinier", "Autre"];
 
   const visibleSuppliers =
     categoryFilter === "Tous"
