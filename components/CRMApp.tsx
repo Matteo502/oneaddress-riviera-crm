@@ -18,8 +18,8 @@ import type {
   Boat,
   BoatStatus,
   Task,
-  TaskStatus
-} from "@/lib/types";
+  TaskStatus,
+  Supplier,} from "@/lib/types";
 
 const STORAGE_KEY = "oneaddress-riviera-crm-v1";
 const QUOTES_STORAGE_KEY = "oneaddress-riviera-crm-quotes-v1";
@@ -40,7 +40,8 @@ const emptyData: CRMData = {
   properties: [],
   vehicles: [],
   boats: [],
-  tasks: []
+  tasks: [],
+  suppliers: []
 };
 
 
@@ -51,7 +52,8 @@ function normalizeSharedCRMData(payload: any): CRMData {
     properties: Array.isArray(payload?.properties) ? payload.properties : [],
     vehicles: Array.isArray(payload?.vehicles) ? payload.vehicles : [],
     boats: Array.isArray(payload?.boats) ? payload.boats : [],
-    tasks: Array.isArray(payload?.tasks) ? payload.tasks : []
+    tasks: Array.isArray(payload?.tasks) ? payload.tasks : [],
+    suppliers: Array.isArray(payload?.suppliers) ? payload.suppliers : []
   };
 }
 
@@ -62,7 +64,8 @@ function crmDataHasContent(value: CRMData) {
     value.properties.length > 0 ||
     value.vehicles.length > 0 ||
     value.boats.length > 0 ||
-    value.tasks.length > 0
+    value.tasks.length > 0 ||
+    (((value as any).suppliers ?? []) as Supplier[]).length > 0
   );
 }
 
@@ -77,7 +80,7 @@ function readLocalCRMDataSafely() {
   }
 }
 
-type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "bookings" | "quickReplies" | "planning" | "properties" | "vehicles" | "boats";
+type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "bookings" | "quickReplies" | "planning" | "properties" | "suppliers" | "vehicles" | "boats";
 
 type Toast = {
   message: string;
@@ -1638,6 +1641,225 @@ function QuotesView({
 }
 
 
+
+
+function SuppliersView({
+  suppliers,
+  onAdd,
+  onUpdate,
+  onDelete
+}: {
+  suppliers: Supplier[];
+  onAdd: (supplier: Supplier) => void;
+  onUpdate: (supplier: Supplier) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [categoryFilter, setCategoryFilter] = useState("Tous");
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+
+  const categories = ["Tous", "Villa", "Voiture", "Bateau", "Chauffeur", "Chef", "Sécurité", "Conciergerie", "Autre"];
+
+  const visibleSuppliers =
+    categoryFilter === "Tous"
+      ? suppliers
+      : suppliers.filter((supplier) => supplier.category === categoryFilter);
+
+  function submitSupplier(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const form = new FormData(event.currentTarget);
+
+    const supplier: Supplier = {
+      id: editingSupplier?.id ?? makeId("supplier"),
+      name: String(form.get("name") ?? "").trim(),
+      category: String(form.get("category") ?? "Autre") as Supplier["category"],
+      contactName: String(form.get("contactName") ?? "").trim(),
+      email: String(form.get("email") ?? "").trim(),
+      phone: String(form.get("phone") ?? "").trim(),
+      zone: String(form.get("zone") ?? "").trim(),
+      quality: String(form.get("quality") ?? "Standard") as Supplier["quality"],
+      reliability: String(form.get("reliability") ?? "À tester") as Supplier["reliability"],
+      priceNotes: String(form.get("priceNotes") ?? "").trim(),
+      commissionNotes: String(form.get("commissionNotes") ?? "").trim(),
+      notes: String(form.get("notes") ?? "").trim(),
+      status: String(form.get("status") ?? "Actif") as Supplier["status"],
+      createdAt: editingSupplier?.createdAt ?? new Date().toISOString()
+    };
+
+    if (!supplier.name) {
+      window.alert("Ajoutez au minimum le nom du fournisseur.");
+      return;
+    }
+
+    if (editingSupplier) {
+      onUpdate(supplier);
+      setEditingSupplier(null);
+    } else {
+      onAdd(supplier);
+    }
+
+    event.currentTarget.reset();
+  }
+
+  return (
+    <div className="split-layout">
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Réseau privé</p>
+            <h3>{visibleSuppliers.length} fournisseur{visibleSuppliers.length > 1 ? "s" : ""}</h3>
+          </div>
+          <p className="muted-line">Partenaires et prestataires privés à activer rapidement.</p>
+        </div>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 22 }}>
+          {categories.map((category) => (
+            <button
+              key={category}
+              type="button"
+              className={categoryFilter === category ? "primary-button" : "secondary-button"}
+              onClick={() => setCategoryFilter(category)}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+
+        {visibleSuppliers.length === 0 ? (
+          <p className="muted-line">Aucun fournisseur dans cette catégorie.</p>
+        ) : (
+          <div className="list-stack">
+            {visibleSuppliers.map((supplier) => (
+              <article className="item-card" key={supplier.id}>
+                <div>
+                  <p className="eyebrow">{supplier.category} · {supplier.status}</p>
+                  <h3>{supplier.name}</h3>
+                  <p>{supplier.contactName || "Contact à compléter"}</p>
+                  <p className="muted-line">{supplier.zone || "Zone non renseignée"}</p>
+                  <p className="muted-line">
+                    Qualité : {supplier.quality} · Fiabilité : {supplier.reliability}
+                  </p>
+                  {supplier.priceNotes && <p className="muted-line">Prix : {supplier.priceNotes}</p>}
+                  {supplier.commissionNotes && <p className="muted-line">Commission : {supplier.commissionNotes}</p>}
+                  {supplier.notes && <p>{supplier.notes}</p>}
+                </div>
+
+                <div className="item-actions">
+                  {supplier.phone && (
+                    <a className="secondary-button" href={`tel:${supplier.phone}`}>
+                      Appeler
+                    </a>
+                  )}
+                  {supplier.email && (
+                    <a className="secondary-button" href={`mailto:${supplier.email}`}>
+                      Email
+                    </a>
+                  )}
+                  <button className="secondary-button" type="button" onClick={() => setEditingSupplier(supplier)}>
+                    Modifier
+                  </button>
+                  <button
+                    className="danger-button"
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm("Supprimer ce fournisseur ?")) {
+                        onDelete(supplier.id);
+                      }
+                    }}
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="card">
+        <p className="eyebrow">{editingSupplier ? "Modification" : "Nouveau"}</p>
+        <h3>{editingSupplier ? "Modifier le fournisseur" : "Ajouter un fournisseur"}</h3>
+
+        <form className="form-grid" onSubmit={submitSupplier}>
+          <label>Nom fournisseur
+            <input name="name" defaultValue={editingSupplier?.name ?? ""} placeholder="Ex : Riviera Chauffeur Premium" />
+          </label>
+
+          <label>Catégorie
+            <select name="category" defaultValue={editingSupplier?.category ?? "Autre"}>
+              {categories.filter((category) => category !== "Tous").map((category) => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>Contact
+            <input name="contactName" defaultValue={editingSupplier?.contactName ?? ""} placeholder="Nom du contact" />
+          </label>
+
+          <label>Email
+            <input name="email" type="email" defaultValue={editingSupplier?.email ?? ""} placeholder="email@exemple.com" />
+          </label>
+
+          <label>Téléphone
+            <input name="phone" defaultValue={editingSupplier?.phone ?? ""} placeholder="+33..." />
+          </label>
+
+          <label>Zone
+            <input name="zone" defaultValue={editingSupplier?.zone ?? ""} placeholder="Cannes, Monaco, Saint-Tropez..." />
+          </label>
+
+          <label>Qualité
+            <select name="quality" defaultValue={editingSupplier?.quality ?? "Standard"}>
+              <option>Standard</option>
+              <option>Premium</option>
+              <option>Très premium</option>
+            </select>
+          </label>
+
+          <label>Fiabilité
+            <select name="reliability" defaultValue={editingSupplier?.reliability ?? "À tester"}>
+              <option>À tester</option>
+              <option>Fiable</option>
+              <option>Très fiable</option>
+              <option>À éviter</option>
+            </select>
+          </label>
+
+          <label>Notes prix
+            <textarea name="priceNotes" defaultValue={editingSupplier?.priceNotes ?? ""} placeholder="Tarifs, minimum spend, conditions..." />
+          </label>
+
+          <label>Commission / marge
+            <textarea name="commissionNotes" defaultValue={editingSupplier?.commissionNotes ?? ""} placeholder="Commission, marge, accord partenaire..." />
+          </label>
+
+          <label>Notes internes
+            <textarea name="notes" defaultValue={editingSupplier?.notes ?? ""} placeholder="Réactivité, points forts, points faibles..." />
+          </label>
+
+          <label>Statut
+            <select name="status" defaultValue={editingSupplier?.status ?? "Actif"}>
+              <option>Actif</option>
+              <option>À vérifier</option>
+              <option>Inactif</option>
+            </select>
+          </label>
+
+          <button className="primary-button" type="submit">
+            {editingSupplier ? "Enregistrer" : "Ajouter fournisseur"}
+          </button>
+
+          {editingSupplier && (
+            <button className="secondary-button" type="button" onClick={() => setEditingSupplier(null)}>
+              Annuler modification
+            </button>
+          )}
+        </form>
+      </section>
+    </div>
+  );
+}
 
 function BookingsView({
   quotes,
@@ -3314,7 +3536,34 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     notify("Export JSON téléchargé.");
   }
 
-  function addContact(event: React.FormEvent<HTMLFormElement>) {
+  
+  function addSupplier(supplier: Supplier) {
+    setData((current) => ({
+      ...current,
+      suppliers: [supplier, ...(((current as any).suppliers ?? []) as Supplier[])]
+    }));
+    notify("Fournisseur ajouté.");
+  }
+
+  function updateSupplier(updatedSupplier: Supplier) {
+    setData((current) => ({
+      ...current,
+      suppliers: (((current as any).suppliers ?? []) as Supplier[]).map((supplier) =>
+        supplier.id === updatedSupplier.id ? updatedSupplier : supplier
+      )
+    }));
+    notify("Fournisseur mis à jour.");
+  }
+
+  function deleteSupplier(id: string) {
+    setData((current) => ({
+      ...current,
+      suppliers: (((current as any).suppliers ?? []) as Supplier[]).filter((supplier) => supplier.id !== id)
+    }));
+    notify("Fournisseur supprimé.");
+  }
+
+function addContact(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const contact: Contact = {
@@ -3788,6 +4037,7 @@ function createQuoteDraftFromLead(lead: Lead) {
         <NavButton label="Tâches" icon="✓" active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} />
         <NavButton label="Devis" icon="🧾" active={activeTab === "quotes"} onClick={() => setActiveTab("quotes")} />
         <NavButton label="Réservations" icon="✓" active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} />
+        <NavButton label="Fournisseurs" icon="🤝" active={activeTab === "suppliers"} onClick={() => setActiveTab("suppliers")} />
         <NavButton label="Réponses rapides" icon="💬" active={activeTab === "quickReplies"} onClick={() => setActiveTab("quickReplies")} />
         <NavButton label="Planning" icon="🗓" active={activeTab === "planning"} onClick={() => setActiveTab("planning")} />
         <NavButton label="Biens" icon="🏠" active={activeTab === "properties"} onClick={() => setActiveTab("properties")} />
@@ -3881,7 +4131,16 @@ function createQuoteDraftFromLead(lead: Lead) {
                 }} />
         )}
 
-                {activeTab === "quickReplies" && (
+                {activeTab === "suppliers" && (
+          <SuppliersView
+            suppliers={(((data as any).suppliers ?? []) as Supplier[])}
+            onAdd={addSupplier}
+            onUpdate={updateSupplier}
+            onDelete={deleteSupplier}
+          />
+        )}
+
+        {activeTab === "quickReplies" && (
           <QuickRepliesView />
         )}
 
@@ -3967,6 +4226,7 @@ function titleForTab(tab: Tab) {
     tasks: "Tâches",
     quotes: "Devis",
     bookings: "Réservations",
+    suppliers: "Fournisseurs",
     quickReplies: "Réponses rapides",
     planning: "Planning",
     properties: "Biens",

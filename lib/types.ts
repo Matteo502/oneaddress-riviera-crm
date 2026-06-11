@@ -93,6 +93,24 @@ export type Task = {
   linkedTo: string;
 };
 
+
+export type Supplier = {
+  id: string;
+  name: string;
+  category: "Villa" | "Voiture" | "Bateau" | "Chauffeur" | "Chef" | "Sécurité" | "Conciergerie" | "Autre";
+  contactName: string;
+  email: string;
+  phone: string;
+  zone: string;
+  quality: "Standard" | "Premium" | "Très premium";
+  reliability: "À tester" | "Fiable" | "Très fiable" | "À éviter";
+  priceNotes: string;
+  commissionNotes: string;
+  notes: string;
+  status: "Actif" | "À vérifier" | "Inactif";
+  createdAt: string;
+};
+
 export type CRMData = {
   contacts: Contact[];
   leads: Lead[];
@@ -100,5 +118,6 @@ export type CRMData = {
   vehicles: Vehicle[];
   boats: Boat[];
   tasks: Task[];
+  suppliers?: Supplier[];
   quotes?: any[];
 };
