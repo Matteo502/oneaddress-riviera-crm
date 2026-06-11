@@ -438,6 +438,10 @@ type QuoteRequest = {
   startDate: string;
   endDate: string;
   unitPrice: number;
+  supplierCost?: number;
+  depositReceived?: number;
+  balanceReceived?: number;
+  paymentNotes?: string;
   validityDate: string;
   paymentTerms: string;
   cancellationTerms: string;
@@ -1635,8 +1639,33 @@ function QuotesView({
 
 
 
-function BookingsView({ quotes }: { quotes: QuoteRequest[] }) {
+function BookingsView({
+  quotes,
+  onChange
+}: {
+  quotes: QuoteRequest[];
+  onChange: (quotes: QuoteRequest[]) => void;
+}) {
   const confirmedQuotes = quotes.filter((quote) => getQuoteStatus(quote.status) === "Accepted");
+
+  function updateBookingFinance(event: React.FormEvent<HTMLFormElement>, quote: QuoteRequest) {
+    event.preventDefault();
+
+    const form = new FormData(event.currentTarget);
+    const updatedQuote: QuoteRequest = {
+      ...quote,
+      supplierCost: readQuoteNumber(form.get("supplierCost")),
+      depositReceived: readQuoteNumber(form.get("depositReceived")),
+      balanceReceived: readQuoteNumber(form.get("balanceReceived")),
+      paymentNotes: String(form.get("paymentNotes") ?? "").trim()
+    };
+
+    const nextQuotes = quotes.map((item) => (item.id === quote.id ? updatedQuote : item));
+
+    onChange(nextQuotes);
+    saveQuotesToBrowser(nextQuotes);
+    window.alert("Suivi financier enregistré.");
+  }
 
   return (
     <section className="card">
@@ -1646,7 +1675,7 @@ function BookingsView({ quotes }: { quotes: QuoteRequest[] }) {
           <h3>{confirmedQuotes.length} réservation{confirmedQuotes.length > 1 ? "s" : ""}</h3>
         </div>
         <p className="muted-line">
-          Les devis gagnés apparaissent ici automatiquement pour préparer l’exécution.
+          Suivez ici les devis gagnés, la marge estimée et les paiements reçus.
         </p>
       </div>
 
@@ -1659,6 +1688,13 @@ function BookingsView({ quotes }: { quotes: QuoteRequest[] }) {
               .map((item) => getQuoteCategoryFrenchLabel(item.category))
               .join(" · ");
 
+            const clientPrice = getQuoteTotal(quote);
+            const supplierCost = Number(quote.supplierCost || 0);
+            const depositReceived = Number(quote.depositReceived || 0);
+            const balanceReceived = Number(quote.balanceReceived || 0);
+            const margin = clientPrice - supplierCost;
+            const remainingBalance = Math.max(clientPrice - depositReceived - balanceReceived, 0);
+
             return (
               <article className="item-card" key={quote.id}>
                 <div>
@@ -1668,10 +1704,50 @@ function BookingsView({ quotes }: { quotes: QuoteRequest[] }) {
                   <p className="muted-line">
                     Du {formatQuoteDate(quote.startDate)} au {formatQuoteDate(quote.endDate)}
                   </p>
+
+                  <div className="stats-grid" style={{ marginTop: 18 }}>
+                    <div className="mini-stat">
+                      <span>Prix client</span>
+                      <strong>{formatQuotePrice(clientPrice)}</strong>
+                    </div>
+                    <div className="mini-stat">
+                      <span>Coût fournisseur</span>
+                      <strong>{formatQuotePrice(supplierCost)}</strong>
+                    </div>
+                    <div className="mini-stat">
+                      <span>Marge estimée</span>
+                      <strong>{formatQuotePrice(margin)}</strong>
+                    </div>
+                    <div className="mini-stat">
+                      <span>Solde restant</span>
+                      <strong>{formatQuotePrice(remainingBalance)}</strong>
+                    </div>
+                  </div>
+
+                  <form className="form-grid" onSubmit={(event) => updateBookingFinance(event, quote)} style={{ marginTop: 20 }}>
+                    <label>Coût fournisseur
+                      <input name="supplierCost" type="number" min="0" step="1" defaultValue={quote.supplierCost || ""} placeholder="Ex : 2500" />
+                    </label>
+
+                    <label>Acompte reçu
+                      <input name="depositReceived" type="number" min="0" step="1" defaultValue={quote.depositReceived || ""} placeholder="Ex : 1000" />
+                    </label>
+
+                    <label>Solde reçu
+                      <input name="balanceReceived" type="number" min="0" step="1" defaultValue={quote.balanceReceived || ""} placeholder="Ex : 3000" />
+                    </label>
+
+                    <label>Notes paiement
+                      <textarea name="paymentNotes" defaultValue={quote.paymentNotes || ""} placeholder="Ex : acompte reçu par virement, solde attendu avant arrivée" />
+                    </label>
+
+                    <button className="primary-button" type="submit">
+                      Enregistrer paiement
+                    </button>
+                  </form>
                 </div>
 
                 <div className="item-actions">
-                  <strong>{formatQuotePrice(getQuoteTotal(quote))}</strong>
                   <span className="status-pill">À préparer</span>
                   <button className="secondary-button" type="button" onClick={() => openQuotePdf(quote)}>
                     Ouvrir devis
@@ -1685,6 +1761,7 @@ function BookingsView({ quotes }: { quotes: QuoteRequest[] }) {
     </section>
   );
 }
+
 
 function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
@@ -3819,7 +3896,10 @@ function createQuoteDraftFromLead(lead: Lead) {
         )}
 
         {activeTab === "bookings" && (
-          <BookingsView quotes={mergeQuoteRequests((data as any).quotes ?? [], loadSavedQuotes())} />
+          <BookingsView
+            quotes={mergeQuoteRequests((data as any).quotes ?? [], loadSavedQuotes())}
+            onChange={(nextQuotes) => setData((current) => ({ ...current, quotes: nextQuotes }))}
+          />
         )}
 
         {activeTab === "planning" && (
