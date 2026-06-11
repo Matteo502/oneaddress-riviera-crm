@@ -2528,6 +2528,183 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     return { pipeline, won, openTasks, availableProperties };
   }, [data]);
 
+
+  const actionNotifications = useMemo(() => {
+    type ActionNotification = {
+      id: string;
+      title: string;
+      detail: string;
+      tab: Tab;
+      tone: "danger" | "warning" | "info";
+    };
+
+    const items: ActionNotification[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    function daysUntil(dateText?: string) {
+      if (!dateText) return null;
+
+      const date = new Date(`${dateText}T00:00:00`);
+      if (Number.isNaN(date.getTime())) return null;
+
+      date.setHours(0, 0, 0, 0);
+      return Math.round((date.getTime() - today.getTime()) / 86400000);
+    }
+
+    function paymentRemaining(quote: QuoteRequest) {
+      const total = getQuoteTotal(quote);
+      const paid = Number(quote.depositReceived || 0) + Number(quote.balanceReceived || 0);
+
+      return Math.max(total - paid, 0);
+    }
+
+    data.tasks
+      .filter((task) => task.status !== "Terminé")
+      .forEach((task) => {
+        const days = daysUntil(task.dueDate);
+
+        if (days === null) {
+          items.push({
+            id: `task-missing-date-${task.id}`,
+            title: "Tâche sans échéance",
+            detail: task.title || "Tâche à compléter",
+            tab: "tasks",
+            tone: "warning"
+          });
+          return;
+        }
+
+        if (days < 0) {
+          items.push({
+            id: `task-late-${task.id}`,
+            title: "Tâche en retard",
+            detail: `${task.title} · ${task.dueDate}`,
+            tab: "tasks",
+            tone: "danger"
+          });
+          return;
+        }
+
+        if (days === 0) {
+          items.push({
+            id: `task-today-${task.id}`,
+            title: "Échéance aujourd’hui",
+            detail: task.title,
+            tab: "tasks",
+            tone: "warning"
+          });
+          return;
+        }
+
+        if (days <= 2) {
+          items.push({
+            id: `task-soon-${task.id}`,
+            title: "Échéance proche",
+            detail: `${task.title} · dans ${days} jour${days > 1 ? "s" : ""}`,
+            tab: "tasks",
+            tone: "info"
+          });
+        }
+      });
+
+    data.leads
+      .filter((lead) => lead.status !== "Gagné" && lead.status !== "Perdu")
+      .forEach((lead) => {
+        if (!lead.nextAction || !lead.dueDate) {
+          items.push({
+            id: `lead-incomplete-${lead.id}`,
+            title: "Lead incomplet",
+            detail: `${lead.contactName} · prochaine action ou échéance manquante`,
+            tab: "leads",
+            tone: "warning"
+          });
+        }
+
+        const days = daysUntil(lead.dueDate);
+
+        if (days !== null && days < 0) {
+          items.push({
+            id: `lead-late-${lead.id}`,
+            title: "Lead en retard",
+            detail: `${lead.contactName} · ${lead.nextAction || "Action à faire"}`,
+            tab: "leads",
+            tone: "danger"
+          });
+        }
+      });
+
+    const quotes = mergeQuoteRequests((((data as any).quotes ?? []) as QuoteRequest[]), loadSavedQuotes());
+
+    quotes.forEach((quote) => {
+      const status = getQuoteStatus(quote.status);
+      const ageDays = getQuoteAgeDays(quote.statusUpdatedAt || quote.createdAt);
+
+      if (status === "Sent" && ageDays >= 1) {
+        items.push({
+          id: `quote-follow-${quote.id}`,
+          title: ageDays >= 3 ? "Relance devis 72h" : "Relance devis 24h",
+          detail: `${quote.clientName} · ${formatQuotePrice(getQuoteTotal(quote))}`,
+          tab: "quotes",
+          tone: ageDays >= 3 ? "danger" : "warning"
+        });
+      }
+
+      if (status === "Negotiation") {
+        items.push({
+          id: `quote-negotiation-${quote.id}`,
+          title: "Négociation à suivre",
+          detail: `${quote.clientName} · devis en négociation`,
+          tab: "quotes",
+          tone: "warning"
+        });
+      }
+
+      if (status === "Accepted") {
+        const bookingStatus = quote.bookingStatus || "À préparer";
+
+        if (bookingStatus !== "Terminé" && bookingStatus !== "Annulé") {
+          if (!quote.supplierConfirmed) {
+            items.push({
+              id: `booking-supplier-${quote.id}`,
+              title: "Prestataire à confirmer",
+              detail: `${quote.clientName} · ${quote.title || "Réservation"}`,
+              tab: "bookings",
+              tone: "warning"
+            });
+          }
+
+          if (!quote.detailsSent) {
+            items.push({
+              id: `booking-details-${quote.id}`,
+              title: "Détails client à envoyer",
+              detail: `${quote.clientName} · réservation confirmée`,
+              tab: "bookings",
+              tone: "info"
+            });
+          }
+        }
+
+        const remaining = paymentRemaining(quote);
+        const paymentStatus = quote.paymentStatus || "Non payé";
+
+        if (remaining > 0 && paymentStatus !== "Payé" && paymentStatus !== "Annulé / remboursé") {
+          const days = daysUntil(quote.paymentDueDate);
+
+          items.push({
+            id: `payment-${quote.id}`,
+            title: days !== null && days < 0 ? "Paiement en retard" : "Paiement à suivre",
+            detail: `${quote.clientName} · ${formatQuotePrice(remaining)} restant`,
+            tab: "bookings",
+            tone: days !== null && days < 0 ? "danger" : "warning"
+          });
+        }
+      }
+    });
+
+    return items.slice(0, 8);
+  }, [data]);
+
   const filteredContacts = useMemo(() => {
     return data.contacts.filter((contact) => searchMatch(query, [contact.name, contact.kind, contact.email, contact.phone, contact.city, contact.postalAddress ?? "", contact.supplierCategory ?? "", contact.supplierZone ?? "", contact.supplierReliability ?? ""]));
   }, [data.contacts, query]);
@@ -4418,6 +4595,39 @@ function createQuoteDraftFromLead(lead: Lead) {
           }}>Export CSV</button>
           </div>
         </header>
+
+        {actionNotifications.length > 0 && (
+          <section className="crm-notification-panel">
+            <div className="crm-notification-heading">
+              <div>
+                <p className="eyebrow">Notifications</p>
+                <h3>{actionNotifications.length} action{actionNotifications.length > 1 ? "s" : ""} à traiter</h3>
+              </div>
+
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => setActiveTab(actionNotifications[0].tab)}
+              >
+                Traiter maintenant
+              </button>
+            </div>
+
+            <div className="crm-notification-list">
+              {actionNotifications.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`crm-notification-item ${item.tone}`}
+                  onClick={() => setActiveTab(item.tab)}
+                >
+                  <strong>{item.title}</strong>
+                  <span>{item.detail}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         {activeTab === "dashboard" && (
           <>
