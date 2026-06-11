@@ -7371,12 +7371,12 @@ function TasksView({
             <p>Ajoutez une tâche depuis un lead, un contact, ou utilisez le formulaire de création.</p>
           </div>
         ) : (
-          <div className="pipeline-grid">
+          <div className="pipeline-grid task-pipeline-grid">
             {taskStatuses.map((status) => {
               const columnTasks = tasks.filter((task) => task.status === status);
 
               return (
-                <div className="pipeline-column" key={status}>
+                <div className="pipeline-column task-column" key={status}>
                   <div className="pipeline-title">
                     <strong>{status}</strong>
                     <span>{columnTasks.length}</span>
