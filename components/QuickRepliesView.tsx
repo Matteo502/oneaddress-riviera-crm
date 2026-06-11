@@ -34,7 +34,6 @@ Could you please share the service you are looking for, the dates, location, num
 Once we have these details, we can review suitable private options.
 
 Kind regards,
-Matteo
 One Address Riviera
 `)
   },
@@ -55,7 +54,6 @@ Please review the details and let me know if you would like to proceed, adjust a
 Availability is not held until confirmation.
 
 Kind regards,
-Matteo
 One Address Riviera
 `)
   },
@@ -76,7 +74,6 @@ The proposal includes the selected service, dates, pricing and key terms. Availa
 Please let me know if you would like to proceed or if any adjustment is required.
 
 Kind regards,
-Matteo
 One Address Riviera
 `)
   },
@@ -95,7 +92,6 @@ I’m following up regarding the private proposal sent yesterday.
 Would you like us to hold this option and move forward, or would you prefer that we review an alternative?
 
 Kind regards,
-Matteo
 One Address Riviera
 `)
   },
@@ -114,7 +110,6 @@ Just following up once more regarding your private request.
 As availability can move quickly, we will not hold the option without confirmation. If your request is still active, please let me know and we can review the next step.
 
 Kind regards,
-Matteo
 One Address Riviera
 `)
   },
@@ -135,7 +130,6 @@ I will review what can reasonably be adjusted while keeping the service level al
 I will come back to you shortly with the best possible option.
 
 Kind regards,
-Matteo
 One Address Riviera
 `)
   },
@@ -156,7 +150,6 @@ We will now proceed with the booking preparation. To secure everything properly,
 Once confirmed, we will coordinate the service and share the necessary information before the date.
 
 Kind regards,
-Matteo
 One Address Riviera
 `)
   },
@@ -177,7 +170,6 @@ No problem at all. We will close this request for now.
 If you need private Riviera arrangements in the future, we would be happy to review a new request.
 
 Kind regards,
-Matteo
 One Address Riviera
 `)
   },
@@ -196,7 +188,6 @@ We are currently confirming the selected provider for your request.
 Once the operational details are secured, we will send you the final confirmation with timing, contact details and any practical instructions.
 
 Kind regards,
-Matteo
 One Address Riviera
 `)
   },
@@ -215,7 +206,6 @@ Your booking is now confirmed.
 We will keep the arrangements discreet and coordinated. The practical details will be shared before the service date, including timing, address and contact information if needed.
 
 Kind regards,
-Matteo
 One Address Riviera
 `)
   },
@@ -234,7 +224,6 @@ A balance remains pending for your confirmed booking.
 Could you please arrange the remaining payment before the agreed deadline so we can keep the service fully secured?
 
 Kind regards,
-Matteo
 One Address Riviera
 `)
   },
@@ -253,7 +242,6 @@ To review suitable private villa options, could you please confirm the location,
 Once confirmed, we can check relevant private options and come back with a curated selection.
 
 Kind regards,
-Matteo
 One Address Riviera
 `)
   },
@@ -270,7 +258,6 @@ Hello,
 To check suitable luxury car options, could you please confirm the dates, pick-up and drop-off location, preferred vehicle type, whether you need self-drive or chauffeur service, number of passengers and estimated budget?
 
 Kind regards,
-Matteo
 One Address Riviera
 `)
   },
@@ -287,7 +274,6 @@ Hello,
 To review private boat options, could you please confirm the preferred date, departure area, number of guests, full day or half day, preferred boat style or size, estimated budget and any preferred itinerary?
 
 Kind regards,
-Matteo
 One Address Riviera
 `)
   },
@@ -304,7 +290,6 @@ Hello,
 Could you please confirm the date and time, pick-up location, drop-off location, flight number if relevant, number of passengers, luggage quantity, preferred vehicle type, and whether you need a simple transfer or a private chauffeur during your stay?
 
 Kind regards,
-Matteo
 One Address Riviera
 `)
   },
@@ -327,7 +312,6 @@ We focus on tailored, high-standard private services with vetted partners across
 If your requirements or budget evolve, we would be happy to review a new request.
 
 Kind regards,
-Matteo
 One Address Riviera
 `)
   }
@@ -384,10 +368,10 @@ export default function QuickRepliesView() {
         <div className="section-heading">
           <div>
             <p className="eyebrow">Réponses rapides</p>
-            <h3>Messages prêts à copier</h3>
+            <h3>Bibliothèque de messages</h3>
           </div>
           <p className="muted-line">
-            Filtrez par situation, sélectionnez un message, puis copiez-le. La liste reste compacte.
+            Sélectionnez une situation à gauche, puis copiez le message complet à droite.
           </p>
         </div>
 
@@ -426,8 +410,15 @@ export default function QuickRepliesView() {
         </div>
       </section>
 
-      <div className="two-columns wide-left">
-        <section className="card">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(280px, 0.8fr) minmax(620px, 1.6fr)",
+          gap: 24,
+          alignItems: "start"
+        }}
+      >
+        <section className="card" style={{ padding: 22 }}>
           <div className="section-heading">
             <div>
               <p className="eyebrow">Bibliothèque</p>
@@ -438,60 +429,76 @@ export default function QuickRepliesView() {
           {filteredTemplates.length === 0 ? (
             <p className="muted-line">Aucune réponse ne correspond aux filtres.</p>
           ) : (
-            <div className="list-stack">
-              {filteredTemplates.map((template) => (
-                <button
-                  key={template.id}
-                  type="button"
-                  className={selectedTemplate?.id === template.id ? "item-card selected" : "item-card"}
-                  onClick={() => setSelectedId(template.id)}
-                  style={{
-                    width: "100%",
-                    textAlign: "left",
-                    cursor: "pointer",
-                    borderColor: selectedTemplate?.id === template.id ? "rgba(201, 161, 86, 0.65)" : undefined
-                  }}
-                >
-                  <div>
-                    <p className="eyebrow">{template.situation} · {template.channel}</p>
-                    <h3>{template.title}</h3>
-                    <p className="muted-line">{template.category}</p>
-                  </div>
+            <div style={{ display: "grid", gap: 10 }}>
+              {filteredTemplates.map((template) => {
+                const isSelected = selectedTemplate?.id === template.id;
 
-                  <div className="item-actions">
-                    <span className="status-pill">{template.language}</span>
-                  </div>
-                </button>
-              ))}
+                return (
+                  <button
+                    key={template.id}
+                    type="button"
+                    onClick={() => setSelectedId(template.id)}
+                    style={{
+                      width: "100%",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      border: isSelected ? "1px solid rgba(201, 161, 86, 0.9)" : "1px solid rgba(7, 31, 39, 0.12)",
+                      background: isSelected ? "rgba(201, 161, 86, 0.08)" : "rgba(255, 255, 255, 0.42)",
+                      padding: "14px 16px",
+                      boxShadow: "none"
+                    }}
+                  >
+                    <p className="eyebrow" style={{ marginBottom: 6 }}>
+                      {template.situation} · {template.channel}
+                    </p>
+                    <strong style={{ display: "block", color: "#071f27", fontSize: 16 }}>
+                      {template.title}
+                    </strong>
+                    <span className="muted-line">{template.category}</span>
+                  </button>
+                );
+              })}
             </div>
           )}
         </section>
 
-        <section className="card form-card" style={{ position: "sticky", top: 20 }}>
+        <section
+          className="card"
+          style={{
+            position: "sticky",
+            top: 20,
+            padding: 30,
+            border: "1px solid rgba(201, 161, 86, 0.28)"
+          }}
+        >
           {selectedTemplate ? (
             <>
               <div className="section-heading">
                 <div>
-                  <p className="eyebrow">{selectedTemplate.situation} · {selectedTemplate.category} · {selectedTemplate.channel}</p>
+                  <p className="eyebrow">
+                    {selectedTemplate.situation} · {selectedTemplate.category} · {selectedTemplate.channel}
+                  </p>
                   <h3>{selectedTemplate.title}</h3>
                 </div>
+                <span className="status-pill">{selectedTemplate.language}</span>
               </div>
 
-              <textarea
-                readOnly
-                value={selectedTemplate.message}
+              <div
                 style={{
-                  width: "100%",
-                  minHeight: 420,
-                  resize: "vertical",
-                  fontSize: 15,
-                  lineHeight: 1.6
+                  whiteSpace: "pre-wrap",
+                  background: "rgba(255, 255, 255, 0.52)",
+                  border: "1px solid rgba(7, 31, 39, 0.12)",
+                  padding: 24,
+                  minHeight: 540,
+                  color: "#071f27",
+                  fontSize: 16,
+                  lineHeight: 1.75
                 }}
-              />
+              >
+                {selectedTemplate.message}
+              </div>
 
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
-                <span className="muted-line">{selectedTemplate.language} · {selectedTemplate.channel}</span>
-
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 18, flexWrap: "wrap" }}>
                 <button className="primary-button" type="button" onClick={() => copyMessage(selectedTemplate)}>
                   {copiedId === selectedTemplate.id ? "Copié" : "Copier le message"}
                 </button>
