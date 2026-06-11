@@ -445,6 +445,9 @@ type QuoteRequest = {
   depositReceived?: number;
   balanceReceived?: number;
   paymentNotes?: string;
+  paymentStatus?: "Non payé" | "Acompte reçu" | "Partiel" | "Payé" | "Annulé / remboursé";
+  expectedDeposit?: number;
+  paymentDueDate?: string;
   bookingStatus?: "À préparer" | "Prestataire à confirmer" | "Confirmé" | "En cours" | "Terminé" | "Annulé";
   clientConfirmed?: boolean;
   depositConfirmed?: boolean;
@@ -1040,6 +1043,9 @@ function normalizeQuoteRequest(value: unknown): QuoteRequest | null {
     notes: String(raw.notes || ""),
     status: getQuoteStatus(raw.status),
     statusUpdatedAt: String(raw.statusUpdatedAt || raw.createdAt || new Date().toISOString()),
+    paymentStatus: String(raw.paymentStatus || "Non payé") as QuoteRequest["paymentStatus"],
+    expectedDeposit: Number(raw.expectedDeposit || 0),
+    paymentDueDate: String(raw.paymentDueDate || ""),
     bookingStatus: String(raw.bookingStatus || "À préparer") as QuoteRequest["bookingStatus"],
     clientConfirmed: Boolean(raw.clientConfirmed),
     depositConfirmed: Boolean(raw.depositConfirmed),
@@ -1910,6 +1916,34 @@ function BookingsView({
 }) {
   const confirmedQuotes = quotes.filter((quote) => getQuoteStatus(quote.status) === "Accepted");
 
+  function getPaymentRemaining(quote: QuoteRequest) {
+    const total = getQuoteTotal(quote);
+    const paid = Number(quote.depositReceived || 0) + Number(quote.balanceReceived || 0);
+
+    return Math.max(total - paid, 0);
+  }
+
+  function getPaymentStatus(quote: QuoteRequest) {
+    const total = getQuoteTotal(quote);
+    const paid = Number(quote.depositReceived || 0) + Number(quote.balanceReceived || 0);
+
+    if (quote.paymentStatus && quote.paymentStatus !== "Non payé") return quote.paymentStatus;
+    if (total > 0 && paid >= total) return "Payé";
+    if (Number(quote.depositReceived || 0) > 0) return "Acompte reçu";
+    if (paid > 0) return "Partiel";
+
+    return "Non payé";
+  }
+
+  function getMarginPercent(quote: QuoteRequest) {
+    const total = getQuoteTotal(quote);
+    const supplierCost = Number(quote.supplierCost || 0);
+
+    if (total <= 0) return 0;
+
+    return Math.round(((total - supplierCost) / total) * 100);
+  }
+
   function updateBookingFinance(event: React.FormEvent<HTMLFormElement>, quote: QuoteRequest) {
     event.preventDefault();
 
@@ -1921,6 +1955,9 @@ function BookingsView({
       depositReceived: readQuoteNumber(form.get("depositReceived")),
       balanceReceived: readQuoteNumber(form.get("balanceReceived")),
       paymentNotes: String(form.get("paymentNotes") ?? "").trim(),
+      paymentStatus: String(form.get("paymentStatus") ?? "Non payé") as QuoteRequest["paymentStatus"],
+      expectedDeposit: readQuoteNumber(form.get("expectedDeposit")),
+      paymentDueDate: String(form.get("paymentDueDate") ?? ""),
       bookingStatus: String(form.get("bookingStatus") ?? "À préparer") as QuoteRequest["bookingStatus"],
       clientConfirmed: form.get("clientConfirmed") === "on",
       depositConfirmed: form.get("depositConfirmed") === "on",
@@ -1965,6 +2002,8 @@ function BookingsView({
             const balanceReceived = Number(quote.balanceReceived || 0);
             const margin = clientPrice - supplierCost;
             const remainingBalance = Math.max(clientPrice - depositReceived - balanceReceived, 0);
+            const paymentStatus = getPaymentStatus(quote);
+            const marginPercent = getMarginPercent(quote);
 
             return (
               <article className="item-card" key={quote.id}>
@@ -1993,9 +2032,43 @@ function BookingsView({
                       <span>Solde restant</span>
                       <strong>{formatQuotePrice(remainingBalance)}</strong>
                     </div>
+                    <div className="mini-stat">
+                      <span>Statut paiement</span>
+                      <strong>{paymentStatus}</strong>
+                    </div>
+                    <div className="mini-stat">
+                      <span>Acompte attendu</span>
+                      <strong>{formatQuotePrice(Number(quote.expectedDeposit || 0))}</strong>
+                    </div>
+                    <div className="mini-stat">
+                      <span>Marge %</span>
+                      <strong>{marginPercent}%</strong>
+                    </div>
+                    <div className="mini-stat">
+                      <span>Limite paiement</span>
+                      <strong>{quote.paymentDueDate ? formatQuoteDate(quote.paymentDueDate) : "—"}</strong>
+                    </div>
                   </div>
 
                   <form className="form-grid" onSubmit={(event) => updateBookingFinance(event, quote)} style={{ marginTop: 20 }}>
+                    <label>Statut paiement
+                      <select name="paymentStatus" defaultValue={quote.paymentStatus || getPaymentStatus(quote)}>
+                        <option>Non payé</option>
+                        <option>Acompte reçu</option>
+                        <option>Partiel</option>
+                        <option>Payé</option>
+                        <option>Annulé / remboursé</option>
+                      </select>
+                    </label>
+
+                    <label>Acompte attendu
+                      <input name="expectedDeposit" type="number" min="0" step="1" defaultValue={quote.expectedDeposit || ""} placeholder="Ex : 1000" />
+                    </label>
+
+                    <label>Date limite paiement
+                      <input name="paymentDueDate" type="date" defaultValue={quote.paymentDueDate || ""} />
+                    </label>
+
                     <label>Coût fournisseur
                       <input name="supplierCost" type="number" min="0" step="1" defaultValue={quote.supplierCost || ""} placeholder="Ex : 2500" />
                     </label>
