@@ -342,6 +342,7 @@ export default function QuickRepliesView() {
   const [category, setCategory] = useState("Toutes");
   const [channel, setChannel] = useState<(typeof channels)[number]>("Tous");
   const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState(templates[0]?.id ?? "");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const filteredTemplates = useMemo(() => {
@@ -363,6 +364,10 @@ export default function QuickRepliesView() {
     });
   }, [situation, category, channel, query]);
 
+  const selectedTemplate = useMemo(() => {
+    return filteredTemplates.find((template) => template.id === selectedId) ?? filteredTemplates[0] ?? null;
+  }, [filteredTemplates, selectedId]);
+
   async function copyMessage(template: QuickReplyTemplate) {
     try {
       await navigator.clipboard.writeText(template.message);
@@ -378,11 +383,11 @@ export default function QuickRepliesView() {
       <section className="card">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Réponses rapides V2</p>
+            <p className="eyebrow">Réponses rapides</p>
             <h3>Messages prêts à copier</h3>
           </div>
           <p className="muted-line">
-            Choisissez une situation, copiez le message, puis adaptez uniquement les détails client.
+            Filtrez par situation, sélectionnez un message, puis copiez-le. La liste reste compacte.
           </p>
         </div>
 
@@ -421,46 +426,82 @@ export default function QuickRepliesView() {
         </div>
       </section>
 
-      <section className="card">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Bibliothèque</p>
-            <h3>{filteredTemplates.length} réponse{filteredTemplates.length > 1 ? "s" : ""}</h3>
+      <div className="two-columns wide-left">
+        <section className="card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Bibliothèque</p>
+              <h3>{filteredTemplates.length} réponse{filteredTemplates.length > 1 ? "s" : ""}</h3>
+            </div>
           </div>
-        </div>
 
-        {filteredTemplates.length === 0 ? (
-          <p className="muted-line">Aucune réponse ne correspond aux filtres.</p>
-        ) : (
-          <div className="list-stack">
-            {filteredTemplates.map((template) => (
-              <article className="item-card" key={template.id}>
+          {filteredTemplates.length === 0 ? (
+            <p className="muted-line">Aucune réponse ne correspond aux filtres.</p>
+          ) : (
+            <div className="list-stack">
+              {filteredTemplates.map((template) => (
+                <button
+                  key={template.id}
+                  type="button"
+                  className={selectedTemplate?.id === template.id ? "item-card selected" : "item-card"}
+                  onClick={() => setSelectedId(template.id)}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    cursor: "pointer",
+                    borderColor: selectedTemplate?.id === template.id ? "rgba(201, 161, 86, 0.65)" : undefined
+                  }}
+                >
+                  <div>
+                    <p className="eyebrow">{template.situation} · {template.channel}</p>
+                    <h3>{template.title}</h3>
+                    <p className="muted-line">{template.category}</p>
+                  </div>
+
+                  <div className="item-actions">
+                    <span className="status-pill">{template.language}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="card form-card" style={{ position: "sticky", top: 20 }}>
+          {selectedTemplate ? (
+            <>
+              <div className="section-heading">
                 <div>
-                  <p className="eyebrow">{template.situation} · {template.category} · {template.channel}</p>
-                  <h3>{template.title}</h3>
-                  <textarea
-                    readOnly
-                    value={template.message}
-                    style={{
-                      width: "100%",
-                      minHeight: 220,
-                      marginTop: 14,
-                      resize: "vertical"
-                    }}
-                  />
+                  <p className="eyebrow">{selectedTemplate.situation} · {selectedTemplate.category} · {selectedTemplate.channel}</p>
+                  <h3>{selectedTemplate.title}</h3>
                 </div>
+              </div>
 
-                <div className="item-actions">
-                  <span className="status-pill">{template.language}</span>
-                  <button className="primary-button" type="button" onClick={() => copyMessage(template)}>
-                    {copiedId === template.id ? "Copié" : "Copier"}
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+              <textarea
+                readOnly
+                value={selectedTemplate.message}
+                style={{
+                  width: "100%",
+                  minHeight: 420,
+                  resize: "vertical",
+                  fontSize: 15,
+                  lineHeight: 1.6
+                }}
+              />
+
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
+                <span className="muted-line">{selectedTemplate.language} · {selectedTemplate.channel}</span>
+
+                <button className="primary-button" type="button" onClick={() => copyMessage(selectedTemplate)}>
+                  {copiedId === selectedTemplate.id ? "Copié" : "Copier le message"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="muted-line">Sélectionnez une réponse.</p>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
