@@ -452,6 +452,7 @@ type QuoteRequest = {
   excluded: string;
   notes: string;
   status: QuoteStatus;
+  statusUpdatedAt?: string;
   createdAt: string;
 };
 
@@ -1030,6 +1031,7 @@ function normalizeQuoteRequest(value: unknown): QuoteRequest | null {
     unitPrice: Number.isFinite(Number(raw.unitPrice)) ? Number(raw.unitPrice) : 0,
     notes: String(raw.notes || ""),
     status: getQuoteStatus(raw.status),
+    statusUpdatedAt: String(raw.statusUpdatedAt || raw.createdAt || new Date().toISOString()),
     createdAt: String(raw.createdAt || new Date().toISOString())
   } as QuoteRequest;
 }
@@ -1208,10 +1210,18 @@ function QuotesView({
 
   function updateQuoteStatus(id: string, status: QuoteStatus) {
     const currentQuote = quotes.find((quote) => quote.id === id);
-    const updatedQuote = currentQuote ? { ...currentQuote, status } : null;
+    const updatedQuote = currentQuote
+      ? {
+          ...currentQuote,
+          status,
+          statusUpdatedAt: currentQuote.status === status
+            ? currentQuote.statusUpdatedAt || currentQuote.createdAt
+            : new Date().toISOString()
+        }
+      : null;
 
     setQuotes((current) =>
-      current.map((quote) => (quote.id === id ? { ...quote, status } : quote))
+      current.map((quote) => (quote.id === id && updatedQuote ? updatedQuote : quote))
     );
 
     if (updatedQuote) {
@@ -1382,6 +1392,7 @@ function QuotesView({
     }));
 
     const unitPrice = quoteItems.reduce((sum, item) => sum + item.unitPrice, 0);
+    const previousQuote = editingQuoteId ? quotes.find((item) => item.id === editingQuoteId) : undefined;
 
     if (!clientName) {
       window.alert("Sélectionnez un client.");
@@ -1422,6 +1433,9 @@ function QuotesView({
       excluded,
       notes,
       status,
+      statusUpdatedAt: previousQuote?.status === status
+        ? previousQuote.statusUpdatedAt || previousQuote.createdAt
+        : new Date().toISOString(),
       createdAt: editingQuoteId
         ? quotes.find((item) => item.id === editingQuoteId)?.createdAt ?? new Date().toISOString()
         : new Date().toISOString()
@@ -4881,6 +4895,11 @@ type FollowUpRecommendation = {
   leadId?: string;
 };
 
+
+function getQuoteStatusAgeDays(quote: QuoteRequest) {
+  return getQuoteAgeDays(quote.statusUpdatedAt || quote.createdAt);
+}
+
 function getQuoteAgeDays(createdAt: string) {
   if (!createdAt) return 0;
 
@@ -4944,7 +4963,7 @@ function FollowUpsPanel({
 
     quotes.forEach((quote) => {
       const status = getQuoteStatus(quote.status);
-      const ageDays = getQuoteAgeDays(quote.createdAt);
+      const ageDays = getQuoteStatusAgeDays(quote);
 
       if (status === "Sent" && ageDays >= 2) {
         items.push({
