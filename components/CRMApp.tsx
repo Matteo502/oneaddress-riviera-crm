@@ -4213,7 +4213,7 @@ function createQuoteDraftFromLead(lead: Lead) {
         )}
 
         {activeTab === "leads" && (
-          <LeadsView leads={filteredLeads} contacts={data.contacts} tasks={data.tasks} properties={data.properties} vehicles={data.vehicles ?? []} boats={data.boats ?? []} preselectedContactName={leadDraftContactName} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} onCreateQuote={createQuoteDraftFromLead} onCreateTask={(lead: Lead) => {
+          <LeadsView leads={filteredLeads} contacts={data.contacts} tasks={data.tasks} quotes={mergeQuoteRequests((data as any).quotes ?? [], loadSavedQuotes())} properties={data.properties} vehicles={data.vehicles ?? []} boats={data.boats ?? []} preselectedContactName={leadDraftContactName} onAdd={addLead} onUpdate={updateLead} onStatusChange={updateLeadStatus} onDelete={deleteLead} onCreateQuote={createQuoteDraftFromLead} onCreateTask={(lead: Lead) => {
                   setTaskDraftLeadId(lead.id);
                   setTaskDraftTitle(lead.nextAction || `Relancer ${lead.contactName}`);
                   setActiveTab("tasks");
@@ -5716,6 +5716,7 @@ function LeadsView({
   onStatusChange,
   onDelete,
   onCreateQuote,
+  quotes = [],
   onCreateTask
 }: {
   leads: Lead[];
@@ -5730,6 +5731,7 @@ function LeadsView({
   onStatusChange: (id: string, status: LeadStatus) => void;
   onDelete: (id: string) => void;
   onCreateQuote: (lead: Lead) => void;
+  quotes?: QuoteRequest[];
   onCreateTask: (lead: Lead) => void;
 }) {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -6084,7 +6086,7 @@ const visibleLeads = leads.filter((lead) => {
                         </button>
 
                         <button className="lead-detail-button" type="button" onClick={() => onCreateQuote(lead)}>
-                          Devis
+                          {quotes.some((quote) => quote.leadId === lead.id) ? "Ouvrir devis lié" : "Créer devis"}
                         </button>
 
                         <button className="lead-edit-button" type="button" onClick={() => openEdit(lead)}>
