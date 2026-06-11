@@ -5051,6 +5051,39 @@ function Dashboard({
   const nextTasks = [...data.tasks].filter((task) => task.status !== "Terminé").sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   const hotLeads = [...data.leads].filter((lead) => lead.status !== "Perdu").sort((a, b) => b.value - a.value).slice(0, 4);
 
+  const cockpitQuotes = mergeQuoteRequests((((data as any).quotes ?? []) as QuoteRequest[]), loadSavedQuotes());
+  const confirmedBookings = cockpitQuotes.filter((quote) => getQuoteStatus(quote.status) === "Accepted");
+
+  function getDashboardPaymentRemaining(quote: QuoteRequest) {
+    const total = getQuoteSubtotal(quote);
+    const paid = Number(quote.depositReceived || 0) + Number(quote.balanceReceived || 0);
+
+    return Math.max(total - paid, 0);
+  }
+
+  function getDashboardMargin(quote: QuoteRequest) {
+    return getQuoteSubtotal(quote) - Number(quote.supplierCost || 0);
+  }
+
+  const quotesToFollow = cockpitQuotes
+    .filter((quote) => {
+      const status = getQuoteStatus(quote.status);
+      const ageDays = getQuoteAgeDays(quote.statusUpdatedAt || quote.createdAt);
+
+      return (status === "Sent" && ageDays >= 1) || status === "Negotiation";
+    })
+    .slice(0, 5);
+
+  const bookingsToPrepare = confirmedBookings.slice(0, 5);
+
+  const paymentsToFollow = confirmedBookings
+    .filter((quote) => getDashboardPaymentRemaining(quote) > 0)
+    .slice(0, 5);
+
+  const confirmedRevenue = confirmedBookings.reduce((sum, quote) => sum + getQuoteSubtotal(quote), 0);
+  const estimatedMargin = confirmedBookings.reduce((sum, quote) => sum + getDashboardMargin(quote), 0);
+  const remainingPayments = confirmedBookings.reduce((sum, quote) => sum + getDashboardPaymentRemaining(quote), 0);
+
   return (
     <div className="stack">
       <section
@@ -5108,6 +5141,84 @@ function Dashboard({
         <StatCard label="Tâches ouvertes" value={String(stats.openTasks)} caption="Actions commerciales à traiter" />
         <StatCard label="Biens disponibles" value={String(stats.availableProperties)} caption="Inventaire prêt à proposer" />
       </div>
+
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Cockpit</p>
+            <h3>Ce qui demande une action</h3>
+          </div>
+        </div>
+
+        <div className="stats-grid">
+          <StatCard label="CA confirmé" value={currency.format(confirmedRevenue)} caption="Total des devis gagnés" />
+          <StatCard label="Marge estimée" value={currency.format(estimatedMargin)} caption="Prix client - coût fournisseur" />
+          <StatCard label="Paiements restants" value={currency.format(remainingPayments)} caption="Solde encore à recevoir" />
+          <StatCard label="Réservations à préparer" value={String(bookingsToPrepare.length)} caption="Services gagnés non terminés" />
+        </div>
+
+        <div className="three-columns" style={{ marginTop: 18 }}>
+          <div className="mini-panel">
+            <p className="eyebrow">Devis</p>
+            <h4>À relancer</h4>
+
+            <div className="list-stack">
+              {quotesToFollow.length === 0 ? (
+                <p className="muted-line">Aucun devis urgent à relancer.</p>
+              ) : (
+                quotesToFollow.map((quote) => (
+                  <article className="mini-row" key={quote.id}>
+                    <div>
+                      <strong>{quote.clientName}</strong>
+                      <span>{getQuoteStatusFrenchLabel(getQuoteStatus(quote.status))} · {currency.format(getQuoteSubtotal(quote))}</span>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="mini-panel">
+            <p className="eyebrow">Réservations</p>
+            <h4>À préparer</h4>
+
+            <div className="list-stack">
+              {bookingsToPrepare.length === 0 ? (
+                <p className="muted-line">Aucune réservation à préparer.</p>
+              ) : (
+                bookingsToPrepare.map((quote) => (
+                  <article className="mini-row" key={quote.id}>
+                    <div>
+                      <strong>{quote.clientName}</strong>
+                      <span>À préparer · {quote.startDate || "Date à compléter"}</span>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="mini-panel">
+            <p className="eyebrow">Paiements</p>
+            <h4>À suivre</h4>
+
+            <div className="list-stack">
+              {paymentsToFollow.length === 0 ? (
+                <p className="muted-line">Aucun paiement urgent à suivre.</p>
+              ) : (
+                paymentsToFollow.map((quote) => (
+                  <article className="mini-row" key={quote.id}>
+                    <div>
+                      <strong>{quote.clientName}</strong>
+                      <span>{currency.format(getDashboardPaymentRemaining(quote))} restant</span>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="two-columns">
         <section className="card">
