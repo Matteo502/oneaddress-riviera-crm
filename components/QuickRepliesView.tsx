@@ -5,8 +5,9 @@ import { useMemo, useState } from "react";
 type QuickReplyTemplate = {
   id: string;
   title: string;
+  situation: string;
   category: string;
-  language: string;
+  language: "English" | "French";
   channel: "WhatsApp" | "Email";
   message: string;
 };
@@ -15,9 +16,10 @@ const clean = (text: string) => text.trim();
 
 const templates: QuickReplyTemplate[] = [
   {
-    id: "demande-vague",
-    title: "Demande vague",
-    category: "Demande vague",
+    id: "first-reply-whatsapp",
+    title: "First client reply",
+    situation: "Premier retour client",
+    category: "Qualification",
     language: "English",
     channel: "WhatsApp",
     message: clean(`
@@ -27,13 +29,7 @@ Thank you for your message.
 
 One Address Riviera arranges private Riviera services including villas, luxury cars, private boats, chauffeurs, chefs, security and tailored concierge support.
 
-To guide you properly, could you please share:
-- Your requested service
-- Dates
-- Preferred location
-- Number of guests / passengers
-- Estimated budget
-- Any specific preferences
+Could you please share the service you are looking for, the dates, location, number of guests or passengers, and your estimated budget?
 
 Once we have these details, we can review suitable private options.
 
@@ -43,25 +39,218 @@ One Address Riviera
 `)
   },
   {
-    id: "villa",
-    title: "Villa",
+    id: "quote-sent-whatsapp",
+    title: "Quote sent",
+    situation: "Devis envoyé",
+    category: "Devis",
+    language: "English",
+    channel: "WhatsApp",
+    message: clean(`
+Hello,
+
+I have just sent you the private proposal for your request.
+
+Please review the details and let me know if you would like to proceed, adjust anything, or check an alternative option.
+
+Availability is not held until confirmation.
+
+Kind regards,
+Matteo
+One Address Riviera
+`)
+  },
+  {
+    id: "quote-sent-email",
+    title: "Quote sent - email",
+    situation: "Devis envoyé",
+    category: "Devis",
+    language: "English",
+    channel: "Email",
+    message: clean(`
+Hello,
+
+Please find attached the private proposal prepared for your request.
+
+The proposal includes the selected service, dates, pricing and key terms. Availability remains subject to confirmation until the booking is secured.
+
+Please let me know if you would like to proceed or if any adjustment is required.
+
+Kind regards,
+Matteo
+One Address Riviera
+`)
+  },
+  {
+    id: "follow-up-24h",
+    title: "Follow-up 24h",
+    situation: "Relance 24h",
+    category: "Relance",
+    language: "English",
+    channel: "WhatsApp",
+    message: clean(`
+Hello,
+
+I’m following up regarding the private proposal sent yesterday.
+
+Would you like us to hold this option and move forward, or would you prefer that we review an alternative?
+
+Kind regards,
+Matteo
+One Address Riviera
+`)
+  },
+  {
+    id: "follow-up-72h",
+    title: "Follow-up 72h",
+    situation: "Relance 72h",
+    category: "Relance",
+    language: "English",
+    channel: "WhatsApp",
+    message: clean(`
+Hello,
+
+Just following up once more regarding your private request.
+
+As availability can move quickly, we will not hold the option without confirmation. If your request is still active, please let me know and we can review the next step.
+
+Kind regards,
+Matteo
+One Address Riviera
+`)
+  },
+  {
+    id: "negotiation",
+    title: "Negotiation",
+    situation: "Négociation",
+    category: "Devis",
+    language: "English",
+    channel: "WhatsApp",
+    message: clean(`
+Hello,
+
+Thank you for your feedback.
+
+I will review what can reasonably be adjusted while keeping the service level aligned with the standard requested.
+
+I will come back to you shortly with the best possible option.
+
+Kind regards,
+Matteo
+One Address Riviera
+`)
+  },
+  {
+    id: "accepted",
+    title: "Quote accepted",
+    situation: "Devis accepté",
+    category: "Réservation",
+    language: "English",
+    channel: "WhatsApp",
+    message: clean(`
+Hello,
+
+Thank you for your confirmation.
+
+We will now proceed with the booking preparation. To secure everything properly, please confirm the final details and payment timing.
+
+Once confirmed, we will coordinate the service and share the necessary information before the date.
+
+Kind regards,
+Matteo
+One Address Riviera
+`)
+  },
+  {
+    id: "lost-clean",
+    title: "Lost cleanly",
+    situation: "Devis perdu proprement",
+    category: "Perdu",
+    language: "English",
+    channel: "WhatsApp",
+    message: clean(`
+Hello,
+
+Thank you for letting us know.
+
+No problem at all. We will close this request for now.
+
+If you need private Riviera arrangements in the future, we would be happy to review a new request.
+
+Kind regards,
+Matteo
+One Address Riviera
+`)
+  },
+  {
+    id: "supplier-confirm",
+    title: "Supplier to confirm",
+    situation: "Prestataire à confirmer",
+    category: "Opérations",
+    language: "English",
+    channel: "WhatsApp",
+    message: clean(`
+Hello,
+
+We are currently confirming the selected provider for your request.
+
+Once the operational details are secured, we will send you the final confirmation with timing, contact details and any practical instructions.
+
+Kind regards,
+Matteo
+One Address Riviera
+`)
+  },
+  {
+    id: "booking-confirmed",
+    title: "Booking confirmed",
+    situation: "Réservation confirmée",
+    category: "Réservation",
+    language: "English",
+    channel: "WhatsApp",
+    message: clean(`
+Hello,
+
+Your booking is now confirmed.
+
+We will keep the arrangements discreet and coordinated. The practical details will be shared before the service date, including timing, address and contact information if needed.
+
+Kind regards,
+Matteo
+One Address Riviera
+`)
+  },
+  {
+    id: "payment-remaining",
+    title: "Payment remaining",
+    situation: "Paiement restant",
+    category: "Paiement",
+    language: "English",
+    channel: "WhatsApp",
+    message: clean(`
+Hello,
+
+A balance remains pending for your confirmed booking.
+
+Could you please arrange the remaining payment before the agreed deadline so we can keep the service fully secured?
+
+Kind regards,
+Matteo
+One Address Riviera
+`)
+  },
+  {
+    id: "villa-qualification",
+    title: "Villa qualification",
+    situation: "Premier retour client",
     category: "Villa",
     language: "English",
     channel: "WhatsApp",
     message: clean(`
 Hello,
 
-Thank you for your request.
+To review suitable private villa options, could you please confirm the location, dates, number of guests, number of bedrooms required, preferred style and estimated weekly budget?
 
-To review suitable private villa options, could you please share:
-- Preferred location
-- Arrival and departure dates
-- Number of guests
-- Number of bedrooms required
-- Estimated weekly budget
-- Preferred style: sea view, walking distance, modern villa, staffed estate, privacy, events, etc.
-
-Once we have these details, we can check relevant private options and come back with a curated selection.
+Once confirmed, we can check relevant private options and come back with a curated selection.
 
 Kind regards,
 Matteo
@@ -69,25 +258,16 @@ One Address Riviera
 `)
   },
   {
-    id: "voiture",
-    title: "Luxury car",
+    id: "car-qualification",
+    title: "Luxury car qualification",
+    situation: "Premier retour client",
     category: "Voiture",
     language: "English",
     channel: "WhatsApp",
     message: clean(`
 Hello,
 
-Thank you for your request.
-
-To check suitable luxury car options, could you please confirm:
-- Dates
-- Pick-up and drop-off location
-- Preferred vehicle type: SUV, convertible, supercar, luxury sedan, van
-- Self-drive or chauffeur service
-- Number of passengers
-- Estimated budget
-
-Once confirmed, we can review available options and come back with suitable vehicles.
+To check suitable luxury car options, could you please confirm the dates, pick-up and drop-off location, preferred vehicle type, whether you need self-drive or chauffeur service, number of passengers and estimated budget?
 
 Kind regards,
 Matteo
@@ -95,26 +275,16 @@ One Address Riviera
 `)
   },
   {
-    id: "yacht-boat",
-    title: "Yacht / boat",
-    category: "Yacht / Boat",
+    id: "boat-qualification",
+    title: "Boat qualification",
+    situation: "Premier retour client",
+    category: "Bateau",
     language: "English",
     channel: "WhatsApp",
     message: clean(`
 Hello,
 
-Thank you for your request.
-
-To review private boat options, could you please confirm:
-- Preferred date
-- Departure area: Cannes, Monaco, Saint-Tropez, Nice, Antibes, etc.
-- Number of guests
-- Full day or half day
-- Preferred boat style or size
-- Estimated budget
-- Any preferred itinerary or onboard services
-
-Once we have these details, we can check suitable private options.
+To review private boat options, could you please confirm the preferred date, departure area, number of guests, full day or half day, preferred boat style or size, estimated budget and any preferred itinerary?
 
 Kind regards,
 Matteo
@@ -122,27 +292,16 @@ One Address Riviera
 `)
   },
   {
-    id: "chauffeur-transfer",
-    title: "Chauffeur / transfer",
-    category: "Chauffeur / Transfer",
+    id: "chauffeur-qualification",
+    title: "Chauffeur qualification",
+    situation: "Premier retour client",
+    category: "Chauffeur",
     language: "English",
     channel: "WhatsApp",
     message: clean(`
 Hello,
 
-Thank you for your request.
-
-Could you please confirm:
-- Date and time
-- Pick-up location
-- Drop-off location
-- Flight number if airport arrival
-- Number of passengers
-- Luggage quantity
-- Preferred vehicle type: luxury sedan, SUV or van
-- Whether you need a simple transfer or a private chauffeur during your stay
-
-Once confirmed, we can review the best option for you.
+Could you please confirm the date and time, pick-up location, drop-off location, flight number if relevant, number of passengers, luggage quantity, preferred vehicle type, and whether you need a simple transfer or a private chauffeur during your stay?
 
 Kind regards,
 Matteo
@@ -150,56 +309,10 @@ One Address Riviera
 `)
   },
   {
-    id: "concierge-full-stay",
-    title: "Concierge / full stay planning",
-    category: "Concierge / Full stay planning",
-    language: "English",
-    channel: "Email",
-    message: clean(`
-Hello,
-
-Thank you for your request.
-
-One Address Riviera can assist with tailored private arrangements across the French Riviera, including villas, cars, boats, chauffeurs, private chefs, restaurants, experiences and security.
-
-To understand your needs, could you please share:
-- Dates
-- Location
-- Number of guests
-- Services required
-- Estimated budget
-- Any specific preferences or priorities
-
-We will then review what can be arranged privately for your stay.
-
-Kind regards,
-Matteo
-One Address Riviera
-`)
-  },
-  {
-    id: "candidat",
-    title: "Candidat / recherche d’emploi",
-    category: "Candidat / recherche d’emploi",
-    language: "English",
-    channel: "Email",
-    message: clean(`
-Hello,
-
-Thank you for your message.
-
-This contact channel is dedicated to private client requests only. Career, employment and job applications are not handled through WhatsApp or the private access form.
-
-If recruitment opens in the future, applications will be handled through a dedicated process.
-
-Kind regards,
-One Address Riviera
-`)
-  },
-  {
-    id: "hors-budget",
-    title: "Hors budget / demande non adaptée",
-    category: "Hors budget / demande non adaptée",
+    id: "not-aligned",
+    title: "Not aligned / low budget",
+    situation: "Demande non adaptée",
+    category: "Qualification",
     language: "English",
     channel: "WhatsApp",
     message: clean(`
@@ -217,132 +330,137 @@ Kind regards,
 Matteo
 One Address Riviera
 `)
-  },
-  {
-    id: "follow-up-24h",
-    title: "Follow-up 24h",
-    category: "Follow-up 24h",
-    language: "English",
-    channel: "WhatsApp",
-    message: clean(`
-Hello,
-
-I’m following up regarding your request with One Address Riviera.
-
-To move forward, could you please confirm the missing details when convenient:
-- Dates
-- Location
-- Number of guests / passengers
-- Service required
-- Estimated budget
-
-Once confirmed, we can review suitable private options.
-
-Kind regards,
-Matteo
-One Address Riviera
-`)
-  },
-  {
-    id: "follow-up-72h",
-    title: "Follow-up 72h",
-    category: "Follow-up 72h",
-    language: "English",
-    channel: "WhatsApp",
-    message: clean(`
-Hello,
-
-Just following up once more regarding your private request.
-
-Without the required details, we are unable to review suitable options properly.
-
-If your project is still active, feel free to send the dates, location, service required and estimated budget, and we will review what may be available.
-
-Kind regards,
-Matteo
-One Address Riviera
-`)
   }
 ];
 
+const situations = ["Toutes", ...Array.from(new Set(templates.map((template) => template.situation)))];
+const categories = ["Toutes", ...Array.from(new Set(templates.map((template) => template.category)))];
+const channels = ["Tous", "WhatsApp", "Email"] as const;
+
 export default function QuickRepliesView() {
-  const [selectedCategory, setSelectedCategory] = useState("Toutes");
-  const [copiedId, setCopiedId] = useState("");
+  const [situation, setSituation] = useState("Toutes");
+  const [category, setCategory] = useState("Toutes");
+  const [channel, setChannel] = useState<(typeof channels)[number]>("Tous");
+  const [query, setQuery] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const categories = useMemo(
-    () => ["Toutes", ...Array.from(new Set(templates.map((template) => template.category)))],
-    []
-  );
+  const filteredTemplates = useMemo(() => {
+    const needle = query.trim().toLowerCase();
 
-  const visibleTemplates =
-    selectedCategory === "Toutes"
-      ? templates
-      : templates.filter((template) => template.category === selectedCategory);
+    return templates.filter((template) => {
+      const matchesSituation = situation === "Toutes" || template.situation === situation;
+      const matchesCategory = category === "Toutes" || template.category === category;
+      const matchesChannel = channel === "Tous" || template.channel === channel;
+      const matchesQuery = !needle || [
+        template.title,
+        template.situation,
+        template.category,
+        template.channel,
+        template.message
+      ].some((value) => value.toLowerCase().includes(needle));
 
-  async function copyTemplate(template: QuickReplyTemplate) {
+      return matchesSituation && matchesCategory && matchesChannel && matchesQuery;
+    });
+  }, [situation, category, channel, query]);
+
+  async function copyMessage(template: QuickReplyTemplate) {
     try {
       await navigator.clipboard.writeText(template.message);
       setCopiedId(template.id);
-      window.setTimeout(() => setCopiedId(""), 1600);
+      window.setTimeout(() => setCopiedId(null), 1600);
     } catch {
-      window.alert("Copie impossible. Sélectionne le texte manuellement.");
+      window.alert("Copie impossible. Sélectionnez le texte manuellement.");
     }
   }
 
   return (
-    <section className="card">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Traitement rapide</p>
-          <h3>Réponses rapides</h3>
+    <div className="stack">
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Réponses rapides V2</p>
+            <h3>Messages prêts à copier</h3>
+          </div>
+          <p className="muted-line">
+            Choisissez une situation, copiez le message, puis adaptez uniquement les détails client.
+          </p>
         </div>
-        <p className="muted-line">Templates internes à copier pour WhatsApp ou email.</p>
-      </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 22 }}>
-        {categories.map((category) => (
-          <button
-            key={category}
-            type="button"
-            className={selectedCategory === category ? "primary-button" : "secondary-button"}
-            onClick={() => setSelectedCategory(category)}
-          >
-            {category}
-          </button>
-        ))}
-      </div>
+        <div className="form-grid">
+          <label>Situation
+            <select value={situation} onChange={(event) => setSituation(event.target.value)}>
+              {situations.map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+          </label>
 
-      <div className="list-stack">
-        {visibleTemplates.map((template) => (
-          <article key={template.id} className="card" style={{ boxShadow: "none" }}>
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">{template.category}</p>
-                <h3>{template.title}</h3>
-                <p className="muted-line">
-                  {template.language} · {template.channel}
-                </p>
-              </div>
+          <label>Catégorie
+            <select value={category} onChange={(event) => setCategory(event.target.value)}>
+              {categories.map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+          </label>
 
-              <button className="primary-button" type="button" onClick={() => copyTemplate(template)}>
-                {copiedId === template.id ? "Copié" : "Copier"}
-              </button>
-            </div>
+          <label>Canal
+            <select value={channel} onChange={(event) => setChannel(event.target.value as typeof channel)}>
+              {channels.map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+          </label>
 
-            <pre
-              style={{
-                whiteSpace: "pre-wrap",
-                margin: 0,
-                fontFamily: "inherit",
-                lineHeight: 1.65,
-                color: "#071f27"
-              }}
-            >
-              {template.message}
-            </pre>
-          </article>
-        ))}
-      </div>
-    </section>
+          <label>Recherche
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Ex : paiement, devis, chauffeur..."
+            />
+          </label>
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Bibliothèque</p>
+            <h3>{filteredTemplates.length} réponse{filteredTemplates.length > 1 ? "s" : ""}</h3>
+          </div>
+        </div>
+
+        {filteredTemplates.length === 0 ? (
+          <p className="muted-line">Aucune réponse ne correspond aux filtres.</p>
+        ) : (
+          <div className="list-stack">
+            {filteredTemplates.map((template) => (
+              <article className="item-card" key={template.id}>
+                <div>
+                  <p className="eyebrow">{template.situation} · {template.category} · {template.channel}</p>
+                  <h3>{template.title}</h3>
+                  <textarea
+                    readOnly
+                    value={template.message}
+                    style={{
+                      width: "100%",
+                      minHeight: 220,
+                      marginTop: 14,
+                      resize: "vertical"
+                    }}
+                  />
+                </div>
+
+                <div className="item-actions">
+                  <span className="status-pill">{template.language}</span>
+                  <button className="primary-button" type="button" onClick={() => copyMessage(template)}>
+                    {copiedId === template.id ? "Copié" : "Copier"}
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
