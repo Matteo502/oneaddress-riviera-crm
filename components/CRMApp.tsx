@@ -458,6 +458,7 @@ type QuoteRequest = {
 type QuoteLeadDraft = {
   key: string;
   leadId?: string;
+  quoteId?: string;
   clientName: string;
   category: string;
   title: string;
@@ -1233,6 +1234,15 @@ function QuotesView({
     }
 
     const quoteForm: HTMLFormElement = foundForm;
+
+    if (prefilledLead.quoteId) {
+      const existingQuote = quotes.find((quote) => quote.id === prefilledLead.quoteId);
+
+      if (existingQuote) {
+        fillQuoteForm(existingQuote);
+        return;
+      }
+    }
 
     quoteForm.reset();
     setEditingQuoteId(null);
@@ -3838,8 +3848,40 @@ function createQuoteDraftFromLead(lead: Lead) {
       lead.notes ? `Client request / internal notes: ${lead.notes}` : ""
     ].filter(Boolean).join("\n\n");
 
+    const existingQuote = mergeQuoteRequests((((data as any).quotes ?? []) as QuoteRequest[]), loadSavedQuotes())
+      .find((quote) => quote.leadId === lead.id);
+
+    if (existingQuote) {
+      setQuoteDraftFromLead({
+        key: `${lead.id}-${existingQuote.id}-${Date.now()}`,
+        leadId: lead.id,
+        quoteId: existingQuote.id,
+        clientName: lead.contactName,
+        category,
+        title,
+        location,
+        startDate: lead.rentalStartDate || "",
+        endDate: lead.rentalEndDate || "",
+        unitPrice: lead.value || 0,
+        notes
+      });
+
+      setActiveTab("quotes");
+
+      window.setTimeout(() => {
+        document.querySelector<HTMLFormElement>('form[data-quote-form="true"]')?.scrollIntoView({
+          behavior: "smooth",
+          block: "start"
+        });
+      }, 160);
+
+      notify(`Devis existant ouvert pour ${lead.contactName}.`);
+      return;
+    }
+
     setQuoteDraftFromLead({
       key: `${lead.id}-${Date.now()}`,
+      leadId: lead.id,
       clientName: lead.contactName,
       category,
       title,
