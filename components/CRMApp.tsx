@@ -5202,14 +5202,14 @@ function Dashboard({
   const confirmedBookings = cockpitQuotes.filter((quote) => getQuoteStatus(quote.status) === "Accepted");
 
   function getDashboardPaymentRemaining(quote: QuoteRequest) {
-    const total = getQuoteSubtotal(quote);
+    const total = getQuoteTotal(quote);
     const paid = Number(quote.depositReceived || 0) + Number(quote.balanceReceived || 0);
 
     return Math.max(total - paid, 0);
   }
 
   function getDashboardMargin(quote: QuoteRequest) {
-    return getQuoteSubtotal(quote) - Number(quote.supplierCost || 0);
+    return getQuoteTotal(quote) - Number(quote.supplierCost || 0);
   }
 
   const quotesToFollow = cockpitQuotes
@@ -5221,13 +5221,21 @@ function Dashboard({
     })
     .slice(0, 5);
 
-  const bookingsToPrepare = confirmedBookings.slice(0, 5);
-
-  const paymentsToFollow = confirmedBookings
-    .filter((quote) => getDashboardPaymentRemaining(quote) > 0)
+  const bookingsToPrepare = confirmedBookings
+    .filter((quote) => {
+      const status = quote.bookingStatus || "À préparer";
+      return status !== "Terminé" && status !== "Annulé";
+    })
     .slice(0, 5);
 
-  const confirmedRevenue = confirmedBookings.reduce((sum, quote) => sum + getQuoteSubtotal(quote), 0);
+  const paymentsToFollow = confirmedBookings
+    .filter((quote) => {
+      const status = quote.paymentStatus || "Non payé";
+      return status !== "Payé" && status !== "Annulé / remboursé" && getDashboardPaymentRemaining(quote) > 0;
+    })
+    .slice(0, 5);
+
+  const confirmedRevenue = confirmedBookings.reduce((sum, quote) => sum + getQuoteTotal(quote), 0);
   const estimatedMargin = confirmedBookings.reduce((sum, quote) => sum + getDashboardMargin(quote), 0);
   const remainingPayments = confirmedBookings.reduce((sum, quote) => sum + getDashboardPaymentRemaining(quote), 0);
 
@@ -5337,7 +5345,7 @@ function Dashboard({
                   <article className="mini-row" key={quote.id}>
                     <div>
                       <strong>{quote.clientName}</strong>
-                      <span>À préparer · {quote.startDate || "Date à compléter"}</span>
+                      <span>{quote.bookingStatus || "À préparer"} · {quote.startDate || "Date à compléter"}</span>
                     </div>
                   </article>
                 ))
@@ -5357,7 +5365,7 @@ function Dashboard({
                   <article className="mini-row" key={quote.id}>
                     <div>
                       <strong>{quote.clientName}</strong>
-                      <span>{currency.format(getDashboardPaymentRemaining(quote))} restant</span>
+                      <span>{currency.format(getDashboardPaymentRemaining(quote))} restant · {quote.paymentDueDate ? formatQuoteDate(quote.paymentDueDate) : "Sans limite"}</span>
                     </div>
                   </article>
                 ))
