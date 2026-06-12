@@ -20,6 +20,8 @@ import type {
   Task,
   TaskStatus,
   Supplier,
+  PlanningEntry,
+  PlanningEntryType,
 } from "@/lib/types";
 
 const STORAGE_KEY = "oneaddress-riviera-crm-v1";
@@ -47,6 +49,7 @@ const emptyData: CRMData = {
   boats: [],
   tasks: [],
   suppliers: [],
+  planningEntries: [],
   quotes: []
 };
 
@@ -137,6 +140,7 @@ function normalizeSharedCRMData(payload: any): CRMData {
     boats: Array.isArray(payload?.boats) ? payload.boats : [],
     tasks: Array.isArray(payload?.tasks) ? payload.tasks : [],
     suppliers: [],
+    planningEntries: Array.isArray(payload?.planningEntries) ? payload.planningEntries : [],
     quotes: Array.isArray(payload?.quotes)
       ? payload.quotes.map(normalizeQuoteRequest).filter((quote: QuoteRequest | null): quote is QuoteRequest => Boolean(quote))
       : []
@@ -151,6 +155,7 @@ function crmDataHasContent(value: CRMData) {
     value.boats.length > 0 ||
     value.tasks.length > 0 ||
     (((value as any).suppliers ?? []) as Supplier[]).length > 0 ||
+    (((value as any).planningEntries ?? []) as PlanningEntry[]).length > 0 ||
     (((value as any).quotes ?? []) as QuoteRequest[]).length > 0
   );
 }
@@ -520,6 +525,20 @@ function exportCRMAsCsv(data: CRMData) {
         task.status,
         task.dueDate,
         task.linkedTo
+      ])
+    },
+    {
+      title: "PLANNING",
+      headers: ["Titre", "Type", "Contact", "Actif", "Date début", "Date fin", "Bloque disponibilité", "Notes"],
+      rows: ((data as any).planningEntries ?? []).map((entry: PlanningEntry) => [
+        entry.title,
+        entry.type,
+        entry.contactName,
+        entry.assetId || "",
+        entry.startDate,
+        entry.endDate,
+        entry.blocksAvailability ? "Oui" : "Non",
+        entry.notes ?? ""
       ])
     }
   ];
@@ -4376,6 +4395,53 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
     notify("Tâche ajoutée.");
   }
 
+  function addPlanningEntry(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const form = new FormData(event.currentTarget);
+    const assetSelection = parseAssetKey(form.get("assetKey"));
+    const start = String(form.get("startDate") ?? "");
+    const end = String(form.get("endDate") ?? "") || start;
+
+    const entry = stampCreated({
+      id: makeId("planning"),
+      title: String(form.get("title") ?? "").trim(),
+      type: String(form.get("type") ?? "Intervention fournisseur") as PlanningEntryType,
+      contactName: String(form.get("contactName") ?? "").trim(),
+      assetType: assetSelection.assetType,
+      assetId: assetSelection.assetId,
+      startDate: start,
+      endDate: end,
+      blocksAvailability: String(form.get("blocksAvailability") ?? "false") === "true",
+      notes: String(form.get("notes") ?? "").trim()
+    }, activeActor) as PlanningEntry;
+
+    if (!entry.title) return notify("Ajoutez au minimum un titre planning.", "warning");
+    if (!isValidPlanningDate(entry.startDate)) return notify("Ajoutez une date de début valide.", "warning");
+    if (!isValidPlanningDate(entry.endDate)) return notify("Ajoutez une date de fin valide.", "warning");
+
+    setData((current) => ({
+      ...current,
+      planningEntries: [entry, ...(((current as any).planningEntries ?? []) as PlanningEntry[])]
+    }));
+
+    event.currentTarget.reset();
+    notify("Événement ajouté au planning.");
+  }
+
+  function deletePlanningEntry(id: string) {
+    const confirmed = window.confirm("Supprimer cette entrée du planning ?");
+
+    if (!confirmed) return;
+
+    setData((current) => ({
+      ...current,
+      planningEntries: (((current as any).planningEntries ?? []) as PlanningEntry[]).filter((entry) => entry.id !== id)
+    }));
+
+    notify("Entrée planning supprimée.");
+  }
+
   function updateLead(updatedLead: Lead) {
     setData((current) => ({
       ...current,
@@ -4855,6 +4921,10 @@ function createQuoteDraftFromLead(lead: Lead) {
             properties={data.properties}
             vehicles={data.vehicles ?? []}
             boats={data.boats ?? []}
+            contacts={data.contacts}
+            planningEntries={(((data as any).planningEntries ?? []) as PlanningEntry[])}
+            onAddPlanningEntry={addPlanningEntry}
+            onDeletePlanningEntry={deletePlanningEntry}
           />
         )}
 
@@ -4937,6 +5007,14 @@ type PlanningAsset = {
   category: string;
   location: string;
 };
+
+const planningEntryTypes: PlanningEntryType[] = [
+  "Intervention fournisseur",
+  "Maintenance",
+  "Tâche interne",
+  "Réservation",
+  "Autre"
+];
 
 function isValidPlanningDate(value?: string) {
   if (!value) return false;
@@ -5025,12 +5103,20 @@ function PlanningView({
   leads,
   properties,
   vehicles,
-  boats
+  boats,
+  contacts,
+  planningEntries,
+  onAddPlanningEntry,
+  onDeletePlanningEntry
 }: {
   leads: Lead[];
   properties: Property[];
   vehicles: Vehicle[];
   boats: Boat[];
+  contacts: Contact[];
+  planningEntries: PlanningEntry[];
+  onAddPlanningEntry: (event: React.FormEvent<HTMLFormElement>) => void;
+  onDeletePlanningEntry: (id: string) => void;
 }) {
   const [categoryFilter, setCategoryFilter] = useState("Tous");
   const [startDate, setStartDate] = useState("");
@@ -5062,6 +5148,19 @@ function PlanningView({
       }))
     ];
   }, [properties, vehicles, boats]);
+
+  const assetOptions = useMemo(() => {
+    return assets.map((asset) => ({
+      key: `${asset.type}:${asset.id}`,
+      label: `${asset.label} · ${asset.category}`
+    }));
+  }, [assets]);
+
+  const supplierContacts = useMemo(() => {
+    return contacts
+      .filter((contact) => contact.kind === "Fournisseur" || Boolean(contact.supplierCategory))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [contacts]);
 
   const confirmedBookings = useMemo(() => {
     return leads
@@ -5159,17 +5258,46 @@ function PlanningView({
   const calendarWeekDays = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
   const calendarEvents = useMemo(() => {
-    return [
+    const leadEvents = [
       ...confirmedBookings.map((booking) => ({
         ...booking,
-        planningLabel: "Confirmé"
+        source: "lead" as const,
+        planningLabel: "Confirmé",
+        blocksAvailability: true
       })),
       ...pendingBookings.map((booking) => ({
         ...booking,
-        planningLabel: booking.status
+        source: "lead" as const,
+        planningLabel: booking.status,
+        blocksAvailability: false
       }))
-    ].sort((a, b) => planningDateValue(a.startDate) - planningDateValue(b.startDate));
-  }, [confirmedBookings, pendingBookings]);
+    ];
+
+    const planningEntryEvents = planningEntries
+      .filter((entry) => isValidPlanningDate(entry.startDate) && isValidPlanningDate(entry.endDate || entry.startDate))
+      .map((entry) => {
+        const asset = assets.find((item) => item.type === entry.assetType && item.id === entry.assetId);
+
+        return {
+          id: entry.id,
+          source: "planning" as const,
+          assetType: entry.assetType || "",
+          assetId: entry.assetId || "",
+          assetLabel: asset?.label || entry.title,
+          assetCategory: asset?.category || entry.type,
+          contactName: entry.contactName || entry.type,
+          startDate: entry.startDate,
+          endDate: entry.endDate || entry.startDate,
+          value: 0,
+          nextAction: entry.notes || "",
+          planningLabel: entry.type,
+          blocksAvailability: Boolean(entry.blocksAvailability)
+        };
+      });
+
+    return [...leadEvents, ...planningEntryEvents]
+      .sort((a, b) => planningDateValue(a.startDate) - planningDateValue(b.startDate));
+  }, [confirmedBookings, pendingBookings, planningEntries, assets]);
 
   const planningConflicts = useMemo(() => {
     const usableLeads = leads
@@ -5270,7 +5398,7 @@ function PlanningView({
         <div className="section-heading">
           <div>
             <p className="eyebrow">Planning</p>
-            <h3>Disponibilités & locations confirmées</h3>
+            <h3>Disponibilités, réservations & interventions</h3>
           </div>
         </div>
 
@@ -5303,6 +5431,110 @@ function PlanningView({
             Reset
           </button>
         </form>
+      </section>
+
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Planning interne</p>
+            <h3>Ajouter une intervention ou une maintenance</h3>
+          </div>
+        </div>
+
+        <form className="form-grid compact" onSubmit={onAddPlanningEntry}>
+          <label>Titre
+            <input name="title" placeholder="Gardens Jardinier · entretien jardin" required />
+          </label>
+
+          <label>Type
+            <select name="type" defaultValue="Intervention fournisseur">
+              {planningEntryTypes.map((type) => (
+                <option key={type}>{type}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>Contact / fournisseur
+            <select name="contactName" defaultValue="">
+              <option value="">Aucun contact lié</option>
+              {supplierContacts.map((contact) => (
+                <option key={contact.id} value={contact.name}>{contact.name}</option>
+              ))}
+              {contacts
+                .filter((contact) => contact.kind !== "Fournisseur" && !contact.supplierCategory)
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((contact) => (
+                  <option key={contact.id} value={contact.name}>{contact.name}</option>
+                ))}
+            </select>
+          </label>
+
+          <label>Actif lié
+            <select name="assetKey" defaultValue="">
+              <option value="">Aucun actif lié</option>
+              {assetOptions.map((asset) => (
+                <option key={asset.key} value={asset.key}>{asset.label}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>Date début
+            <input type="date" name="startDate" required />
+          </label>
+
+          <label>Date fin
+            <input type="date" name="endDate" />
+          </label>
+
+          <label>Bloque la disponibilité
+            <select name="blocksAvailability" defaultValue="false">
+              <option value="false">Non</option>
+              <option value="true">Oui</option>
+            </select>
+          </label>
+
+          <label>Notes
+            <textarea name="notes" placeholder="Détails internes, horaires, consignes..." />
+          </label>
+
+          <button className="primary-button" type="submit">
+            Ajouter au planning
+          </button>
+        </form>
+
+        <div className="planning-legend">
+          <span><i className="legend-dot blocked" /> Rouge = planning rempli / disponibilité bloquée</span>
+          <span><i className="legend-dot entry" /> Doré = intervention non bloquante</span>
+        </div>
+
+        <div className="list-stack">
+          {planningEntries.length === 0 ? (
+            <p className="muted-line">Aucune intervention interne. Ajoutez ici les fournisseurs, maintenances et passages qui ne doivent pas devenir des leads.</p>
+          ) : (
+            planningEntries
+              .slice()
+              .sort((a, b) => planningDateValue(a.startDate || "9999-12-31") - planningDateValue(b.startDate || "9999-12-31"))
+              .map((entry) => {
+                const asset = assets.find((item) => item.type === entry.assetType && item.id === entry.assetId);
+
+                return (
+                  <article className="mini-row" key={entry.id} data-notification-target={`planning-${entry.id}`}>
+                    <div>
+                      <strong>{entry.title}</strong>
+                      <span>{entry.type} · {formatDateFR(entry.startDate)}{entry.endDate && entry.endDate !== entry.startDate ? ` → ${formatDateFR(entry.endDate)}` : ""}</span>
+                      <span>{entry.contactName || "Aucun contact lié"}{asset ? ` · ${asset.label}` : ""}</span>
+                      {entry.notes && <span>{entry.notes}</span>}
+                      <ActionMeta item={entry} />
+                    </div>
+                    <div className="item-actions">
+                      <Badge>{entry.blocksAvailability ? "Bloquant" : "Non bloquant"}</Badge>
+                      <button className="icon-button danger" type="button" aria-label="Supprimer" onClick={() => onDeletePlanningEntry(entry.id)}>×</button>
+                    </div>
+                  </article>
+                );
+              })
+          )}
+        </div>
       </section>
 
       <section className="card">
@@ -5371,8 +5603,15 @@ function PlanningView({
                   {week.map((day, dayIndex) => {
                     const events = day ? getEventsForCalendarDay(day.iso) : [];
 
+                    const hasBlockingEvent = events.some((event) => event.blocksAvailability);
+                    const dayClassName = [
+                      "planning-day",
+                      events.length > 0 ? "planning-day-filled" : "",
+                      hasBlockingEvent ? "planning-day-blocked" : ""
+                    ].filter(Boolean).join(" ");
+
                     return (
-                      <td key={`${weekIndex}-${dayIndex}`}>
+                      <td key={`${weekIndex}-${dayIndex}`} className={day ? dayClassName : "planning-day-empty"}>
                         {day ? (
                           <div>
                             <strong>{day.day}</strong>
@@ -5381,7 +5620,10 @@ function PlanningView({
                               <span className="muted-line">Disponible</span>
                             ) : (
                               events.slice(0, 4).map((event) => (
-                                <span className="muted-line" key={event.id}>
+                                <span
+                                  className={`planning-event-pill ${event.blocksAvailability ? "blocked" : event.source === "planning" ? "entry" : "option"}`}
+                                  key={`${event.source}-${event.id}`}
+                                >
                                   {event.assetLabel} · {event.contactName} · {event.planningLabel}
                                 </span>
                               ))

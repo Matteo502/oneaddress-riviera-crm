@@ -11,6 +11,7 @@ export type PropertyStatus = "Disponible" | "Mandat en cours" | "Loué" | "Vendu
 export type VehicleStatus = "Disponible" | "En location" | "En maintenance" | "Vendu";
 export type BoatStatus = "Disponible" | "En charter" | "En maintenance" | "Vendu";
 export type TaskStatus = "À faire" | "En cours" | "Terminé";
+export type PlanningEntryType = "Réservation" | "Intervention fournisseur" | "Maintenance" | "Tâche interne" | "Autre";
 
 export type ActionAuditFields = {
   createdBy?: string;
@@ -130,6 +131,22 @@ export type Task = {
 };
 
 
+export type PlanningEntry = {
+  id: string;
+  title: string;
+  type: PlanningEntryType;
+  contactName: string;
+  assetType?: "" | "Property" | "Vehicle" | "Boat";
+  assetId?: string;
+  startDate: string;
+  endDate: string;
+  blocksAvailability: boolean;
+  notes?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  updatedAt?: string;
+};
+
 export type Supplier = {
   id: string;
   name: string;
@@ -158,5 +175,6 @@ export type CRMData = {
   boats: Boat[];
   tasks: Task[];
   suppliers?: Supplier[];
+  planningEntries?: PlanningEntry[];
   quotes?: any[];
 };
