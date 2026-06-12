@@ -3069,3 +3069,61 @@ textarea {
   transform: translateY(-2px) !important;
   transition: outline-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease !important;
 }
+
+/* ACTION_ATTRIBUTION */
+.actor-select-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid rgba(201, 161, 86, 0.42);
+  background: rgba(7, 31, 39, 0.16);
+  color: rgba(247, 241, 231, 0.76);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.actor-select-label select {
+  min-width: 112px;
+  height: 34px;
+  border: 1px solid rgba(201, 161, 86, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7f1e7;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.actor-select-label option {
+  color: #071f27;
+}
+
+.action-meta {
+  display: block;
+  margin-top: 8px;
+  color: rgba(7, 31, 39, 0.48);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.task-row .action-meta,
+.mini-row .action-meta {
+  margin-top: 6px;
+}
+
+@media (max-width: 760px) {
+  .actor-select-label {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .actor-select-label select {
+    width: 145px;
+  }
+}

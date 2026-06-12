@@ -24,6 +24,7 @@ import type {
 
 const STORAGE_KEY = "oneaddress-riviera-crm-v1";
 const QUOTES_STORAGE_KEY = "oneaddress-riviera-crm-quotes-v1";
+const ACTOR_STORAGE_KEY = "oneaddress-riviera-crm-active-actor-v1";
 const SHARED_WORKSPACE_ID = "oneaddress-riviera";
 const leadStatuses: LeadStatus[] = ["Nouveau", "Contacté", "Devis", "Négociation", "Gagné", "Perdu"];
 const propertyStatuses: PropertyStatus[] = ["Disponible", "Mandat en cours", "Loué", "Vendu"];
@@ -35,6 +36,8 @@ const contactLevels = ["Standard", "VIP", "Ultra VIP"] as const;
 const contactLanguages = ["Français", "Anglais", "Italien", "Autre"] as const;
 const contactRelationshipStatuses = ["Prospect", "Actif", "Dormant"] as const;
 const supplierCategories = ["Villa", "Voiture", "Bateau", "Chauffeur", "Chef", "Sécurité", "Conciergerie", "Paysagiste", "Gestion nuisibles", "Pisciniste", "Femme de ménage", "Nounou", "Artisan rénovation", "Lavage voiture", "Garage / mécanicien", "Jardinier", "Autre"] as const;
+const crmActors = ["Matteo", "Vincent"] as const;
+type CRMActor = typeof crmActors[number];
 
 const emptyData: CRMData = {
   contacts: [],
@@ -195,6 +198,64 @@ function makeId(prefix: string) {
 function safeNumber(value: FormDataEntryValue | null) {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+type ActionTrackedItem = {
+  createdBy?: string;
+  updatedBy?: string;
+  updatedAt?: string;
+  createdAt?: string;
+};
+
+function isCRMActor(value: string | null): value is CRMActor {
+  return value === "Matteo" || value === "Vincent";
+}
+
+function stampCreated<T extends object>(item: T, actor: string): T {
+  const now = new Date().toISOString();
+
+  return {
+    ...item,
+    createdBy: actor,
+    updatedBy: actor,
+    updatedAt: now
+  };
+}
+
+function stampUpdated<T extends object>(item: T, actor: string): T {
+  return {
+    ...item,
+    updatedBy: actor,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function formatDateTimeFR(value?: string) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
+}
+
+function getActionMetaLabel(item: ActionTrackedItem) {
+  const actor = item.updatedBy || item.createdBy;
+
+  if (!actor) return "Action non attribuée";
+
+  const dateLabel = formatDateTimeFR(item.updatedAt || item.createdAt);
+  return dateLabel ? `Dernière action : ${actor} · ${dateLabel}` : `Dernière action : ${actor}`;
+}
+
+function ActionMeta({ item }: { item: ActionTrackedItem }) {
+  return <small className="action-meta">{getActionMetaLabel(item)}</small>;
 }
 
 
@@ -558,6 +619,9 @@ type QuoteRequest = {
   status: QuoteStatus;
   statusUpdatedAt?: string;
   createdAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+  updatedAt?: string;
 };
 
 type QuoteLeadDraft = {
@@ -1148,6 +1212,9 @@ function normalizeQuoteRequest(value: unknown): QuoteRequest | null {
     serviceCompleted: Boolean(raw.serviceCompleted),
     operationNotes: String(raw.operationNotes || ""),
     assignedContactId: String(raw.assignedContactId || ""),
+    createdBy: raw.createdBy ? String(raw.createdBy) : undefined,
+    updatedBy: raw.updatedBy ? String(raw.updatedBy) : undefined,
+    updatedAt: raw.updatedAt ? String(raw.updatedAt) : undefined,
     createdAt: String(raw.createdAt || new Date().toISOString())
   } as QuoteRequest;
 }
@@ -1308,12 +1375,14 @@ function QuotesView({
   contacts,
   prefilledLead,
   quotes,
+  activeActor,
   onChange,
   onQuoteChange
 }: {
   contacts: Contact[];
   prefilledLead?: QuoteLeadDraft | null;
   quotes: QuoteRequest[];
+  activeActor: string;
   onChange: (quotes: QuoteRequest[]) => void;
   onQuoteChange?: (quote: QuoteRequest) => void;
 }) {
@@ -1327,13 +1396,13 @@ function QuotesView({
   function updateQuoteStatus(id: string, status: QuoteStatus) {
     const currentQuote = quotes.find((quote) => quote.id === id);
     const updatedQuote = currentQuote
-      ? {
+      ? stampUpdated({
           ...currentQuote,
           status,
           statusUpdatedAt: currentQuote.status === status
             ? currentQuote.statusUpdatedAt || currentQuote.createdAt
             : new Date().toISOString()
-        }
+        }, activeActor) as QuoteRequest
       : null;
 
     setQuotes((current) =>
@@ -1530,7 +1599,8 @@ function QuotesView({
       return;
     }
 
-    const quote: QuoteRequest = {
+    const quotePayload: QuoteRequest = {
+      ...(previousQuote ?? {}),
       id: editingQuoteId ?? createQuoteId(),
       leadId: leadId || undefined,
       clientName,
@@ -1553,9 +1623,13 @@ function QuotesView({
         ? previousQuote.statusUpdatedAt || previousQuote.createdAt
         : new Date().toISOString(),
       createdAt: editingQuoteId
-        ? quotes.find((item) => item.id === editingQuoteId)?.createdAt ?? new Date().toISOString()
+        ? previousQuote?.createdAt ?? new Date().toISOString()
         : new Date().toISOString()
     };
+
+    const quote: QuoteRequest = editingQuoteId
+      ? stampUpdated(quotePayload, activeActor) as QuoteRequest
+      : stampCreated(quotePayload, activeActor) as QuoteRequest;
 
     if (editingQuoteId) {
       setQuotes((current) => current.map((item) => (item.id === editingQuoteId ? quote : item)));
@@ -1632,6 +1706,7 @@ function QuotesView({
                   </ul>
 
                   {quote.location && <p>{quote.location}</p>}
+                  <ActionMeta item={quote} />
                 </div>
 
                 <div className="quote-actions">
@@ -2004,10 +2079,12 @@ function SuppliersView({
 function BookingsView({
   quotes,
   contacts = [],
+  activeActor,
   onChange
 }: {
   quotes: QuoteRequest[];
   contacts?: Contact[];
+  activeActor: string;
   onChange: (quotes: QuoteRequest[]) => void;
 }) {
   const confirmedQuotes = quotes.filter((quote) => getQuoteStatus(quote.status) === "Accepted");
@@ -2050,7 +2127,7 @@ function BookingsView({
 
     const form = new FormData(event.currentTarget);
 
-    const updatedQuote: QuoteRequest = {
+    const updatedQuote: QuoteRequest = stampUpdated({
       ...quote,
       supplierCost: readQuoteNumber(form.get("supplierCost")),
       depositReceived: readQuoteNumber(form.get("depositReceived")),
@@ -2068,7 +2145,7 @@ function BookingsView({
       serviceCompleted: form.get("serviceCompleted") === "on",
       operationNotes: String(form.get("operationNotes") ?? "").trim(),
       assignedContactId: String(form.get("assignedContactId") ?? "")
-    };
+    }, activeActor) as QuoteRequest;
 
     const nextQuotes = quotes.map((item) => (item.id === quote.id ? updatedQuote : item));
 
@@ -2368,6 +2445,19 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
   const [data, setData] = useState<CRMData>(emptyData);
   const [sharedWorkspaceReady, setSharedWorkspaceReady] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
+  const [activeActor, setActiveActor] = useState<CRMActor>("Matteo");
+
+  useEffect(() => {
+    const savedActor = window.localStorage.getItem(ACTOR_STORAGE_KEY);
+
+    if (isCRMActor(savedActor)) {
+      setActiveActor(savedActor);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(ACTOR_STORAGE_KEY, activeActor);
+  }, [activeActor]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -4085,7 +4175,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
 function addContact(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const contact: Contact = {
+    const contact: Contact = stampCreated({
       id: makeId("c"),
       name: String(form.get("name") ?? "").trim(),
       kind: String(form.get("kind") ?? "Client") as ContactKind,
@@ -4110,7 +4200,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
       supplierCommissionNotes: String(form.get("supplierCommissionNotes") ?? "").trim(),
       supplierStatus: String(form.get("supplierStatus") ?? "Actif") as Contact["supplierStatus"],
       createdAt: new Date().toISOString().slice(0, 10)
-    };
+    }, activeActor) as Contact;
     if (!contact.name) return notify("Ajoutez au minimum un nom de contact.", "warning");
     if (!confirmDuplicateContact(contact)) return;
     setData((current) => ({ ...current, contacts: [contact, ...current.contacts] }));
@@ -4131,7 +4221,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
     const form = new FormData(event.currentTarget);
     const assetSelection = parseAssetKey(form.get("assetKey"));
 
-    const lead: Lead = {
+    const lead: Lead = stampCreated({
       id: makeId("l"),
       category: String(form.get("category") ?? "Villa") as Lead["category"],
       contactName: String(form.get("contactName") ?? "").trim(),
@@ -4145,7 +4235,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
       rentalStartDate: String(form.get("rentalStartDate") ?? ""),
       rentalEndDate: String(form.get("rentalEndDate") ?? ""),
       notes: String(form.get("notes") ?? "").trim()
-    };
+    }, activeActor) as Lead;
 
     if (!lead.contactName) return notify("Sélectionnez un contact pour ce lead.", "warning");
 
@@ -4155,7 +4245,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
 
     if (!confirmDuplicateLead(lead)) return;
 
-    const draftQuote = createDraftQuoteFromLead(lead);
+    const draftQuote = stampCreated(createDraftQuoteFromLead(lead), activeActor) as QuoteRequest;
     const nextLocalQuotes = mergeQuoteRequests(loadSavedQuotes(), [draftQuote]);
 
     saveQuotesToBrowser(nextLocalQuotes);
@@ -4173,7 +4263,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
   function addProperty(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const property: Property = {
+    const property: Property = stampCreated({
       id: makeId("p"),
       name: String(form.get("name") ?? "").trim(),
       city: String(form.get("city") ?? "").trim(),
@@ -4183,7 +4273,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
       owner: String(form.get("owner") ?? "").trim(),
       bedrooms: safeNumber(form.get("bedrooms")),
       surface: safeNumber(form.get("surface"))
-    };
+    }, activeActor) as Property;
     if (!property.name) return notify("Ajoutez au minimum un nom de bien.", "warning");
     if (!confirmDuplicateAsset("bien", property)) return;
     setData((current) => ({ ...current, properties: [property, ...current.properties] }));
@@ -4194,7 +4284,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
   function addVehicle(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const vehicle: Vehicle = {
+    const vehicle: Vehicle = stampCreated({
       id: makeId("v"),
       name: String(form.get("name") ?? "").trim(),
       brand: String(form.get("brand") ?? "").trim(),
@@ -4205,7 +4295,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
       owner: String(form.get("owner") ?? "").trim(),
       year: safeNumber(form.get("year")),
       mileage: safeNumber(form.get("mileage"))
-    };
+    }, activeActor) as Vehicle;
     if (!vehicle.name) return notify("Ajoutez au minimum un nom de voiture.", "warning");
     if (!confirmDuplicateAsset("voiture", vehicle)) return;
     setData((current) => ({ ...current, vehicles: [vehicle, ...(current.vehicles ?? [])] }));
@@ -4216,7 +4306,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
   function addBoat(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const boat: Boat = {
+    const boat: Boat = stampCreated({
       id: makeId("b"),
       name: String(form.get("name") ?? "").trim(),
       port: String(form.get("port") ?? "").trim(),
@@ -4226,7 +4316,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
       owner: String(form.get("owner") ?? "").trim(),
       year: safeNumber(form.get("year")),
       length: safeNumber(form.get("length"))
-    };
+    }, activeActor) as Boat;
     if (!boat.name) return notify("Ajoutez au minimum un nom de bateau.", "warning");
     if (!confirmDuplicateAsset("bateau", boat)) return;
     setData((current) => ({ ...current, boats: [boat, ...(current.boats ?? [])] }));
@@ -4238,7 +4328,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
     setData((current) => ({
       ...current,
       properties: current.properties.map((property) =>
-        property.id === updatedProperty.id ? updatedProperty : property
+        property.id === updatedProperty.id ? stampUpdated(updatedProperty, activeActor) as Property : property
       )
     }));
 
@@ -4249,7 +4339,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
     setData((current) => ({
       ...current,
       vehicles: (current.vehicles ?? []).map((vehicle) =>
-        vehicle.id === updatedVehicle.id ? updatedVehicle : vehicle
+        vehicle.id === updatedVehicle.id ? stampUpdated(updatedVehicle, activeActor) as Vehicle : vehicle
       )
     }));
 
@@ -4260,7 +4350,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
     setData((current) => ({
       ...current,
       boats: (current.boats ?? []).map((boat) =>
-        boat.id === updatedBoat.id ? updatedBoat : boat
+        boat.id === updatedBoat.id ? stampUpdated(updatedBoat, activeActor) as Boat : boat
       )
     }));
 
@@ -4270,14 +4360,14 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
   function addTask(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const task: Task = {
+    const task: Task = stampCreated({
       id: makeId("t"),
       title: String(form.get("title") ?? "").trim(),
-      owner: String(form.get("owner") ?? "Matteo").trim(),
+      owner: String(form.get("owner") ?? "").trim() || activeActor,
       status: String(form.get("status") ?? "À faire") as TaskStatus,
       dueDate: String(form.get("dueDate") ?? ""),
       linkedTo: String(form.get("linkedTo") ?? "").trim()
-    };
+    }, activeActor) as Task;
     if (!task.title) return notify("Ajoutez au minimum un titre de tâche.", "warning");
     setData((current) => ({ ...current, tasks: [task, ...current.tasks] }));
     event.currentTarget.reset();
@@ -4290,7 +4380,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
     setData((current) => ({
       ...current,
       leads: current.leads.map((lead) =>
-        lead.id === updatedLead.id ? updatedLead : lead
+        lead.id === updatedLead.id ? stampUpdated(updatedLead, activeActor) as Lead : lead
       )
     }));
 
@@ -4300,7 +4390,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
   function updateLeadStatus(id: string, status: LeadStatus) {
     setData((current) => ({
       ...current,
-      leads: current.leads.map((lead) => (lead.id === id ? { ...lead, status } : lead))
+      leads: current.leads.map((lead) => (lead.id === id ? stampUpdated({ ...lead, status }, activeActor) as Lead : lead))
     }));
   }
 
@@ -4315,17 +4405,17 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
 
     setData((current) => ({
       ...current,
-      quotes: mergeQuoteRequests((((current as any).quotes ?? []) as QuoteRequest[]), [quote]),
+      quotes: mergeQuoteRequests((((current as any).quotes ?? []) as QuoteRequest[]), [stampUpdated(quote, activeActor) as QuoteRequest]),
       leads: current.leads.map((lead) =>
         lead.id === quote.leadId
-          ? {
+          ? stampUpdated({
               ...lead,
               category: (mainCategory || lead.category) as Lead["category"],
               rentalStartDate: quote.startDate || lead.rentalStartDate,
               rentalEndDate: quote.endDate || lead.rentalEndDate,
               value: quoteValue,
               status: leadStatus
-            }
+            }, activeActor) as Lead
           : lead
       )
     }));
@@ -4449,7 +4539,7 @@ function createQuoteDraftFromLead(lead: Lead) {
     setData((current) => ({
       ...current,
       tasks: current.tasks.map((task) =>
-        task.id === updatedTask.id ? updatedTask : task
+        task.id === updatedTask.id ? stampUpdated(updatedTask, activeActor) as Task : task
       )
     }));
 
@@ -4459,7 +4549,7 @@ function createQuoteDraftFromLead(lead: Lead) {
   function updateTaskStatus(id: string, status: TaskStatus) {
     setData((current) => ({
       ...current,
-      tasks: current.tasks.map((task) => (task.id === id ? { ...task, status } : task))
+      tasks: current.tasks.map((task) => (task.id === id ? stampUpdated({ ...task, status }, activeActor) as Task : task))
     }));
   }
 
@@ -4467,7 +4557,7 @@ function createQuoteDraftFromLead(lead: Lead) {
     setData((current) => ({
       ...current,
       contacts: current.contacts.map((contact) =>
-        contact.id === updatedContact.id ? updatedContact : contact
+        contact.id === updatedContact.id ? stampUpdated(updatedContact, activeActor) as Contact : contact
       )
     }));
 
@@ -4632,6 +4722,12 @@ function createQuoteDraftFromLead(lead: Lead) {
               aria-label="Recherche"
             />
             <span className="muted-line">Connecté : {sessionEmail}</span>
+            <label className="actor-select-label">
+              <span>Actions par</span>
+              <select value={activeActor} onChange={(event) => setActiveActor(event.target.value as CRMActor)}>
+                {crmActors.map((actor) => <option key={actor}>{actor}</option>)}
+              </select>
+            </label>
             <button className="secondary-button" type="button" onClick={onLogout}>Déconnexion</button>
             <button className="secondary-button" type="button" onClick={openSafeCsvImportPrompt}>Import sécurisé</button>
             <button className="secondary-button" onClick={exportJson}>Backup fichier</button>
@@ -4738,6 +4834,7 @@ function createQuoteDraftFromLead(lead: Lead) {
             contacts={data.contacts}
             prefilledLead={quoteDraftFromLead}
             quotes={mergeQuoteRequests((data as any).quotes ?? [], loadSavedQuotes())}
+            activeActor={activeActor}
             onChange={(nextQuotes) => setData((current) => ({ ...current, quotes: nextQuotes }))}
             onQuoteChange={syncLeadFromQuote}
           />
@@ -4747,6 +4844,7 @@ function createQuoteDraftFromLead(lead: Lead) {
           <BookingsView
             quotes={mergeQuoteRequests((data as any).quotes ?? [], loadSavedQuotes())}
             contacts={data.contacts}
+            activeActor={activeActor}
             onChange={(nextQuotes) => setData((current) => ({ ...current, quotes: nextQuotes }))}
           />
         )}
@@ -5996,6 +6094,7 @@ function ContactsView({
                     <p className="muted-line">
                       {contact.email || "Email à compléter"} · {contact.phone || "Téléphone à compléter"}
                     </p>
+                    <ActionMeta item={contact} />
                     {isSupplierContact(contact) ? (
                       <p className="muted-line">
                         Fiabilité : {contact.supplierReliability || "À tester"} · Statut : {contact.supplierStatus || "Actif"}
@@ -6106,6 +6205,7 @@ function ContactsView({
               <div><span>Email</span><strong>{selectedContact.email || "Non renseigné"}</strong></div>
               <div><span>Téléphone</span><strong>{selectedContact.phone || "Non renseigné"}</strong></div>
               <div><span>Ville / zone</span><strong>{selectedContact.city || getContactSupplierZone(selectedContact) || "Non renseignée"}</strong></div>
+              <div><span>Action</span><strong>{getActionMetaLabel(selectedContact)}</strong></div>
 
               {isSupplierContact(selectedContact) ? (
                 <>
@@ -6682,6 +6782,7 @@ const visibleLeads = leads.filter((lead) => {
                 <span>Prochaine action</span>
                 <strong>{selectedLead.nextAction || "Aucune prochaine action"}</strong>
               </div>
+              <div><span>Action</span><strong>{getActionMetaLabel(selectedLead)}</strong></div>
 
               <div className="full">
                 <span>Notes internes</span>
@@ -6959,6 +7060,7 @@ function PropertiesView({
                 <div><dt>Surface</dt><dd>{property.surface ? `${property.surface} m²` : "—"}</dd></div>
                 <div><dt>Owner</dt><dd>{property.owner || "—"}</dd></div>
               </dl>
+              <ActionMeta item={property} />
 
               <div className="asset-card-actions">
                 <button className="asset-detail-button" type="button" onClick={() => setSelectedProperty(property)}>
@@ -7195,6 +7297,7 @@ function VehiclesView({
                 <div><dt>Kilométrage</dt><dd>{vehicle.mileage ? `${vehicle.mileage.toLocaleString("fr-FR")} km` : "—"}</dd></div>
                 <div><dt>Owner</dt><dd>{vehicle.owner || "—"}</dd></div>
               </dl>
+              <ActionMeta item={vehicle} />
 
               <div className="asset-card-actions">
                 <button className="asset-detail-button" type="button" onClick={() => setSelectedVehicle(vehicle)}>Détails</button>
@@ -7431,6 +7534,7 @@ function BoatsView({
                 <div><dt>Année</dt><dd>{boat.year || "—"}</dd></div>
                 <div><dt>Owner</dt><dd>{boat.owner || "—"}</dd></div>
               </dl>
+              <ActionMeta item={boat} />
 
               <div className="asset-card-actions">
                 <button className="asset-detail-button" type="button" onClick={() => setSelectedBoat(boat)}>Détails</button>
@@ -7664,6 +7768,8 @@ function TasksView({
                                 </small>
                               )}
 
+                              <ActionMeta item={task} />
+
                               <button
                                 className="task-edit-button"
                                 type="button"
@@ -7741,6 +7847,7 @@ function TasksView({
           <div id="task-edit-panel" className="confirm-dialog edit-dialog" role="dialog" aria-modal="true">
             <p className="eyebrow">Modification</p>
             <h3>Modifier la tâche</h3>
+            <ActionMeta item={editingTask} />
 
             <form className="form-grid" onSubmit={submitEdit}>
               <label>Titre<input name="title" defaultValue={editingTask.title} /></label>

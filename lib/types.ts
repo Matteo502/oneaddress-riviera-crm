@@ -12,6 +12,12 @@ export type VehicleStatus = "Disponible" | "En location" | "En maintenance" | "V
 export type BoatStatus = "Disponible" | "En charter" | "En maintenance" | "Vendu";
 export type TaskStatus = "À faire" | "En cours" | "Terminé";
 
+export type ActionAuditFields = {
+  createdBy?: string;
+  updatedBy?: string;
+  updatedAt?: string;
+};
+
 export type Contact = {
   id: string;
   name: string;
@@ -37,6 +43,9 @@ export type Contact = {
   supplierCommissionNotes?: string;
   supplierStatus?: SupplierStatus;
   createdAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+  updatedAt?: string;
 };
 
 export type Lead = {
@@ -53,6 +62,9 @@ export type Lead = {
   dueDate: string;
   rentalStartDate: string;
   rentalEndDate: string;
+  createdBy?: string;
+  updatedBy?: string;
+  updatedAt?: string;
 };
 
 export type Property = {
@@ -66,6 +78,9 @@ export type Property = {
   bedrooms: number;
   surface: number;
   notes?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  updatedAt?: string;
 };
 
 export type Vehicle = {
@@ -80,6 +95,9 @@ export type Vehicle = {
   year: number;
   mileage: number;
   notes?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  updatedAt?: string;
 };
 
 export type Boat = {
@@ -93,6 +111,9 @@ export type Boat = {
   year: number;
   length: number;
   notes?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  updatedAt?: string;
 };
 
 
@@ -103,6 +124,9 @@ export type Task = {
   status: TaskStatus;
   dueDate: string;
   linkedTo: string;
+  createdBy?: string;
+  updatedBy?: string;
+  updatedAt?: string;
 };
 
 
@@ -121,6 +145,9 @@ export type Supplier = {
   notes: string;
   status: SupplierStatus;
   createdAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+  updatedAt?: string;
 };
 
 export type CRMData = {
