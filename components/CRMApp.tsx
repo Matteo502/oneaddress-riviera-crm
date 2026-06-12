@@ -4419,6 +4419,9 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
     if (!entry.title) return notify("Ajoutez au minimum un titre planning.", "warning");
     if (!isValidPlanningDate(entry.startDate)) return notify("Ajoutez une date de début valide.", "warning");
     if (!isValidPlanningDate(entry.endDate)) return notify("Ajoutez une date de fin valide.", "warning");
+    if (planningDateValue(entry.endDate) < planningDateValue(entry.startDate)) {
+      return notify("La date de fin ne peut pas être avant la date de début.", "warning");
+    }
 
     setData((current) => ({
       ...current,
@@ -4440,6 +4443,57 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
     }));
 
     notify("Entrée planning supprimée.");
+  }
+
+  function updatePlanningEntry(id: string, event: React.FormEvent<HTMLFormElement>): boolean {
+    event.preventDefault();
+
+    const form = new FormData(event.currentTarget);
+    const assetSelection = parseAssetKey(form.get("assetKey"));
+    const start = String(form.get("startDate") ?? "");
+    const end = String(form.get("endDate") ?? "") || start;
+
+    const nextEntry = {
+      title: String(form.get("title") ?? "").trim(),
+      type: String(form.get("type") ?? "Intervention fournisseur") as PlanningEntryType,
+      contactName: String(form.get("contactName") ?? "").trim(),
+      assetType: assetSelection.assetType,
+      assetId: assetSelection.assetId,
+      startDate: start,
+      endDate: end,
+      blocksAvailability: String(form.get("blocksAvailability") ?? "false") === "true",
+      notes: String(form.get("notes") ?? "").trim()
+    };
+
+    if (!nextEntry.title) {
+      notify("Ajoutez au minimum un titre planning.", "warning");
+      return false;
+    }
+
+    if (!isValidPlanningDate(nextEntry.startDate)) {
+      notify("Ajoutez une date de début valide.", "warning");
+      return false;
+    }
+
+    if (!isValidPlanningDate(nextEntry.endDate)) {
+      notify("Ajoutez une date de fin valide.", "warning");
+      return false;
+    }
+
+    if (planningDateValue(nextEntry.endDate) < planningDateValue(nextEntry.startDate)) {
+      notify("La date de fin ne peut pas être avant la date de début.", "warning");
+      return false;
+    }
+
+    setData((current) => ({
+      ...current,
+      planningEntries: (((current as any).planningEntries ?? []) as PlanningEntry[]).map((entry) =>
+        entry.id === id ? stampUpdated({ ...entry, ...nextEntry }, activeActor) as PlanningEntry : entry
+      )
+    }));
+
+    notify("Entrée planning mise à jour.");
+    return true;
   }
 
   function updateLead(updatedLead: Lead) {
@@ -4924,6 +4978,7 @@ function createQuoteDraftFromLead(lead: Lead) {
             contacts={data.contacts}
             planningEntries={(((data as any).planningEntries ?? []) as PlanningEntry[])}
             onAddPlanningEntry={addPlanningEntry}
+            onUpdatePlanningEntry={updatePlanningEntry}
             onDeletePlanningEntry={deletePlanningEntry}
           />
         )}
@@ -5107,6 +5162,7 @@ function PlanningView({
   contacts,
   planningEntries,
   onAddPlanningEntry,
+  onUpdatePlanningEntry,
   onDeletePlanningEntry
 }: {
   leads: Lead[];
@@ -5116,12 +5172,14 @@ function PlanningView({
   contacts: Contact[];
   planningEntries: PlanningEntry[];
   onAddPlanningEntry: (event: React.FormEvent<HTMLFormElement>) => void;
+  onUpdatePlanningEntry: (id: string, event: React.FormEvent<HTMLFormElement>) => boolean;
   onDeletePlanningEntry: (id: string) => void;
 }) {
   const [categoryFilter, setCategoryFilter] = useState("Tous");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [calendarMonth, setCalendarMonth] = useState(() => formatPlanningMonthValue(new Date()));
+  const [editingPlanningEntry, setEditingPlanningEntry] = useState<PlanningEntry | null>(null);
 
   const assets = useMemo<PlanningAsset[]>(() => {
     return [
@@ -5392,6 +5450,22 @@ function PlanningView({
     setCalendarMonth(formatPlanningMonthValue(new Date(year, month - 1 + offset, 1)));
   }
 
+  function startPlanningEntryEdit(entry: PlanningEntry) {
+    setEditingPlanningEntry(entry);
+
+    requestAnimationFrame(() => {
+      document.querySelector('[data-planning-entry-form="true"]')?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function cancelPlanningEntryEdit() {
+    setEditingPlanningEntry(null);
+  }
+
+  const editingPlanningAssetKey = editingPlanningEntry?.assetType && editingPlanningEntry?.assetId
+    ? `${editingPlanningEntry.assetType}:${editingPlanningEntry.assetId}`
+    : "";
+
   return (
     <div className="stack">
       <section className="card">
@@ -5433,21 +5507,36 @@ function PlanningView({
         </form>
       </section>
 
-      <section className="card">
+      <section className="card" data-planning-entry-form="true">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Planning interne</p>
-            <h3>Ajouter une intervention ou une maintenance</h3>
+            <h3>{editingPlanningEntry ? "Modifier une intervention" : "Ajouter une intervention ou une maintenance"}</h3>
           </div>
         </div>
 
-        <form className="form-grid compact" onSubmit={onAddPlanningEntry}>
+        <form
+          className="form-grid compact"
+          key={editingPlanningEntry?.id ?? "new-planning-entry"}
+          onSubmit={(event) => {
+            if (!editingPlanningEntry) {
+              onAddPlanningEntry(event);
+              return;
+            }
+
+            const updated = onUpdatePlanningEntry(editingPlanningEntry.id, event);
+
+            if (updated) {
+              setEditingPlanningEntry(null);
+            }
+          }}
+        >
           <label>Titre
-            <input name="title" placeholder="Gardens Jardinier · entretien jardin" required />
+            <input name="title" defaultValue={editingPlanningEntry?.title ?? ""} placeholder="Gardens Jardinier · entretien jardin" required />
           </label>
 
           <label>Type
-            <select name="type" defaultValue="Intervention fournisseur">
+            <select name="type" defaultValue={editingPlanningEntry?.type ?? "Intervention fournisseur"}>
               {planningEntryTypes.map((type) => (
                 <option key={type}>{type}</option>
               ))}
@@ -5455,7 +5544,7 @@ function PlanningView({
           </label>
 
           <label>Contact / fournisseur
-            <select name="contactName" defaultValue="">
+            <select name="contactName" defaultValue={editingPlanningEntry?.contactName ?? ""}>
               <option value="">Aucun contact lié</option>
               {supplierContacts.map((contact) => (
                 <option key={contact.id} value={contact.name}>{contact.name}</option>
@@ -5470,7 +5559,7 @@ function PlanningView({
           </label>
 
           <label>Actif lié
-            <select name="assetKey" defaultValue="">
+            <select name="assetKey" defaultValue={editingPlanningAssetKey}>
               <option value="">Aucun actif lié</option>
               {assetOptions.map((asset) => (
                 <option key={asset.key} value={asset.key}>{asset.label}</option>
@@ -5479,27 +5568,33 @@ function PlanningView({
           </label>
 
           <label>Date début
-            <input type="date" name="startDate" required />
+            <input type="date" name="startDate" defaultValue={editingPlanningEntry?.startDate ?? ""} required />
           </label>
 
           <label>Date fin
-            <input type="date" name="endDate" />
+            <input type="date" name="endDate" defaultValue={editingPlanningEntry?.endDate ?? ""} />
           </label>
 
           <label>Bloque la disponibilité
-            <select name="blocksAvailability" defaultValue="false">
+            <select name="blocksAvailability" defaultValue={editingPlanningEntry?.blocksAvailability ? "true" : "false"}>
               <option value="false">Non</option>
               <option value="true">Oui</option>
             </select>
           </label>
 
           <label>Notes
-            <textarea name="notes" placeholder="Détails internes, horaires, consignes..." />
+            <textarea name="notes" defaultValue={editingPlanningEntry?.notes ?? ""} placeholder="Détails internes, horaires, consignes..." />
           </label>
 
           <button className="primary-button" type="submit">
-            Ajouter au planning
+            {editingPlanningEntry ? "Enregistrer les modifications" : "Ajouter au planning"}
           </button>
+
+          {editingPlanningEntry && (
+            <button className="ghost-button" type="button" onClick={cancelPlanningEntryEdit}>
+              Annuler
+            </button>
+          )}
         </form>
 
         <div className="planning-legend">
@@ -5526,9 +5621,21 @@ function PlanningView({
                       {entry.notes && <span>{entry.notes}</span>}
                       <ActionMeta item={entry} />
                     </div>
-                    <div className="item-actions">
+                    <div className="item-actions planning-entry-actions">
                       <Badge>{entry.blocksAvailability ? "Bloquant" : "Non bloquant"}</Badge>
-                      <button className="icon-button danger" type="button" aria-label="Supprimer" onClick={() => onDeletePlanningEntry(entry.id)}>×</button>
+                      <button className="asset-edit-button" type="button" onClick={() => startPlanningEntryEdit(entry)}>Modifier</button>
+                      <button
+                        className="icon-button danger"
+                        type="button"
+                        aria-label="Supprimer"
+                        onClick={() => {
+                          if (editingPlanningEntry?.id === entry.id) {
+                            setEditingPlanningEntry(null);
+                          }
+
+                          onDeletePlanningEntry(entry.id);
+                        }}
+                      >×</button>
                     </div>
                   </article>
                 );

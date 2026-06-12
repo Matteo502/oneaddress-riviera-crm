@@ -3224,3 +3224,13 @@ textarea {
 .legend-dot.entry {
   background: #c9a156 !important;
 }
+
+/* Planning interne : actions modifier/supprimer */
+.planning-entry-actions {
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.planning-entry-actions .asset-edit-button {
+  margin-top: 0 !important;
+}
