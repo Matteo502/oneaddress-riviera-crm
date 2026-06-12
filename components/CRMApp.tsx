@@ -170,6 +170,15 @@ type Toast = {
   tone: "success" | "warning";
 };
 
+type ActionNotification = {
+  id: string;
+  title: string;
+  detail: string;
+  tab: Tab;
+  tone: "danger" | "warning" | "info";
+  targetId?: string;
+};
+
 const currency = new Intl.NumberFormat("fr-FR", {
   style: "currency",
   currency: "EUR",
@@ -1601,7 +1610,7 @@ function QuotesView({
             <p className="muted-line">Aucun devis pour le moment. Créez d’abord un contact et un lead, puis générez un devis depuis le lead.</p>
           ) : (
             visibleQuotes.map((quote) => (
-              <article className="quote-card" key={quote.id}>
+              <article className="quote-card" key={quote.id} data-notification-target={`quote-${quote.id}`}>
                 <div>
                   <p className="eyebrow">{getQuoteItems(quote).map((item) => getQuoteCategoryFrenchLabel(item.category)).join(" · ")}</p>
                   <h3>{quote.title || quote.clientName}</h3>
@@ -2100,7 +2109,7 @@ function BookingsView({
             const assignedProvider = getAssignedProvider(quote);
 
             return (
-              <article className="item-card" key={quote.id}>
+              <article className="item-card" key={quote.id} data-notification-target={`booking-${quote.id}`}>
                 <div>
                   <p className="eyebrow">{services || "Service confirmé"}</p>
                   <h3>{quote.clientName}</h3>
@@ -2530,14 +2539,6 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
 
 
   const actionNotifications = useMemo(() => {
-    type ActionNotification = {
-      id: string;
-      title: string;
-      detail: string;
-      tab: Tab;
-      tone: "danger" | "warning" | "info";
-    };
-
     const items: ActionNotification[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -2570,7 +2571,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             title: "Tâche sans échéance",
             detail: task.title || "Tâche à compléter",
             tab: "tasks",
-            tone: "warning"
+            tone: "warning",
+            targetId: `task-${task.id}`
           });
           return;
         }
@@ -2581,7 +2583,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             title: "Tâche en retard",
             detail: `${task.title} · ${task.dueDate}`,
             tab: "tasks",
-            tone: "danger"
+            tone: "danger",
+            targetId: `task-${task.id}`
           });
           return;
         }
@@ -2592,7 +2595,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             title: "Échéance aujourd’hui",
             detail: task.title,
             tab: "tasks",
-            tone: "warning"
+            tone: "warning",
+            targetId: `task-${task.id}`
           });
           return;
         }
@@ -2603,7 +2607,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             title: "Échéance proche",
             detail: `${task.title} · dans ${days} jour${days > 1 ? "s" : ""}`,
             tab: "tasks",
-            tone: "info"
+            tone: "info",
+            targetId: `task-${task.id}`
           });
         }
       });
@@ -2617,7 +2622,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             title: "Lead incomplet",
             detail: `${lead.contactName} · prochaine action ou échéance manquante`,
             tab: "leads",
-            tone: "warning"
+            tone: "warning",
+            targetId: `lead-${lead.id}`
           });
         }
 
@@ -2629,7 +2635,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             title: "Lead en retard",
             detail: `${lead.contactName} · ${lead.nextAction || "Action à faire"}`,
             tab: "leads",
-            tone: "danger"
+            tone: "danger",
+            targetId: `lead-${lead.id}`
           });
         }
       });
@@ -2646,7 +2653,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
           title: ageDays >= 3 ? "Relance devis 72h" : "Relance devis 24h",
           detail: `${quote.clientName} · ${formatQuotePrice(getQuoteTotal(quote))}`,
           tab: "quotes",
-          tone: ageDays >= 3 ? "danger" : "warning"
+          tone: ageDays >= 3 ? "danger" : "warning",
+          targetId: `quote-${quote.id}`
         });
       }
 
@@ -2656,7 +2664,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
           title: "Négociation à suivre",
           detail: `${quote.clientName} · devis en négociation`,
           tab: "quotes",
-          tone: "warning"
+          tone: "warning",
+          targetId: `quote-${quote.id}`
         });
       }
 
@@ -2670,7 +2679,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
               title: "Prestataire à confirmer",
               detail: `${quote.clientName} · ${quote.title || "Réservation"}`,
               tab: "bookings",
-              tone: "warning"
+              tone: "warning",
+              targetId: `booking-${quote.id}`
             });
           }
 
@@ -2680,7 +2690,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
               title: "Détails client à envoyer",
               detail: `${quote.clientName} · réservation confirmée`,
               tab: "bookings",
-              tone: "info"
+              tone: "info",
+              targetId: `booking-${quote.id}`
             });
           }
         }
@@ -2696,13 +2707,22 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             title: days !== null && days < 0 ? "Paiement en retard" : "Paiement à suivre",
             detail: `${quote.clientName} · ${formatQuotePrice(remaining)} restant`,
             tab: "bookings",
-            tone: days !== null && days < 0 ? "danger" : "warning"
+            tone: days !== null && days < 0 ? "danger" : "warning",
+            targetId: `booking-${quote.id}`
           });
         }
       }
     });
 
-    return items.slice(0, 8);
+    const toneRank: Record<ActionNotification["tone"], number> = {
+      danger: 0,
+      warning: 1,
+      info: 2
+    };
+
+    return items
+      .sort((first, second) => toneRank[first.tone] - toneRank[second.tone])
+      .slice(0, 8);
   }, [data]);
 
   const filteredContacts = useMemo(() => {
@@ -2738,6 +2758,34 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       ...sortByUrgency(matchingTasks.filter((task) => task.status === "Terminé"))
     ];
   }, [data.tasks, data.leads, query]);
+
+  function handleNotificationAction(notification?: ActionNotification) {
+    const target = notification ?? actionNotifications[0];
+
+    if (!target) return;
+
+    setActiveTab(target.tab);
+
+    window.setTimeout(() => {
+      const targetElement = target.targetId
+        ? Array.from(document.querySelectorAll<HTMLElement>("[data-notification-target]")).find((element) =>
+            element.dataset.notificationTarget === target.targetId
+          )
+        : null;
+
+      if (!targetElement) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      targetElement.classList.add("notification-focus");
+
+      window.setTimeout(() => {
+        targetElement.classList.remove("notification-focus");
+      }, 3200);
+    }, 220);
+  }
 
   function notify(message: string, tone: Toast["tone"] = "success") {
     setToast({ message, tone });
@@ -4607,7 +4655,7 @@ function createQuoteDraftFromLead(lead: Lead) {
               <button
                 className="secondary-button"
                 type="button"
-                onClick={() => setActiveTab(actionNotifications[0].tab)}
+                onClick={() => handleNotificationAction()}
               >
                 Traiter maintenant
               </button>
@@ -4619,7 +4667,7 @@ function createQuoteDraftFromLead(lead: Lead) {
                   key={item.id}
                   type="button"
                   className={`crm-notification-item ${item.tone}`}
-                  onClick={() => setActiveTab(item.tab)}
+                  onClick={() => handleNotificationAction(item)}
                 >
                   <strong>{item.title}</strong>
                   <span>{item.detail}</span>
@@ -6525,7 +6573,7 @@ const visibleLeads = leads.filter((lead) => {
               {!isCollapsed && (
                 <div className="list-stack">
                   {columnLeads.map((lead) => (
-                    <article className={`lead-card ${getDueStatus(lead.dueDate)}`} key={lead.id}>
+                    <article className={`lead-card ${getDueStatus(lead.dueDate)}`} key={lead.id} data-notification-target={`lead-${lead.id}`}>
                       <div className="lead-topline">
                         <Badge>{lead.priority}</Badge>
 
@@ -7600,7 +7648,7 @@ function TasksView({
                         const linkedLead = leads.find((lead) => lead.id === task.linkedTo);
 
                         return (
-                          <article className="task-row" key={task.id}>
+                          <article className="task-row" key={task.id} data-notification-target={`task-${task.id}`}>
                             <div>
                               <strong>{task.title}</strong>
                               <small>

@@ -3060,3 +3060,12 @@ textarea {
   }
 }
 
+
+/* NOTIFICATION_ACTION_FOCUS */
+.notification-focus {
+  outline: 2px solid rgba(201, 161, 86, 0.95) !important;
+  outline-offset: 4px !important;
+  box-shadow: 0 0 0 6px rgba(201, 161, 86, 0.14), 0 24px 60px rgba(7, 31, 39, 0.18) !important;
+  transform: translateY(-2px) !important;
+  transition: outline-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease !important;
+}
