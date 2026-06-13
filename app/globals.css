@@ -3656,3 +3656,67 @@ main > header > *,
 main header > * {
   background-color: transparent !important;
 }
+
+/* CRM_HEADER_CLEAN_SEPARATOR_FIX */
+html,
+body,
+#__next,
+.app-shell,
+.crm-shell,
+.crm-layout,
+.layout,
+.main-layout,
+main,
+main.crm-main,
+main.app-main,
+.main-content,
+.content-area,
+.crm-content {
+  background: #f4efe5 !important;
+  background-color: #f4efe5 !important;
+  background-image: none !important;
+}
+
+aside,
+.sidebar,
+.crm-sidebar,
+.app-sidebar,
+[class*="sidebar"] {
+  background: #001434 !important;
+  background-color: #001434 !important;
+  background-image: none !important;
+}
+
+main > header,
+main header:first-child,
+.crm-header,
+.page-header,
+.content-header,
+.dashboard-header,
+.hero-header,
+.hero-section,
+.topbar {
+  background: #001434 !important;
+  background-color: #001434 !important;
+  background-image: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+main > header {
+  padding-bottom: 44px !important;
+}
+
+.shared-db-status-panel,
+.crm-notification-panel,
+section.card,
+.card {
+  background: #fffaf2 !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+.shared-db-status-panel {
+  margin-top: 24px !important;
+}
