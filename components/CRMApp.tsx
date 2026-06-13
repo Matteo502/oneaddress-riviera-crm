@@ -6100,12 +6100,8 @@ function createQuoteDraftFromLead(lead: Lead) {
   return (
     <main className="crm-shell">
       <aside className="sidebar">
-        <div className="brand-block">
-          <div className="brand-mark">OA</div>
-          <div>
-            <p className="eyebrow">OneAddress</p>
-            <h1>Riviera CRM</h1>
-          </div>
+        <div className="brand-block brand-block-logo">
+          <img src="/oar-logo-paysage-crm.png" alt="One Address Riviera" className="crm-sidebar-logo" />
         </div>
 
         <nav className="nav-list" aria-label="Navigation principale">

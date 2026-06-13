@@ -3367,3 +3367,28 @@ article {
   transition: outline-color 0.25s ease, outline-offset 0.25s ease;
 }
 
+
+/* CRM_LANDSCAPE_LOGO */
+.brand-block.brand-block-logo {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  gap: 0 !important;
+  width: 100% !important;
+  padding: 0 0 14px !important;
+}
+
+.crm-sidebar-logo {
+  display: block !important;
+  width: 238px !important;
+  max-width: 100% !important;
+  height: auto !important;
+  object-fit: contain !important;
+}
+
+@media (max-width: 980px) {
+  .crm-sidebar-logo {
+    width: 210px !important;
+  }
+}
+
