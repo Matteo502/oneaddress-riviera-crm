@@ -3210,7 +3210,7 @@ function VendorInvoicesView({
         ) : (
           <div className="list-stack">
             {visibleInvoices.map((invoice) => (
-              <article className="item-card vendor-invoice-card" key={invoice.id}>
+              <article className="item-card vendor-invoice-card" key={invoice.id} id={`vendor-invoice-${invoice.id}`}>
                 <div>
                   <p className="eyebrow">{invoice.category} · {invoice.status}</p>
                   <h3>{invoice.contactName}</h3>
@@ -3237,7 +3237,12 @@ function VendorInvoicesView({
 
                 <div className="item-actions">
                   <span className={`status-pill vendor-invoice-status ${getSemanticToneFromText(invoice.status) ? `semantic-${getSemanticToneFromText(invoice.status)}` : ""}`}>{invoice.status}</span>
-                  <button className="secondary-button" type="button" onClick={() => setEditingInvoice(invoice)}>
+                  <button className="secondary-button" type="button" onClick={() => {
+                      setEditingInvoice(invoice);
+                      window.setTimeout(() => {
+                        document.querySelector(".vendor-invoices-form-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }, 80);
+                    }}>
                     Modifier
                   </button>
                   <button
@@ -3262,7 +3267,7 @@ function VendorInvoicesView({
         <p className="eyebrow">{editingInvoice ? "Modification" : "Nouvelle"}</p>
         <h3>{editingInvoice ? "Modifier facture" : "Ajouter une facture fournisseur"}</h3>
 
-        <form className="form-grid" onSubmit={submitInvoice}>
+        <form key={editingInvoice?.id || "new-vendor-invoice"} className="form-grid" onSubmit={submitInvoice}>
           <label>Contact fournisseur
             <select name="contactId" defaultValue={editingInvoice?.contactId || ""} required>
               <option value="">Choisir un contact</option>
@@ -4029,7 +4034,29 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       }
     });
 
-    const toneRank: Record<ActionNotification["tone"], number> = {
+    
+    const vendorInvoices = (((data as any).vendorInvoices ?? []) as VendorInvoice[]);
+
+    vendorInvoices.forEach((invoice) => {
+      const remaining = getVendorInvoiceRemaining(invoice);
+
+      if (invoice.status === "Payé" || invoice.status === "Annulé" || remaining <= 0) {
+        return;
+      }
+
+      const days = daysUntil(invoice.dueDate);
+
+      items.push({
+        id: `vendor-invoice-payment-${invoice.id}`,
+        title: days !== null && days < 0 ? "Facture fournisseur en retard" : "Facture fournisseur à payer",
+        detail: `${invoice.contactName} · ${formatQuotePrice(remaining)} restant`,
+        tab: "vendorInvoices",
+        tone: days !== null && days < 0 ? "danger" : "warning",
+        targetId: `vendor-invoice-${invoice.id}`
+      });
+    });
+
+const toneRank: Record<ActionNotification["tone"], number> = {
       danger: 0,
       warning: 1,
       info: 2
@@ -4037,7 +4064,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
 
     return items
       .sort((first, second) => toneRank[first.tone] - toneRank[second.tone])
-      .slice(0, 8);
+      .slice(0, 20);
   }, [data]);
 
   const filteredContacts = useMemo(() => {
@@ -7408,7 +7435,7 @@ function FollowUpsPanel({
       }
     });
 
-    return items.slice(0, 8);
+    return items.slice(0, 20);
   }, [leads, tasks, quotes]);
 
   return (

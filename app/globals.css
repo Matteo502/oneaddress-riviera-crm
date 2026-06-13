@@ -3888,3 +3888,82 @@ section.card,
   }
 }
 
+
+/* CRM_HEADER_STABILITY_20260613 */
+html,
+body,
+#__next,
+.app-shell,
+.crm-shell,
+.crm-layout,
+.layout,
+.main-layout,
+main,
+main.crm-main,
+main.app-main,
+.main-content,
+.content-area,
+.crm-content {
+  background: #f4efe5 !important;
+  background-color: #f4efe5 !important;
+  background-image: none !important;
+}
+
+aside,
+.sidebar,
+.crm-sidebar,
+.app-sidebar,
+[class*="sidebar"] {
+  background: #001434 !important;
+  background-color: #001434 !important;
+  background-image: none !important;
+}
+
+main > header,
+main header:first-child,
+.crm-header,
+.page-header,
+.content-header,
+.dashboard-header,
+.hero-header,
+.hero-section,
+.topbar {
+  background: #001434 !important;
+  background-color: #001434 !important;
+  background-image: none !important;
+  margin: 0 0 26px 0 !important;
+  padding: 44px 48px 48px 48px !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: none !important;
+  overflow: visible !important;
+}
+
+main > header h1,
+main header:first-child h1,
+.crm-header h1,
+.page-header h1,
+.content-header h1,
+.dashboard-header h1,
+.hero-header h1,
+.hero-section h1 {
+  margin: 10px 0 0 0 !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+  line-height: 0.95 !important;
+}
+
+.shared-db-status-panel,
+.crm-notification-panel,
+section.card,
+.card {
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+.vendor-invoices-form-card {
+  scroll-margin-top: 24px !important;
+}
+
