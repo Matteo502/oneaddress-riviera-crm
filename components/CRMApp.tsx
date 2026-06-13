@@ -22,6 +22,7 @@ import type {
   Supplier,
   PlanningEntry,
   PlanningEntryType,
+  VendorInvoice,
 } from "@/lib/types";
 
 const STORAGE_KEY = "oneaddress-riviera-crm-v1";
@@ -50,7 +51,8 @@ const emptyData: CRMData = {
   tasks: [],
   suppliers: [],
   planningEntries: [],
-  quotes: []
+  quotes: [],
+  vendorInvoices: []
 };
 
 
@@ -143,6 +145,9 @@ function normalizeSharedCRMData(payload: any): CRMData {
     planningEntries: Array.isArray(payload?.planningEntries) ? payload.planningEntries : [],
     quotes: Array.isArray(payload?.quotes)
       ? payload.quotes.map(normalizeQuoteRequest).filter((quote: QuoteRequest | null): quote is QuoteRequest => Boolean(quote))
+      : [],
+    vendorInvoices: Array.isArray(payload?.vendorInvoices)
+      ? payload.vendorInvoices.map(normalizeVendorInvoice).filter((invoice: VendorInvoice | null): invoice is VendorInvoice => Boolean(invoice))
       : []
   };
 }
@@ -156,7 +161,8 @@ function crmDataHasContent(value: CRMData) {
     value.tasks.length > 0 ||
     (((value as any).suppliers ?? []) as Supplier[]).length > 0 ||
     (((value as any).planningEntries ?? []) as PlanningEntry[]).length > 0 ||
-    (((value as any).quotes ?? []) as QuoteRequest[]).length > 0
+    (((value as any).quotes ?? []) as QuoteRequest[]).length > 0 ||
+    (((value as any).vendorInvoices ?? []) as VendorInvoice[]).length > 0
   );
 }
 
@@ -171,7 +177,7 @@ function readLocalCRMDataSafely() {
   }
 }
 
-type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "bookings" | "quickReplies" | "planning" | "properties" | "vehicles" | "boats";
+type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "bookings" | "vendorInvoices" | "quickReplies" | "planning" | "properties" | "vehicles" | "boats";
 
 type Toast = {
   message: string;
@@ -192,6 +198,69 @@ const currency = new Intl.NumberFormat("fr-FR", {
   currency: "EUR",
   maximumFractionDigits: 0
 });
+
+
+function normalizeVendorInvoice(value: unknown): VendorInvoice | null {
+  if (!value || typeof value !== "object") return null;
+
+  const raw = value as Record<string, unknown>;
+  const amount = Number(raw.amount || 0);
+  const paidAmount = Number(raw.paidAmount || 0);
+  const status = String(raw.status || getVendorInvoiceStatus(amount, paidAmount, String(raw.dueDate || ""))) as VendorInvoice["status"];
+
+  return {
+    id: String(raw.id || makeId("invoice")),
+    contactId: String(raw.contactId || ""),
+    contactName: String(raw.contactName || ""),
+    category: String(raw.category || "Fournisseur"),
+    title: String(raw.title || "Facture fournisseur"),
+    invoiceDate: String(raw.invoiceDate || ""),
+    dueDate: String(raw.dueDate || ""),
+    amount: Number.isFinite(amount) ? amount : 0,
+    paidAmount: Number.isFinite(paidAmount) ? paidAmount : 0,
+    status: getVendorInvoiceStatusFromValue(status),
+    paymentMethod: String(raw.paymentMethod || ""),
+    notes: String(raw.notes || ""),
+    createdAt: String(raw.createdAt || new Date().toISOString())
+  };
+}
+
+function getVendorInvoiceStatusFromValue(value: unknown): VendorInvoice["status"] {
+  if (
+    value === "À payer" ||
+    value === "Partiellement payé" ||
+    value === "Payé" ||
+    value === "En retard" ||
+    value === "Annulé"
+  ) {
+    return value;
+  }
+
+  return "À payer";
+}
+
+function getVendorInvoiceStatus(amount: number, paidAmount: number, dueDate?: string): VendorInvoice["status"] {
+  if (amount > 0 && paidAmount >= amount) return "Payé";
+  if (paidAmount > 0 && paidAmount < amount) return "Partiellement payé";
+
+  if (dueDate) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const due = new Date(`${dueDate}T00:00:00`);
+    due.setHours(0, 0, 0, 0);
+
+    if (!Number.isNaN(due.getTime()) && due.getTime() < today.getTime()) {
+      return "En retard";
+    }
+  }
+
+  return "À payer";
+}
+
+function getVendorInvoiceRemaining(invoice: VendorInvoice) {
+  return Math.max(Number(invoice.amount || 0) - Number(invoice.paidAmount || 0), 0);
+}
 
 function makeId(prefix: string) {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -2387,6 +2456,232 @@ function BookingsView({
 }
 
 
+
+function VendorInvoicesView({
+  contacts,
+  invoices,
+  onAdd,
+  onUpdate,
+  onDelete
+}: {
+  contacts: Contact[];
+  invoices: VendorInvoice[];
+  onAdd: (invoice: VendorInvoice) => void;
+  onUpdate: (invoice: VendorInvoice) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [statusFilter, setStatusFilter] = useState<VendorInvoice["status"] | "Tous">("Tous");
+  const [editingInvoice, setEditingInvoice] = useState<VendorInvoice | null>(null);
+
+  const supplierContacts = contacts.filter((contact) => {
+    const kind = String((contact as any).kind || "");
+    return kind === "Fournisseur" || kind === "Partenaire" || kind === "Propriétaire";
+  });
+
+  const selectableContacts = supplierContacts.length > 0 ? supplierContacts : contacts;
+
+  const visibleInvoices = statusFilter === "Tous"
+    ? invoices
+    : invoices.filter((invoice) => invoice.status === statusFilter);
+
+  const totalToPay = invoices
+    .filter((invoice) => invoice.status !== "Payé" && invoice.status !== "Annulé")
+    .reduce((sum, invoice) => sum + getVendorInvoiceRemaining(invoice), 0);
+
+  function submitInvoice(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const form = new FormData(event.currentTarget);
+    const contactId = String(form.get("contactId") ?? "");
+    const contact = contacts.find((item) => item.id === contactId);
+    const amount = safeNumber(form.get("amount"));
+    const paidAmount = safeNumber(form.get("paidAmount"));
+    const dueDate = String(form.get("dueDate") ?? "");
+
+    const invoice: VendorInvoice = {
+      id: editingInvoice?.id || makeId("invoice"),
+      contactId,
+      contactName: contact?.name || String(form.get("contactName") ?? "").trim(),
+      category: String(form.get("category") ?? "Fournisseur").trim(),
+      title: String(form.get("title") ?? "").trim() || "Facture fournisseur",
+      invoiceDate: String(form.get("invoiceDate") ?? ""),
+      dueDate,
+      amount,
+      paidAmount,
+      status: getVendorInvoiceStatus(amount, paidAmount, dueDate),
+      paymentMethod: String(form.get("paymentMethod") ?? "").trim(),
+      notes: String(form.get("notes") ?? "").trim(),
+      createdAt: editingInvoice?.createdAt || new Date().toISOString()
+    };
+
+    if (!invoice.contactName) return window.alert("Choisissez un contact fournisseur.");
+    if (!invoice.amount || invoice.amount <= 0) return window.alert("Ajoutez un montant de facture.");
+
+    if (editingInvoice) {
+      onUpdate(invoice);
+      setEditingInvoice(null);
+    } else {
+      onAdd(invoice);
+    }
+
+    event.currentTarget.reset();
+  }
+
+  return (
+    <div className="two-columns wide-left">
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Factures fournisseurs</p>
+            <h3>{visibleInvoices.length} facture{visibleInvoices.length > 1 ? "s" : ""}</h3>
+          </div>
+          <div>
+            <p className="eyebrow">Reste à payer</p>
+            <h3>{currency.format(totalToPay)}</h3>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
+          {(["Tous", "À payer", "Partiellement payé", "En retard", "Payé", "Annulé"] as Array<VendorInvoice["status"] | "Tous">).map((status) => (
+            <button
+              key={status}
+              type="button"
+              className={statusFilter === status ? "primary-button" : "secondary-button"}
+              onClick={() => setStatusFilter(status)}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+
+        {visibleInvoices.length === 0 ? (
+          <p className="muted-line">Aucune facture fournisseur pour ce filtre.</p>
+        ) : (
+          <div className="list-stack">
+            {visibleInvoices.map((invoice) => (
+              <article className="item-card" key={invoice.id}>
+                <div>
+                  <p className="eyebrow">{invoice.category} · {invoice.status}</p>
+                  <h3>{invoice.contactName}</h3>
+                  <p>{invoice.title}</p>
+                  <p className="muted-line">
+                    Facture : {invoice.invoiceDate || "À compléter"} · Échéance : {invoice.dueDate || "À compléter"}
+                  </p>
+
+                  <div className="stats-grid" style={{ marginTop: 14 }}>
+                    <div className="mini-stat">
+                      <span>Montant</span>
+                      <strong>{currency.format(invoice.amount)}</strong>
+                    </div>
+                    <div className="mini-stat">
+                      <span>Payé</span>
+                      <strong>{currency.format(invoice.paidAmount)}</strong>
+                    </div>
+                    <div className="mini-stat">
+                      <span>Reste</span>
+                      <strong>{currency.format(getVendorInvoiceRemaining(invoice))}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="item-actions">
+                  <span className="status-pill">{invoice.status}</span>
+                  <button className="secondary-button" type="button" onClick={() => setEditingInvoice(invoice)}>
+                    Modifier
+                  </button>
+                  <button
+                    className="danger-link"
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm("Supprimer cette facture fournisseur ?")) {
+                        onDelete(invoice.id);
+                      }
+                    }}
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="card form-card">
+        <p className="eyebrow">{editingInvoice ? "Modification" : "Nouvelle"}</p>
+        <h3>{editingInvoice ? "Modifier facture" : "Ajouter une facture fournisseur"}</h3>
+
+        <form className="form-grid" onSubmit={submitInvoice}>
+          <label>Contact fournisseur
+            <select name="contactId" defaultValue={editingInvoice?.contactId || ""} required>
+              <option value="">Choisir un contact</option>
+              {selectableContacts.map((contact) => (
+                <option key={contact.id} value={contact.id}>
+                  {contact.name} · {String((contact as any).kind || "Contact")}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>Catégorie
+            <select name="category" defaultValue={editingInvoice?.category || "Fournisseur"}>
+              <option>Fournisseur</option>
+              <option>Paysagiste</option>
+              <option>Jardinier</option>
+              <option>Pisciniste</option>
+              <option>Femme de ménage</option>
+              <option>Nounou</option>
+              <option>Garage / mécanicien</option>
+              <option>Lavage voiture</option>
+              <option>Artisan rénovation</option>
+              <option>Gestion nuisibles</option>
+              <option>Autre</option>
+            </select>
+          </label>
+
+          <label>Objet facture
+            <input name="title" defaultValue={editingInvoice?.title || ""} placeholder="Ex : Entretien jardin juin" />
+          </label>
+
+          <label>Date facture
+            <input name="invoiceDate" type="date" defaultValue={editingInvoice?.invoiceDate || ""} />
+          </label>
+
+          <label>Échéance paiement
+            <input name="dueDate" type="date" defaultValue={editingInvoice?.dueDate || ""} />
+          </label>
+
+          <label>Montant facture
+            <input name="amount" type="number" min="0" step="1" defaultValue={editingInvoice?.amount || ""} placeholder="Ex : 450" required />
+          </label>
+
+          <label>Montant payé
+            <input name="paidAmount" type="number" min="0" step="1" defaultValue={editingInvoice?.paidAmount || ""} placeholder="Ex : 0" />
+          </label>
+
+          <label>Moyen de paiement
+            <input name="paymentMethod" defaultValue={editingInvoice?.paymentMethod || ""} placeholder="Virement, espèces, CB..." />
+          </label>
+
+          <label>Notes
+            <textarea name="notes" defaultValue={editingInvoice?.notes || ""} placeholder="Détails, facture reçue, IBAN, remarque..." />
+          </label>
+
+          <button className="primary-button" type="submit">
+            {editingInvoice ? "Enregistrer" : "Ajouter facture"}
+          </button>
+
+          {editingInvoice && (
+            <button className="secondary-button" type="button" onClick={() => setEditingInvoice(null)}>
+              Annuler
+            </button>
+          )}
+        </form>
+      </section>
+    </div>
+  );
+}
+
 function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
 
@@ -4165,6 +4460,36 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
   }
 
   
+
+  function addVendorInvoice(invoice: VendorInvoice) {
+    setData((current) => ({
+      ...current,
+      vendorInvoices: [invoice, ...(((current as any).vendorInvoices ?? []) as VendorInvoice[])]
+    }));
+
+    notify("Facture fournisseur ajoutée.");
+  }
+
+  function updateVendorInvoice(updatedInvoice: VendorInvoice) {
+    setData((current) => ({
+      ...current,
+      vendorInvoices: (((current as any).vendorInvoices ?? []) as VendorInvoice[]).map((invoice) =>
+        invoice.id === updatedInvoice.id ? updatedInvoice : invoice
+      )
+    }));
+
+    notify("Facture fournisseur mise à jour.");
+  }
+
+  function deleteVendorInvoice(id: string) {
+    setData((current) => ({
+      ...current,
+      vendorInvoices: (((current as any).vendorInvoices ?? []) as VendorInvoice[]).filter((invoice) => invoice.id !== id)
+    }));
+
+    notify("Facture fournisseur supprimée.");
+  }
+
   function addSupplier(supplier: Supplier) {
     setData((current) => ({
       ...current,
@@ -4813,6 +5138,7 @@ function createQuoteDraftFromLead(lead: Lead) {
         <NavButton label="Tâches" icon="✓" active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} />
         <NavButton label="Devis" icon="🧾" active={activeTab === "quotes"} onClick={() => setActiveTab("quotes")} />
         <NavButton label="Réservations" icon="✓" active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} />
+        <NavButton label="Factures fournisseurs" icon="€" active={activeTab === "vendorInvoices"} onClick={() => setActiveTab("vendorInvoices")} />
         <NavButton label="Réponses rapides" icon="💬" active={activeTab === "quickReplies"} onClick={() => setActiveTab("quickReplies")} />
         <NavButton label="Planning" icon="🗓" active={activeTab === "planning"} onClick={() => setActiveTab("planning")} />
         <NavButton label="Biens" icon="🏠" active={activeTab === "properties"} onClick={() => setActiveTab("properties")} />
@@ -5039,6 +5365,7 @@ function titleForTab(tab: Tab) {
     tasks: "Tâches",
     quotes: "Devis",
     bookings: "Réservations",
+    vendorInvoices: "Factures fournisseurs",
     quickReplies: "Réponses rapides",
     planning: "Planning",
     properties: "Biens",

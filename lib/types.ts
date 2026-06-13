@@ -167,6 +167,22 @@ export type Supplier = {
   updatedAt?: string;
 };
 
+export type VendorInvoice = {
+  id: string;
+  contactId: string;
+  contactName: string;
+  category: string;
+  title: string;
+  invoiceDate: string;
+  dueDate: string;
+  amount: number;
+  paidAmount: number;
+  status: "À payer" | "Partiellement payé" | "Payé" | "En retard" | "Annulé";
+  paymentMethod?: string;
+  notes?: string;
+  createdAt: string;
+};
+
 export type CRMData = {
   contacts: Contact[];
   leads: Lead[];
@@ -177,4 +193,5 @@ export type CRMData = {
   suppliers?: Supplier[];
   planningEntries?: PlanningEntry[];
   quotes?: any[];
+  vendorInvoices?: VendorInvoice[];
 };
