@@ -3333,6 +3333,70 @@ function VendorInvoicesView({
   );
 }
 
+
+function getSemanticToneFromText(text: string) {
+  const value = text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (
+    value.includes("non paye") ||
+    value.includes("a payer") ||
+    value.includes("reste a payer") ||
+    value.includes("perdu") ||
+    value.includes("erreur") ||
+    value.includes("annule") ||
+    value.includes("impossible")
+  ) {
+    return "danger";
+  }
+
+  if (
+    value.includes("en retard") ||
+    value.includes("retard") ||
+    value.includes("relance") ||
+    value.includes("echeance depassee") ||
+    value.includes("a relancer")
+  ) {
+    return "warning";
+  }
+
+  if (
+    value.includes("paye") ||
+    value.includes("confirme") ||
+    value.includes("gagne") ||
+    value.includes("termine") ||
+    value.includes("connectee") ||
+    value.includes("synchronise")
+  ) {
+    return "success";
+  }
+
+  if (
+    value.includes("partiel") ||
+    value.includes("negociation") ||
+    value.includes("en cours") ||
+    value.includes("a preparer") ||
+    value.includes("prestataire a confirmer") ||
+    value.includes("devis") ||
+    value.includes("brouillon")
+  ) {
+    return "pending";
+  }
+
+  if (
+    value.includes("nouveau") ||
+    value.includes("standard") ||
+    value.includes("local") ||
+    value.includes("prospect")
+  ) {
+    return "neutral";
+  }
+
+  return "";
+}
+
 function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
 
@@ -3413,6 +3477,32 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
   const [sharedWorkspaceMessage, setSharedWorkspaceMessage] = useState("Chargement de la base partagée...");
   const [sharedWorkspaceUpdatedAt, setSharedWorkspaceUpdatedAt] = useState("");
   const [toast, setToast] = useState<Toast | null>(null);
+
+  useEffect(() => {
+    const targets = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        ".status-pill, .notification-card, .mini-stat, .item-card .eyebrow, .shared-db-status-panel, .lead-status, .quote-status"
+      )
+    );
+
+    targets.forEach((element) => {
+      element.classList.remove(
+        "semantic-success",
+        "semantic-warning",
+        "semantic-danger",
+        "semantic-pending",
+        "semantic-neutral"
+      );
+
+      const tone = getSemanticToneFromText(element.textContent || "");
+
+      if (tone) {
+        element.classList.add(`semantic-${tone}`);
+      }
+    });
+  }, [activeTab, data, sharedWorkspaceStatus, sharedWorkspaceMessage]);
+
+
 
   useEffect(() => {
     function normalizeCrmButtonLabel(value: string) {

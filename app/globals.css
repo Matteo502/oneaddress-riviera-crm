@@ -3392,3 +3392,80 @@ article {
   }
 }
 
+
+/* GLOBAL_STATUS_COLORS_20260613 */
+.status-pill.semantic-success,
+.mini-stat.semantic-success,
+.item-card .eyebrow.semantic-success,
+.lead-status.semantic-success,
+.quote-status.semantic-success {
+  border-color: rgba(31, 122, 76, 0.38) !important;
+  background: rgba(31, 122, 76, 0.10) !important;
+  color: #1f7a4c !important;
+}
+
+.status-pill.semantic-warning,
+.mini-stat.semantic-warning,
+.item-card .eyebrow.semantic-warning,
+.lead-status.semantic-warning,
+.quote-status.semantic-warning {
+  border-color: rgba(184, 132, 31, 0.42) !important;
+  background: rgba(184, 132, 31, 0.12) !important;
+  color: #9a6a13 !important;
+}
+
+.status-pill.semantic-danger,
+.mini-stat.semantic-danger,
+.item-card .eyebrow.semantic-danger,
+.lead-status.semantic-danger,
+.quote-status.semantic-danger {
+  border-color: rgba(151, 51, 51, 0.42) !important;
+  background: rgba(151, 51, 51, 0.10) !important;
+  color: #973333 !important;
+}
+
+.status-pill.semantic-pending,
+.mini-stat.semantic-pending,
+.item-card .eyebrow.semantic-pending,
+.lead-status.semantic-pending,
+.quote-status.semantic-pending {
+  border-color: rgba(201, 132, 42, 0.42) !important;
+  background: rgba(201, 132, 42, 0.11) !important;
+  color: #a56418 !important;
+}
+
+.status-pill.semantic-neutral,
+.mini-stat.semantic-neutral,
+.item-card .eyebrow.semantic-neutral,
+.lead-status.semantic-neutral,
+.quote-status.semantic-neutral {
+  border-color: rgba(7, 31, 39, 0.18) !important;
+  background: rgba(7, 31, 39, 0.06) !important;
+  color: rgba(7, 31, 39, 0.72) !important;
+}
+
+.notification-card.semantic-success,
+.shared-db-status-panel.semantic-success {
+  border-left: 4px solid #1f7a4c !important;
+}
+
+.notification-card.semantic-warning,
+.shared-db-status-panel.semantic-warning {
+  border-left: 4px solid #b8841f !important;
+}
+
+.notification-card.semantic-danger,
+.shared-db-status-panel.semantic-danger {
+  border-left: 4px solid #973333 !important;
+}
+
+.notification-card.semantic-pending,
+.shared-db-status-panel.semantic-pending {
+  border-left: 4px solid #c9842a !important;
+}
+
+.notification-card.semantic-neutral,
+.shared-db-status-panel.semantic-neutral {
+  border-left: 4px solid rgba(7, 31, 39, 0.28) !important;
+}
+
