@@ -23,6 +23,10 @@ import type {
   PlanningEntry,
   PlanningEntryType,
   VendorInvoice,
+  HouseTrackingHouse,
+  HouseTrackingWorker,
+  HouseTimeEntry,
+  HousePayment,
 } from "@/lib/types";
 
 const STORAGE_KEY = "oneaddress-riviera-crm-v1";
@@ -52,7 +56,11 @@ const emptyData: CRMData = {
   suppliers: [],
   planningEntries: [],
   quotes: [],
-  vendorInvoices: []
+  vendorInvoices: [],
+  houseTrackingHouses: [],
+  houseTrackingWorkers: [],
+  houseTimeEntries: [],
+  housePayments: []
 };
 
 
@@ -148,6 +156,18 @@ function normalizeSharedCRMData(payload: any): CRMData {
       : [],
     vendorInvoices: Array.isArray(payload?.vendorInvoices)
       ? payload.vendorInvoices.map(normalizeVendorInvoice).filter((invoice: VendorInvoice | null): invoice is VendorInvoice => Boolean(invoice))
+      : [],
+    houseTrackingHouses: Array.isArray(payload?.houseTrackingHouses)
+      ? payload.houseTrackingHouses.map(normalizeHouseTrackingHouse).filter((house: HouseTrackingHouse | null): house is HouseTrackingHouse => Boolean(house))
+      : [],
+    houseTrackingWorkers: Array.isArray(payload?.houseTrackingWorkers)
+      ? payload.houseTrackingWorkers.map(normalizeHouseTrackingWorker).filter((worker: HouseTrackingWorker | null): worker is HouseTrackingWorker => Boolean(worker))
+      : [],
+    houseTimeEntries: Array.isArray(payload?.houseTimeEntries)
+      ? payload.houseTimeEntries.map(normalizeHouseTimeEntry).filter((entry: HouseTimeEntry | null): entry is HouseTimeEntry => Boolean(entry))
+      : [],
+    housePayments: Array.isArray(payload?.housePayments)
+      ? payload.housePayments.map(normalizeHousePayment).filter((payment: HousePayment | null): payment is HousePayment => Boolean(payment))
       : []
   };
 }
@@ -162,7 +182,11 @@ function crmDataHasContent(value: CRMData) {
     (((value as any).suppliers ?? []) as Supplier[]).length > 0 ||
     (((value as any).planningEntries ?? []) as PlanningEntry[]).length > 0 ||
     (((value as any).quotes ?? []) as QuoteRequest[]).length > 0 ||
-    (((value as any).vendorInvoices ?? []) as VendorInvoice[]).length > 0
+    (((value as any).vendorInvoices ?? []) as VendorInvoice[]).length > 0 ||
+    (((value as any).houseTrackingHouses ?? []) as HouseTrackingHouse[]).length > 0 ||
+    (((value as any).houseTrackingWorkers ?? []) as HouseTrackingWorker[]).length > 0 ||
+    (((value as any).houseTimeEntries ?? []) as HouseTimeEntry[]).length > 0 ||
+    (((value as any).housePayments ?? []) as HousePayment[]).length > 0
   );
 }
 
@@ -177,7 +201,7 @@ function readLocalCRMDataSafely() {
   }
 }
 
-type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "bookings" | "vendorInvoices" | "quickReplies" | "planning" | "properties" | "vehicles" | "boats";
+type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "bookings" | "vendorInvoices" | "houseTracking" | "quickReplies" | "planning" | "properties" | "vehicles" | "boats";
 
 type Toast = {
   message: string;
@@ -260,6 +284,126 @@ function getVendorInvoiceStatus(amount: number, paidAmount: number, dueDate?: st
 
 function getVendorInvoiceRemaining(invoice: VendorInvoice) {
   return Math.max(Number(invoice.amount || 0) - Number(invoice.paidAmount || 0), 0);
+}
+
+function normalizeHouseTrackingHouse(value: unknown): HouseTrackingHouse | null {
+  if (!value || typeof value !== "object") return null;
+
+  const raw = value as Record<string, unknown>;
+
+  return {
+    id: String(raw.id || makeId("house")),
+    name: String(raw.name || "Maison à compléter"),
+    address: String(raw.address || ""),
+    notes: String(raw.notes || ""),
+    createdAt: String(raw.createdAt || new Date().toISOString()),
+    createdBy: raw.createdBy ? String(raw.createdBy) : undefined,
+    updatedBy: raw.updatedBy ? String(raw.updatedBy) : undefined,
+    updatedAt: raw.updatedAt ? String(raw.updatedAt) : undefined
+  };
+}
+
+function normalizeHouseTrackingWorker(value: unknown): HouseTrackingWorker | null {
+  if (!value || typeof value !== "object") return null;
+
+  const raw = value as Record<string, unknown>;
+  const hourlyRate = Number(raw.hourlyRate || 0);
+
+  return {
+    id: String(raw.id || makeId("worker")),
+    contactId: String(raw.contactId || ""),
+    contactName: String(raw.contactName || "Intervenant à compléter"),
+    role: String(raw.role || "Intervenant"),
+    hourlyRate: Number.isFinite(hourlyRate) ? hourlyRate : 0,
+    status: raw.status === "Inactif" ? "Inactif" : "Actif",
+    notes: String(raw.notes || ""),
+    createdAt: String(raw.createdAt || new Date().toISOString()),
+    createdBy: raw.createdBy ? String(raw.createdBy) : undefined,
+    updatedBy: raw.updatedBy ? String(raw.updatedBy) : undefined,
+    updatedAt: raw.updatedAt ? String(raw.updatedAt) : undefined
+  };
+}
+
+function normalizeHouseTimeEntry(value: unknown): HouseTimeEntry | null {
+  if (!value || typeof value !== "object") return null;
+
+  const raw = value as Record<string, unknown>;
+  const breakMinutes = Number(raw.breakMinutes || 0);
+  const hourlyRate = Number(raw.hourlyRate || 0);
+
+  return {
+    id: String(raw.id || makeId("hours")),
+    houseId: String(raw.houseId || ""),
+    houseName: String(raw.houseName || "Maison"),
+    workerId: String(raw.workerId || ""),
+    workerName: String(raw.workerName || "Intervenant"),
+    date: String(raw.date || new Date().toISOString().slice(0, 10)),
+    startTime: String(raw.startTime || ""),
+    endTime: String(raw.endTime || ""),
+    breakMinutes: Number.isFinite(breakMinutes) ? breakMinutes : 0,
+    hourlyRate: Number.isFinite(hourlyRate) ? hourlyRate : 0,
+    note: String(raw.note || ""),
+    createdAt: String(raw.createdAt || new Date().toISOString()),
+    createdBy: raw.createdBy ? String(raw.createdBy) : undefined,
+    updatedBy: raw.updatedBy ? String(raw.updatedBy) : undefined,
+    updatedAt: raw.updatedAt ? String(raw.updatedAt) : undefined
+  };
+}
+
+function normalizeHousePayment(value: unknown): HousePayment | null {
+  if (!value || typeof value !== "object") return null;
+
+  const raw = value as Record<string, unknown>;
+  const amount = Number(raw.amount || 0);
+  const methodValue = String(raw.method || "Virement");
+  const method = (methodValue === "Espèces" || methodValue === "CB" || methodValue === "Chèque" || methodValue === "Autre" ? methodValue : "Virement") as HousePayment["method"];
+
+  return {
+    id: String(raw.id || makeId("payment")),
+    houseId: String(raw.houseId || ""),
+    houseName: String(raw.houseName || "Maison"),
+    workerId: String(raw.workerId || ""),
+    workerName: String(raw.workerName || "Intervenant"),
+    date: String(raw.date || new Date().toISOString().slice(0, 10)),
+    amount: Number.isFinite(amount) ? amount : 0,
+    method,
+    note: String(raw.note || ""),
+    createdAt: String(raw.createdAt || new Date().toISOString()),
+    createdBy: raw.createdBy ? String(raw.createdBy) : undefined,
+    updatedBy: raw.updatedBy ? String(raw.updatedBy) : undefined,
+    updatedAt: raw.updatedAt ? String(raw.updatedAt) : undefined
+  };
+}
+
+function getHouseTimeHours(entry: Pick<HouseTimeEntry, "startTime" | "endTime" | "breakMinutes">) {
+  if (!entry.startTime || !entry.endTime) return 0;
+
+  const [startHour, startMinute] = entry.startTime.split(":").map(Number);
+  const [endHour, endMinute] = entry.endTime.split(":").map(Number);
+
+  if (![startHour, startMinute, endHour, endMinute].every(Number.isFinite)) return 0;
+
+  const startTotal = startHour * 60 + startMinute;
+  const endTotal = endHour * 60 + endMinute;
+  const rawMinutes = endTotal - startTotal - Number(entry.breakMinutes || 0);
+
+  return Math.max(rawMinutes / 60, 0);
+}
+
+function getHouseTimeAmount(entry: Pick<HouseTimeEntry, "startTime" | "endTime" | "breakMinutes" | "hourlyRate">) {
+  return getHouseTimeHours(entry) * Number(entry.hourlyRate || 0);
+}
+
+function getCurrentMonthValue() {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function getMonthFromDate(value?: string) {
+  return String(value || "").slice(0, 7);
+}
+
+function formatHours(value: number) {
+  return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(value)} h`;
 }
 
 function makeId(prefix: string) {
@@ -2457,6 +2601,513 @@ function BookingsView({
 
 
 
+function HouseTrackingView({
+  contacts,
+  houses,
+  workers,
+  timeEntries,
+  payments,
+  onAddHouse,
+  onDeleteHouse,
+  onAddWorker,
+  onDeleteWorker,
+  onAddTimeEntry,
+  onDeleteTimeEntry,
+  onAddPayment,
+  onDeletePayment
+}: {
+  contacts: Contact[];
+  houses: HouseTrackingHouse[];
+  workers: HouseTrackingWorker[];
+  timeEntries: HouseTimeEntry[];
+  payments: HousePayment[];
+  onAddHouse: (house: HouseTrackingHouse) => void;
+  onDeleteHouse: (id: string) => void;
+  onAddWorker: (worker: HouseTrackingWorker) => void;
+  onDeleteWorker: (id: string) => void;
+  onAddTimeEntry: (entry: HouseTimeEntry) => void;
+  onDeleteTimeEntry: (id: string) => void;
+  onAddPayment: (payment: HousePayment) => void;
+  onDeletePayment: (id: string) => void;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [monthFilter, setMonthFilter] = useState(getCurrentMonthValue());
+  const [houseFilter, setHouseFilter] = useState("Tous");
+  const [workerFilter, setWorkerFilter] = useState("Tous");
+  const [hourDraft, setHourDraft] = useState({
+    date: today,
+    houseId: houses[0]?.id || "",
+    workerId: workers[0]?.id || "",
+    startTime: "09:00",
+    endTime: "13:00",
+    breakMinutes: "0",
+    hourlyRate: workers[0]?.hourlyRate ? String(workers[0].hourlyRate) : "",
+    note: ""
+  });
+
+  const filteredEntries = timeEntries.filter((entry) => {
+    const matchesMonth = !monthFilter || getMonthFromDate(entry.date) === monthFilter;
+    const matchesHouse = houseFilter === "Tous" || entry.houseId === houseFilter;
+    const matchesWorker = workerFilter === "Tous" || entry.workerId === workerFilter;
+    return matchesMonth && matchesHouse && matchesWorker;
+  });
+
+  const filteredPayments = payments.filter((payment) => {
+    const matchesMonth = !monthFilter || getMonthFromDate(payment.date) === monthFilter;
+    const matchesHouse = houseFilter === "Tous" || payment.houseId === houseFilter;
+    const matchesWorker = workerFilter === "Tous" || payment.workerId === workerFilter;
+    return matchesMonth && matchesHouse && matchesWorker;
+  });
+
+  const totalHours = filteredEntries.reduce((sum, entry) => sum + getHouseTimeHours(entry), 0);
+  const totalDue = filteredEntries.reduce((sum, entry) => sum + getHouseTimeAmount(entry), 0);
+  const totalPaid = filteredPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const totalBalance = Math.max(totalDue - totalPaid, 0);
+
+  const selectedWorker = workers.find((worker) => worker.id === hourDraft.workerId);
+  const currentRate = Number(hourDraft.hourlyRate || selectedWorker?.hourlyRate || 0);
+  const previewEntry = {
+    startTime: hourDraft.startTime,
+    endTime: hourDraft.endTime,
+    breakMinutes: Number(hourDraft.breakMinutes || 0),
+    hourlyRate: currentRate
+  };
+  const previewHours = getHouseTimeHours(previewEntry);
+  const previewAmount = getHouseTimeAmount(previewEntry);
+
+  const balanceRows = workers
+    .map((worker) => {
+      const workerEntries = filteredEntries.filter((entry) => entry.workerId === worker.id);
+      const workerPayments = filteredPayments.filter((payment) => payment.workerId === worker.id);
+      const hours = workerEntries.reduce((sum, entry) => sum + getHouseTimeHours(entry), 0);
+      const due = workerEntries.reduce((sum, entry) => sum + getHouseTimeAmount(entry), 0);
+      const paid = workerPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+
+      return {
+        worker,
+        hours,
+        due,
+        paid,
+        balance: Math.max(due - paid, 0)
+      };
+    })
+    .filter((row) => row.hours > 0 || row.paid > 0 || row.balance > 0);
+
+  function submitHouse(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const name = String(form.get("name") ?? "").trim();
+
+    if (!name) return window.alert("Ajoutez le nom de la maison.");
+
+    onAddHouse({
+      id: makeId("house"),
+      name,
+      address: String(form.get("address") ?? "").trim(),
+      notes: String(form.get("notes") ?? "").trim(),
+      createdAt: new Date().toISOString()
+    });
+
+    event.currentTarget.reset();
+  }
+
+  function submitWorker(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const contactId = String(form.get("contactId") ?? "");
+    const contact = contacts.find((item) => item.id === contactId);
+    const contactName = contact?.name || String(form.get("contactName") ?? "").trim();
+
+    if (!contactName) return window.alert("Choisissez ou créez un contact intervenant.");
+
+    onAddWorker({
+      id: makeId("worker"),
+      contactId,
+      contactName,
+      role: String(form.get("role") ?? "Intervenant").trim() || "Intervenant",
+      hourlyRate: safeNumber(form.get("hourlyRate")),
+      status: "Actif",
+      notes: String(form.get("notes") ?? "").trim(),
+      createdAt: new Date().toISOString()
+    });
+
+    event.currentTarget.reset();
+  }
+
+  function submitTimeEntry(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const house = houses.find((item) => item.id === hourDraft.houseId);
+    const worker = workers.find((item) => item.id === hourDraft.workerId);
+
+    if (!house) return window.alert("Choisissez une maison.");
+    if (!worker) return window.alert("Choisissez un intervenant.");
+    if (previewHours <= 0) return window.alert("Vérifiez les heures de début et de fin.");
+
+    onAddTimeEntry({
+      id: makeId("hours"),
+      houseId: house.id,
+      houseName: house.name,
+      workerId: worker.id,
+      workerName: worker.contactName,
+      date: hourDraft.date,
+      startTime: hourDraft.startTime,
+      endTime: hourDraft.endTime,
+      breakMinutes: Number(hourDraft.breakMinutes || 0),
+      hourlyRate: currentRate,
+      note: hourDraft.note.trim(),
+      createdAt: new Date().toISOString()
+    });
+
+    setHourDraft((current) => ({ ...current, note: "" }));
+  }
+
+  function submitPayment(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const house = houses.find((item) => item.id === String(form.get("houseId") ?? ""));
+    const worker = workers.find((item) => item.id === String(form.get("workerId") ?? ""));
+    const amount = safeNumber(form.get("amount"));
+
+    if (!house) return window.alert("Choisissez une maison.");
+    if (!worker) return window.alert("Choisissez un intervenant.");
+    if (amount <= 0) return window.alert("Ajoutez un montant payé.");
+
+    onAddPayment({
+      id: makeId("payment"),
+      houseId: house.id,
+      houseName: house.name,
+      workerId: worker.id,
+      workerName: worker.contactName,
+      date: String(form.get("date") ?? today),
+      amount,
+      method: String(form.get("method") ?? "Virement") as HousePayment["method"],
+      note: String(form.get("note") ?? "").trim(),
+      createdAt: new Date().toISOString()
+    });
+
+    event.currentTarget.reset();
+  }
+
+  function exportHouseCsv() {
+    const rows = [
+      ["Type", "Date", "Maison", "Intervenant", "Role", "Debut", "Fin", "Pause", "Heures", "Taux", "Du", "Paye", "Moyen", "Note"],
+      ...filteredEntries.map((entry) => {
+        const worker = workers.find((item) => item.id === entry.workerId);
+        return [
+          "Heures",
+          entry.date,
+          entry.houseName,
+          entry.workerName,
+          worker?.role || "",
+          entry.startTime,
+          entry.endTime,
+          String(entry.breakMinutes),
+          String(getHouseTimeHours(entry)),
+          String(entry.hourlyRate),
+          String(getHouseTimeAmount(entry)),
+          "",
+          "",
+          entry.note || ""
+        ];
+      }),
+      ...filteredPayments.map((payment) => {
+        const worker = workers.find((item) => item.id === payment.workerId);
+        return [
+          "Paiement",
+          payment.date,
+          payment.houseName,
+          payment.workerName,
+          worker?.role || "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          String(payment.amount),
+          payment.method,
+          payment.note || ""
+        ];
+      })
+    ];
+
+    const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `suivi-maison-${monthFilter || "toutes-dates"}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="stack house-tracking-view">
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Gestion privée maison</p>
+            <h3>Suivi des heures, salaires et paiements</h3>
+          </div>
+          <button className="secondary-button" type="button" onClick={exportHouseCsv}>Export CSV</button>
+        </div>
+
+        <div className="stats-grid">
+          <StatCard label="Heures travaillées" value={formatHours(totalHours)} caption="Période filtrée" />
+          <StatCard label="Salaire dû" value={currency.format(totalDue)} caption="Heures x taux" />
+          <StatCard label="Déjà payé" value={currency.format(totalPaid)} caption="Paiements saisis" />
+          <StatCard label="Solde restant" value={currency.format(totalBalance)} caption="À payer" />
+        </div>
+
+        <div className="form-grid" style={{ marginTop: 18 }}>
+          <label>Mois
+            <input type="month" value={monthFilter} onChange={(event) => setMonthFilter(event.target.value)} />
+          </label>
+
+          <label>Maison
+            <select value={houseFilter} onChange={(event) => setHouseFilter(event.target.value)}>
+              <option value="Tous">Toutes les maisons</option>
+              {houses.map((house) => <option key={house.id} value={house.id}>{house.name}</option>)}
+            </select>
+          </label>
+
+          <label>Intervenant
+            <select value={workerFilter} onChange={(event) => setWorkerFilter(event.target.value)}>
+              <option value="Tous">Tous les intervenants</option>
+              {workers.map((worker) => <option key={worker.id} value={worker.id}>{worker.contactName}</option>)}
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <div className="house-tracking-grid">
+        <aside className="stack">
+          <section className="card">
+            <p className="eyebrow">Maisons</p>
+            <h3>Maisons</h3>
+            <form className="form-grid" onSubmit={submitHouse}>
+              <label>Nom
+                <input name="name" placeholder="Maison principale" />
+              </label>
+              <label>Adresse
+                <input name="address" placeholder="Adresse" />
+              </label>
+              <label>Notes
+                <textarea name="notes" placeholder="Accès, alarmes, consignes..." />
+              </label>
+              <button className="primary-button" type="submit">Ajouter la maison</button>
+            </form>
+
+            <div className="list-stack" style={{ marginTop: 18 }}>
+              {houses.length === 0 ? <p className="muted-line">Aucune maison.</p> : houses.map((house) => (
+                <article className="mini-row" key={house.id}>
+                  <div>
+                    <strong>{house.name}</strong>
+                    <span>{house.address || "Adresse à compléter"}</span>
+                  </div>
+                  <button className="danger-link" type="button" onClick={() => window.confirm("Supprimer cette maison ?") && onDeleteHouse(house.id)}>Suppr.</button>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="card">
+            <p className="eyebrow">Intervenants</p>
+            <h3>Intervenants</h3>
+            <form className="form-grid" onSubmit={submitWorker}>
+              <label>Contact CRM
+                <select name="contactId" defaultValue="">
+                  <option value="">Choisir un contact</option>
+                  {contacts.map((contact) => <option key={contact.id} value={contact.id}>{contact.name} · {contact.kind}</option>)}
+                </select>
+              </label>
+              <label>Nom manuel si besoin
+                <input name="contactName" placeholder="Nom" />
+              </label>
+              <label>Rôle
+                <input name="role" placeholder="Ménage, nounou, chauffeur..." />
+              </label>
+              <label>Taux horaire
+                <input name="hourlyRate" type="number" min="0" step="0.5" placeholder="Ex : 18" />
+              </label>
+              <label>Notes
+                <textarea name="notes" placeholder="Disponibilités, conditions, préférences..." />
+              </label>
+              <button className="primary-button" type="submit">Ajouter l’intervenant</button>
+            </form>
+
+            <div className="list-stack" style={{ marginTop: 18 }}>
+              {workers.length === 0 ? <p className="muted-line">Aucun intervenant.</p> : workers.map((worker) => (
+                <article className="mini-row" key={worker.id} data-notification-target={`house-worker-${worker.id}`}>
+                  <div>
+                    <strong>{worker.contactName}</strong>
+                    <span>{worker.role} · {currency.format(worker.hourlyRate)}/h</span>
+                  </div>
+                  <button className="danger-link" type="button" onClick={() => window.confirm("Supprimer cet intervenant ?") && onDeleteWorker(worker.id)}>Suppr.</button>
+                </article>
+              ))}
+            </div>
+          </section>
+        </aside>
+
+        <main className="stack">
+          <section className="card">
+            <p className="eyebrow">Saisie</p>
+            <h3>Saisie des heures</h3>
+            <form className="form-grid" onSubmit={submitTimeEntry}>
+              <label>Date
+                <input type="date" value={hourDraft.date} onChange={(event) => setHourDraft((current) => ({ ...current, date: event.target.value }))} />
+              </label>
+              <label>Maison
+                <select value={hourDraft.houseId} onChange={(event) => setHourDraft((current) => ({ ...current, houseId: event.target.value }))}>
+                  <option value="">Choisir</option>
+                  {houses.map((house) => <option key={house.id} value={house.id}>{house.name}</option>)}
+                </select>
+              </label>
+              <label>Intervenant
+                <select value={hourDraft.workerId} onChange={(event) => {
+                  const worker = workers.find((item) => item.id === event.target.value);
+                  setHourDraft((current) => ({ ...current, workerId: event.target.value, hourlyRate: worker?.hourlyRate ? String(worker.hourlyRate) : current.hourlyRate }));
+                }}>
+                  <option value="">Choisir</option>
+                  {workers.map((worker) => <option key={worker.id} value={worker.id}>{worker.contactName}</option>)}
+                </select>
+              </label>
+              <label>Début
+                <input type="time" value={hourDraft.startTime} onChange={(event) => setHourDraft((current) => ({ ...current, startTime: event.target.value }))} />
+              </label>
+              <label>Fin
+                <input type="time" value={hourDraft.endTime} onChange={(event) => setHourDraft((current) => ({ ...current, endTime: event.target.value }))} />
+              </label>
+              <label>Pause minutes
+                <input type="number" min="0" value={hourDraft.breakMinutes} onChange={(event) => setHourDraft((current) => ({ ...current, breakMinutes: event.target.value }))} />
+              </label>
+              <label>Taux horaire
+                <input type="number" min="0" step="0.5" value={hourDraft.hourlyRate} onChange={(event) => setHourDraft((current) => ({ ...current, hourlyRate: event.target.value }))} />
+              </label>
+              <label>Note
+                <input value={hourDraft.note} onChange={(event) => setHourDraft((current) => ({ ...current, note: event.target.value }))} placeholder="Ex : ménage complet, soirée enfants..." />
+              </label>
+              <div className="full muted-line" style={{ padding: 14, background: "rgba(7,31,39,0.04)" }}>
+                Calcul immédiat : <strong>{formatHours(previewHours)}</strong> — <strong>{currency.format(previewAmount)}</strong>
+              </div>
+              <button className="primary-button" type="submit">Ajouter les heures</button>
+            </form>
+          </section>
+
+          <section className="card">
+            <p className="eyebrow">Paiements</p>
+            <h3>Saisie des paiements</h3>
+            <form className="form-grid" onSubmit={submitPayment}>
+              <label>Date
+                <input name="date" type="date" defaultValue={today} />
+              </label>
+              <label>Maison
+                <select name="houseId" defaultValue={houses[0]?.id || ""}>
+                  <option value="">Choisir</option>
+                  {houses.map((house) => <option key={house.id} value={house.id}>{house.name}</option>)}
+                </select>
+              </label>
+              <label>Intervenant
+                <select name="workerId" defaultValue={workers[0]?.id || ""}>
+                  <option value="">Choisir</option>
+                  {workers.map((worker) => <option key={worker.id} value={worker.id}>{worker.contactName}</option>)}
+                </select>
+              </label>
+              <label>Montant
+                <input name="amount" type="number" min="0" step="1" placeholder="Ex : 150" />
+              </label>
+              <label>Moyen
+                <select name="method" defaultValue="Virement">
+                  <option>Virement</option>
+                  <option>Espèces</option>
+                  <option>CB</option>
+                  <option>Chèque</option>
+                  <option>Autre</option>
+                </select>
+              </label>
+              <label>Note
+                <input name="note" placeholder="Paiement semaine..." />
+              </label>
+              <button className="primary-button" type="submit">Ajouter le paiement</button>
+            </form>
+          </section>
+
+          <section className="card">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Soldes</p>
+                <h3>Soldes par intervenant</h3>
+              </div>
+            </div>
+            {balanceRows.length === 0 ? (
+              <p className="muted-line">Aucun solde sur la période.</p>
+            ) : (
+              <div className="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Intervenant</th>
+                      <th>Heures</th>
+                      <th>Dû</th>
+                      <th>Payé</th>
+                      <th>Solde</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {balanceRows.map((row) => (
+                      <tr key={row.worker.id}>
+                        <td><strong>{row.worker.contactName}</strong><br /><span className="muted-line">{row.worker.role}</span></td>
+                        <td>{formatHours(row.hours)}</td>
+                        <td>{currency.format(row.due)}</td>
+                        <td>{currency.format(row.paid)}</td>
+                        <td><strong>{currency.format(row.balance)}</strong></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <section className="card">
+            <p className="eyebrow">Historique</p>
+            <h3>Historique des heures</h3>
+            <div className="list-stack">
+              {filteredEntries.length === 0 ? <p className="muted-line">Aucune heure saisie.</p> : filteredEntries.map((entry) => (
+                <article className="mini-row" key={entry.id}>
+                  <div>
+                    <strong>{entry.workerName}</strong>
+                    <span>{entry.date} · {entry.houseName} · {entry.startTime} à {entry.endTime} · {formatHours(getHouseTimeHours(entry))} · {currency.format(getHouseTimeAmount(entry))}</span>
+                  </div>
+                  <button className="danger-link" type="button" onClick={() => window.confirm("Supprimer ces heures ?") && onDeleteTimeEntry(entry.id)}>Suppr.</button>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="card">
+            <p className="eyebrow">Historique</p>
+            <h3>Historique des paiements</h3>
+            <div className="list-stack">
+              {filteredPayments.length === 0 ? <p className="muted-line">Aucun paiement saisi.</p> : filteredPayments.map((payment) => (
+                <article className="mini-row" key={payment.id}>
+                  <div>
+                    <strong>{payment.workerName}</strong>
+                    <span>{payment.date} · {payment.houseName} · {currency.format(payment.amount)} · {payment.method}</span>
+                  </div>
+                  <button className="danger-link" type="button" onClick={() => window.confirm("Supprimer ce paiement ?") && onDeletePayment(payment.id)}>Suppr.</button>
+                </article>
+              ))}
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  );
+}
+
 function VendorInvoicesView({
   contacts,
   invoices,
@@ -3115,6 +3766,32 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             targetId: `booking-${quote.id}`
           });
         }
+      }
+    });
+
+
+    const houseEntries = (((data as any).houseTimeEntries ?? []) as HouseTimeEntry[]);
+    const housePayments = (((data as any).housePayments ?? []) as HousePayment[]);
+    const houseWorkers = (((data as any).houseTrackingWorkers ?? []) as HouseTrackingWorker[]);
+
+    houseWorkers.forEach((worker) => {
+      const due = houseEntries
+        .filter((entry) => entry.workerId === worker.id)
+        .reduce((sum, entry) => sum + getHouseTimeAmount(entry), 0);
+      const paid = housePayments
+        .filter((payment) => payment.workerId === worker.id)
+        .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+      const balance = Math.max(due - paid, 0);
+
+      if (balance > 0) {
+        items.push({
+          id: `house-balance-${worker.id}`,
+          title: "Intervenant à payer",
+          detail: `${worker.contactName} · ${currency.format(balance)} restant`,
+          tab: "houseTracking",
+          tone: "warning",
+          targetId: `house-worker-${worker.id}`
+        });
       }
     });
 
@@ -4461,6 +5138,82 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
 
   
 
+  function addHouseTrackingHouse(house: HouseTrackingHouse) {
+    setData((current) => ({
+      ...current,
+      houseTrackingHouses: [stampCreated(house, activeActor), ...(((current as any).houseTrackingHouses ?? []) as HouseTrackingHouse[])]
+    }));
+
+    notify("Maison ajoutée au suivi.");
+  }
+
+  function deleteHouseTrackingHouse(id: string) {
+    setData((current) => ({
+      ...current,
+      houseTrackingHouses: (((current as any).houseTrackingHouses ?? []) as HouseTrackingHouse[]).filter((house) => house.id !== id),
+      houseTimeEntries: (((current as any).houseTimeEntries ?? []) as HouseTimeEntry[]).filter((entry) => entry.houseId !== id),
+      housePayments: (((current as any).housePayments ?? []) as HousePayment[]).filter((payment) => payment.houseId !== id)
+    }));
+
+    notify("Maison supprimée du suivi.");
+  }
+
+  function addHouseTrackingWorker(worker: HouseTrackingWorker) {
+    setData((current) => ({
+      ...current,
+      houseTrackingWorkers: [stampCreated(worker, activeActor), ...(((current as any).houseTrackingWorkers ?? []) as HouseTrackingWorker[])]
+    }));
+
+    notify("Intervenant ajouté.");
+  }
+
+  function deleteHouseTrackingWorker(id: string) {
+    setData((current) => ({
+      ...current,
+      houseTrackingWorkers: (((current as any).houseTrackingWorkers ?? []) as HouseTrackingWorker[]).filter((worker) => worker.id !== id),
+      houseTimeEntries: (((current as any).houseTimeEntries ?? []) as HouseTimeEntry[]).filter((entry) => entry.workerId !== id),
+      housePayments: (((current as any).housePayments ?? []) as HousePayment[]).filter((payment) => payment.workerId !== id)
+    }));
+
+    notify("Intervenant supprimé.");
+  }
+
+  function addHouseTimeEntry(entry: HouseTimeEntry) {
+    setData((current) => ({
+      ...current,
+      houseTimeEntries: [stampCreated(entry, activeActor), ...(((current as any).houseTimeEntries ?? []) as HouseTimeEntry[])]
+    }));
+
+    notify("Heures ajoutées.");
+  }
+
+  function deleteHouseTimeEntry(id: string) {
+    setData((current) => ({
+      ...current,
+      houseTimeEntries: (((current as any).houseTimeEntries ?? []) as HouseTimeEntry[]).filter((entry) => entry.id !== id)
+    }));
+
+    notify("Heures supprimées.");
+  }
+
+  function addHousePayment(payment: HousePayment) {
+    setData((current) => ({
+      ...current,
+      housePayments: [stampCreated(payment, activeActor), ...(((current as any).housePayments ?? []) as HousePayment[])]
+    }));
+
+    notify("Paiement ajouté.");
+  }
+
+  function deleteHousePayment(id: string) {
+    setData((current) => ({
+      ...current,
+      housePayments: (((current as any).housePayments ?? []) as HousePayment[]).filter((payment) => payment.id !== id)
+    }));
+
+    notify("Paiement supprimé.");
+  }
+
   function addVendorInvoice(invoice: VendorInvoice) {
     setData((current) => ({
       ...current,
@@ -5087,7 +5840,7 @@ function createQuoteDraftFromLead(lead: Lead) {
           throw new Error("Format JSON invalide.");
         }
 
-        const knownKeys = ["contacts", "leads", "properties", "vehicles", "boats", "tasks", "suppliers", "quotes"];
+        const knownKeys = ["contacts", "leads", "properties", "vehicles", "boats", "tasks", "suppliers", "quotes", "vendorInvoices", "houseTrackingHouses", "houseTrackingWorkers", "houseTimeEntries", "housePayments"];
         const hasKnownData = knownKeys.some((key) => Array.isArray((parsed as Record<string, unknown>)[key]));
 
         if (!hasKnownData) {
@@ -5139,6 +5892,7 @@ function createQuoteDraftFromLead(lead: Lead) {
         <NavButton label="Devis" icon="🧾" active={activeTab === "quotes"} onClick={() => setActiveTab("quotes")} />
         <NavButton label="Réservations" icon="✓" active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} />
         <NavButton label="Factures fournisseurs" icon="€" active={activeTab === "vendorInvoices"} onClick={() => setActiveTab("vendorInvoices")} />
+        <NavButton label="Suivi maison" icon="⏱" active={activeTab === "houseTracking"} onClick={() => setActiveTab("houseTracking")} />
         <NavButton label="Réponses rapides" icon="💬" active={activeTab === "quickReplies"} onClick={() => setActiveTab("quickReplies")} />
         <NavButton label="Planning" icon="🗓" active={activeTab === "planning"} onClick={() => setActiveTab("planning")} />
         <NavButton label="Biens" icon="🏠" active={activeTab === "properties"} onClick={() => setActiveTab("properties")} />
@@ -5295,6 +6049,34 @@ function createQuoteDraftFromLead(lead: Lead) {
           />
         )}
 
+        {activeTab === "vendorInvoices" && (
+          <VendorInvoicesView
+            contacts={data.contacts}
+            invoices={(((data as any).vendorInvoices ?? []) as VendorInvoice[])}
+            onAdd={addVendorInvoice}
+            onUpdate={updateVendorInvoice}
+            onDelete={deleteVendorInvoice}
+          />
+        )}
+
+        {activeTab === "houseTracking" && (
+          <HouseTrackingView
+            contacts={data.contacts}
+            houses={(((data as any).houseTrackingHouses ?? []) as HouseTrackingHouse[])}
+            workers={(((data as any).houseTrackingWorkers ?? []) as HouseTrackingWorker[])}
+            timeEntries={(((data as any).houseTimeEntries ?? []) as HouseTimeEntry[])}
+            payments={(((data as any).housePayments ?? []) as HousePayment[])}
+            onAddHouse={addHouseTrackingHouse}
+            onDeleteHouse={deleteHouseTrackingHouse}
+            onAddWorker={addHouseTrackingWorker}
+            onDeleteWorker={deleteHouseTrackingWorker}
+            onAddTimeEntry={addHouseTimeEntry}
+            onDeleteTimeEntry={deleteHouseTimeEntry}
+            onAddPayment={addHousePayment}
+            onDeletePayment={deleteHousePayment}
+          />
+        )}
+
         {activeTab === "planning" && (
           <PlanningView
             leads={data.leads}
@@ -5366,6 +6148,7 @@ function titleForTab(tab: Tab) {
     quotes: "Devis",
     bookings: "Réservations",
     vendorInvoices: "Factures fournisseurs",
+    houseTracking: "Suivi maison",
     quickReplies: "Réponses rapides",
     planning: "Planning",
     properties: "Biens",

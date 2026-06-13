@@ -167,6 +167,65 @@ export type Supplier = {
   updatedAt?: string;
 };
 
+export type HouseTrackingHouse = {
+  id: string;
+  name: string;
+  address: string;
+  notes?: string;
+  createdAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+  updatedAt?: string;
+};
+
+export type HouseTrackingWorker = {
+  id: string;
+  contactId: string;
+  contactName: string;
+  role: string;
+  hourlyRate: number;
+  status: "Actif" | "Inactif";
+  notes?: string;
+  createdAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+  updatedAt?: string;
+};
+
+export type HouseTimeEntry = {
+  id: string;
+  houseId: string;
+  houseName: string;
+  workerId: string;
+  workerName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  breakMinutes: number;
+  hourlyRate: number;
+  note?: string;
+  createdAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+  updatedAt?: string;
+};
+
+export type HousePayment = {
+  id: string;
+  houseId: string;
+  houseName: string;
+  workerId: string;
+  workerName: string;
+  date: string;
+  amount: number;
+  method: "Virement" | "Espèces" | "CB" | "Chèque" | "Autre";
+  note?: string;
+  createdAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+  updatedAt?: string;
+};
+
 export type VendorInvoice = {
   id: string;
   contactId: string;
@@ -194,4 +253,8 @@ export type CRMData = {
   planningEntries?: PlanningEntry[];
   quotes?: any[];
   vendorInvoices?: VendorInvoice[];
+  houseTrackingHouses?: HouseTrackingHouse[];
+  houseTrackingWorkers?: HouseTrackingWorker[];
+  houseTimeEntries?: HouseTimeEntry[];
+  housePayments?: HousePayment[];
 };

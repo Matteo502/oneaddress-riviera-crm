@@ -3234,3 +3234,55 @@ textarea {
 .planning-entry-actions .asset-edit-button {
   margin-top: 0 !important;
 }
+
+/* HOUSE_TRACKING_MODULE */
+.house-tracking-view .card {
+  scroll-margin-top: 24px;
+}
+
+.house-tracking-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.72fr) minmax(640px, 1.45fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.house-tracking-grid aside {
+  position: sticky;
+  top: 20px;
+}
+
+.house-tracking-view .table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.house-tracking-view table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.house-tracking-view th,
+.house-tracking-view td {
+  padding: 13px 12px;
+  border-bottom: 1px solid rgba(7, 31, 39, 0.1);
+  text-align: left;
+  vertical-align: top;
+}
+
+.house-tracking-view th {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(7, 31, 39, 0.62);
+}
+
+@media (max-width: 1120px) {
+  .house-tracking-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .house-tracking-grid aside {
+    position: static;
+  }
+}
