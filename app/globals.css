@@ -3346,3 +3346,24 @@ textarea {
   }
 }
 
+
+/* CRM_AUTO_SCROLL_BUTTONS */
+.form-card,
+.detail-card,
+.details-card,
+.quote-preview,
+.quote-card,
+.two-columns > section,
+.two-columns > .card,
+.card,
+section,
+article {
+  scroll-margin-top: 96px;
+}
+
+.crm-auto-scroll-focus {
+  outline: 2px solid rgba(201, 161, 86, 0.55);
+  outline-offset: 4px;
+  transition: outline-color 0.25s ease, outline-offset 0.25s ease;
+}
+

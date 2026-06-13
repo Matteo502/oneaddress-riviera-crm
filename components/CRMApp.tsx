@@ -3413,6 +3413,121 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
   const [sharedWorkspaceMessage, setSharedWorkspaceMessage] = useState("Chargement de la base partagée...");
   const [sharedWorkspaceUpdatedAt, setSharedWorkspaceUpdatedAt] = useState("");
   const [toast, setToast] = useState<Toast | null>(null);
+
+  useEffect(() => {
+    function normalizeCrmButtonLabel(value: string) {
+      return value
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function isVisibleCrmTarget(element: HTMLElement) {
+      const rect = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+
+      return (
+        rect.width > 0 &&
+        rect.height > 60 &&
+        style.display !== "none" &&
+        style.visibility !== "hidden"
+      );
+    }
+
+    function scrollToCrmTarget(target: HTMLElement) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      target.classList.add("crm-auto-scroll-focus");
+      window.setTimeout(() => target.classList.remove("crm-auto-scroll-focus"), 1200);
+    }
+
+    function findCrmActionTarget(button: HTMLElement) {
+      const clickedCard = button.closest("article, section, .card, .item-card, .lead-card");
+      const selectors = [
+        ".form-card",
+        ".detail-card",
+        ".details-card",
+        ".quote-preview",
+        ".quote-card",
+        ".two-columns > section:last-child",
+        ".two-columns > .card:last-child",
+        "form"
+      ];
+
+      const candidates = Array.from(document.querySelectorAll<HTMLElement>(selectors.join(",")))
+        .map((candidate) => candidate.closest<HTMLElement>(".form-card, .card, section") || candidate)
+        .filter((candidate, index, list) => list.indexOf(candidate) === index)
+        .filter((candidate) => isVisibleCrmTarget(candidate))
+        .filter((candidate) => !clickedCard || !clickedCard.contains(candidate));
+
+      return candidates[0] || document.querySelector<HTMLElement>("main") || document.body;
+    }
+
+    function shouldAutoScroll(button: HTMLElement) {
+      if (button.closest("aside, nav, .sidebar")) return false;
+
+      const rawLabel = button.textContent || button.getAttribute("aria-label") || "";
+      const label = normalizeCrmButtonLabel(rawLabel);
+      const type = (button.getAttribute("type") || "").toLowerCase();
+
+      if (!label) return false;
+      if (type === "submit") return false;
+
+      const skipWords = [
+        "supprimer",
+        "deconnexion",
+        "connexion",
+        "export",
+        "import",
+        "sauvegarde",
+        "recharger cloud",
+        "forcer synchro",
+        "annuler",
+        "reset",
+        "reinitialiser"
+      ];
+
+      if (skipWords.some((word) => label.includes(word))) return false;
+
+      const triggerWords = [
+        "modifier",
+        "details",
+        "detail",
+        "ouvrir",
+        "creer",
+        "nouveau",
+        "traiter",
+        "voir",
+        "gerer",
+        "relancer"
+      ];
+
+      return triggerWords.some((word) => label.includes(word));
+    }
+
+    function handleCrmButtonClick(event: MouseEvent) {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const button = target.closest<HTMLElement>("button, a, [role='button']");
+      if (!button || !shouldAutoScroll(button)) return;
+
+      window.setTimeout(() => {
+        window.requestAnimationFrame(() => {
+          const scrollTarget = findCrmActionTarget(button);
+          scrollToCrmTarget(scrollTarget);
+        });
+      }, 120);
+    }
+
+    document.addEventListener("click", handleCrmButtonClick, true);
+
+    return () => {
+      document.removeEventListener("click", handleCrmButtonClick, true);
+    };
+  }, []);
+
   const [activeActor, setActiveActor] = useState<CRMActor>("Matteo");
 
   useEffect(() => {
