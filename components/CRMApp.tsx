@@ -3409,6 +3409,9 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
   const [query, setQuery] = useState("");
   const [data, setData] = useState<CRMData>(emptyData);
   const [sharedWorkspaceReady, setSharedWorkspaceReady] = useState(false);
+  const [sharedWorkspaceStatus, setSharedWorkspaceStatus] = useState<"loading" | "connected" | "local" | "error">("loading");
+  const [sharedWorkspaceMessage, setSharedWorkspaceMessage] = useState("Chargement de la base partagée...");
+  const [sharedWorkspaceUpdatedAt, setSharedWorkspaceUpdatedAt] = useState("");
   const [toast, setToast] = useState<Toast | null>(null);
   const [activeActor, setActiveActor] = useState<CRMActor>("Matteo");
 
@@ -3473,12 +3476,14 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       if (userError || !userData.user) {
         window.alert("Base CRM partagée non chargée : utilisateur Supabase non connecté.");
         setSharedWorkspaceReady(false);
+        setSharedWorkspaceStatus("error");
+        setSharedWorkspaceMessage("Base partagée non chargée : utilisateur Supabase non connecté.");
         return;
       }
 
       const { data: row, error } = await supabase
         .from("crm_workspace_state")
-        .select("payload")
+        .select("payload, updated_at")
         .eq("workspace_id", SHARED_WORKSPACE_ID)
         .single();
 
@@ -3487,14 +3492,20 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       if (error) {
         window.alert(`Base CRM partagée non chargée : ${error.message}`);
         setSharedWorkspaceReady(false);
+        setSharedWorkspaceStatus("error");
+        setSharedWorkspaceMessage(`Base partagée non chargée : ${error.message}`);
         return;
       }
 
       const sharedData = normalizeSharedCRMData(row?.payload);
+      const sharedUpdatedAt = String(row?.updated_at || "");
 
       if (crmDataHasContent(sharedData)) {
         setData(sharedData);
         setSharedWorkspaceReady(true);
+        setSharedWorkspaceStatus("connected");
+        setSharedWorkspaceMessage("Base partagée chargée depuis Supabase.");
+        setSharedWorkspaceUpdatedAt(sharedUpdatedAt);
         return;
       }
 
@@ -3503,6 +3514,9 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       if (!crmDataHasContent(localData)) {
         setData(emptyData);
         setSharedWorkspaceReady(true);
+        setSharedWorkspaceStatus("connected");
+        setSharedWorkspaceMessage("Base partagée connectée, mais encore vide.");
+        setSharedWorkspaceUpdatedAt(sharedUpdatedAt);
         return;
       }
 
@@ -3513,6 +3527,9 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       if (!shouldSeedSharedWorkspace) {
         setData(emptyData);
         setSharedWorkspaceReady(true);
+        setSharedWorkspaceStatus("local");
+        setSharedWorkspaceMessage("Base partagée vide. Données locales non copiées.");
+        setSharedWorkspaceUpdatedAt(sharedUpdatedAt);
         return;
       }
 
@@ -3528,11 +3545,16 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       if (seedError) {
         window.alert(`Base CRM partagée non initialisée : ${seedError.message}`);
         setSharedWorkspaceReady(false);
+        setSharedWorkspaceStatus("error");
+        setSharedWorkspaceMessage(`Base partagée non initialisée : ${seedError.message}`);
         return;
       }
 
       setData(localData);
       setSharedWorkspaceReady(true);
+      setSharedWorkspaceStatus("connected");
+      setSharedWorkspaceMessage("Base partagée initialisée depuis les données locales.");
+      setSharedWorkspaceUpdatedAt(new Date().toISOString());
     }
 
     const timer = window.setTimeout(() => {
@@ -3571,7 +3593,14 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
 
         if (error) {
           console.warn(`Base CRM partagée non sauvegardée : ${error.message}`);
+          setSharedWorkspaceStatus("error");
+          setSharedWorkspaceMessage(`Base partagée non sauvegardée : ${error.message}`);
+          return;
         }
+
+        setSharedWorkspaceStatus("connected");
+        setSharedWorkspaceMessage("Base partagée synchronisée.");
+        setSharedWorkspaceUpdatedAt(new Date().toISOString());
       }
 
       void saveSharedWorkspaceState();
@@ -5034,6 +5063,86 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     };
   }, []);
 
+
+  async function reloadSharedWorkspaceFromCloud() {
+    setSharedWorkspaceStatus("loading");
+    setSharedWorkspaceMessage("Rechargement depuis Supabase...");
+
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !userData.user) {
+      setSharedWorkspaceStatus("error");
+      setSharedWorkspaceMessage("Rechargement impossible : utilisateur Supabase non connecté.");
+      notify("Rechargement cloud impossible : non connecté.", "warning");
+      return;
+    }
+
+    const { data: row, error } = await supabase
+      .from("crm_workspace_state")
+      .select("payload, updated_at")
+      .eq("workspace_id", SHARED_WORKSPACE_ID)
+      .single();
+
+    if (error) {
+      setSharedWorkspaceStatus("error");
+      setSharedWorkspaceMessage(`Rechargement cloud impossible : ${error.message}`);
+      notify("Rechargement cloud impossible.", "warning");
+      return;
+    }
+
+    const sharedData = normalizeSharedCRMData(row?.payload);
+
+    setData(sharedData);
+    setSharedWorkspaceReady(true);
+    setSharedWorkspaceStatus("connected");
+    setSharedWorkspaceMessage("Données rechargées depuis la base partagée.");
+    setSharedWorkspaceUpdatedAt(String(row?.updated_at || new Date().toISOString()));
+    notify("CRM rechargé depuis Supabase.");
+  }
+
+  async function forceSaveSharedWorkspaceNow() {
+    setSharedWorkspaceStatus("loading");
+    setSharedWorkspaceMessage("Synchronisation forcée en cours...");
+
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !userData.user) {
+      setSharedWorkspaceStatus("error");
+      setSharedWorkspaceMessage("Synchronisation impossible : utilisateur Supabase non connecté.");
+      notify("Synchronisation cloud impossible : non connecté.", "warning");
+      return;
+    }
+
+    const visibleQuotes = mergeQuoteRequests((((data as any).quotes ?? []) as QuoteRequest[]), loadSavedQuotes());
+    const dataWithVisibleQuotes: CRMData = {
+      ...data,
+      quotes: visibleQuotes
+    };
+
+    const { error } = await supabase
+      .from("crm_workspace_state")
+      .upsert({
+        workspace_id: SHARED_WORKSPACE_ID,
+        payload: dataWithVisibleQuotes,
+        updated_at: new Date().toISOString(),
+        updated_by: userData.user.id
+      }, { onConflict: "workspace_id" });
+
+    if (error) {
+      setSharedWorkspaceStatus("error");
+      setSharedWorkspaceMessage(`Synchronisation impossible : ${error.message}`);
+      notify("Synchronisation cloud impossible.", "warning");
+      return;
+    }
+
+    setData(dataWithVisibleQuotes);
+    setSharedWorkspaceReady(true);
+    setSharedWorkspaceStatus("connected");
+    setSharedWorkspaceMessage("Synchronisation cloud forcée effectuée.");
+    setSharedWorkspaceUpdatedAt(new Date().toISOString());
+    notify("Base partagée synchronisée.");
+  }
+
   async function saveCrmBackupToSupabase() {
     const currentData = data as any;
 
@@ -5932,6 +6041,8 @@ function createQuoteDraftFromLead(lead: Lead) {
             <button className="secondary-button" type="button" onClick={openSafeCsvImportPrompt}>Import sécurisé</button>
             <button className="secondary-button" onClick={exportJson}>Backup fichier</button>
             <button className="secondary-button" type="button" onClick={saveCrmBackupToSupabase}>Sauvegarde cloud</button>
+            <button className="secondary-button" type="button" onClick={reloadSharedWorkspaceFromCloud}>Recharger cloud</button>
+            <button className="secondary-button" type="button" onClick={forceSaveSharedWorkspaceNow}>Forcer synchro</button>
             
             <button className="secondary-button" onClick={() => {
             exportCRMAsCsv(data);
@@ -5939,6 +6050,28 @@ function createQuoteDraftFromLead(lead: Lead) {
           }}>Export CSV</button>
           </div>
         </header>
+
+        <section className={`shared-db-status-panel ${sharedWorkspaceStatus}`}>
+          <div>
+            <p className="eyebrow">Base partagée</p>
+            <strong>
+              {sharedWorkspaceStatus === "connected" ? "Connectée" : sharedWorkspaceStatus === "loading" ? "Synchronisation..." : sharedWorkspaceStatus === "local" ? "Mode local / à vérifier" : "Erreur"}
+            </strong>
+            <span>{sharedWorkspaceMessage}</span>
+            {sharedWorkspaceUpdatedAt && (
+              <small>Dernière mise à jour cloud : {new Date(sharedWorkspaceUpdatedAt).toLocaleString("fr-FR")}</small>
+            )}
+          </div>
+
+          <div>
+            <button className="secondary-button" type="button" onClick={reloadSharedWorkspaceFromCloud}>
+              Recharger cloud
+            </button>
+            <button className="primary-button" type="button" onClick={forceSaveSharedWorkspaceNow}>
+              Forcer synchro
+            </button>
+          </div>
+        </section>
 
         {actionNotifications.length > 0 && (
           <section className="crm-notification-panel">

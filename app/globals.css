@@ -3286,3 +3286,63 @@ textarea {
     position: static;
   }
 }
+
+
+/* SHARED_DB_STATUS_PANEL */
+.shared-db-status-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin: 0 0 22px;
+  padding: 18px 20px;
+  border: 1px solid rgba(7, 31, 39, 0.12);
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: 0 14px 32px rgba(7, 31, 39, 0.06);
+}
+
+.shared-db-status-panel strong {
+  display: block;
+  margin: 4px 0 4px;
+  color: #071f27;
+}
+
+.shared-db-status-panel span,
+.shared-db-status-panel small {
+  display: block;
+  color: rgba(7, 31, 39, 0.62);
+  line-height: 1.35;
+}
+
+.shared-db-status-panel > div:last-child {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.shared-db-status-panel.connected {
+  border-left: 4px solid rgba(37, 112, 78, 0.85);
+}
+
+.shared-db-status-panel.loading,
+.shared-db-status-panel.local {
+  border-left: 4px solid #c9a156;
+}
+
+.shared-db-status-panel.error {
+  border-left: 4px solid #8b2f2f;
+  background: rgba(255, 244, 244, 0.82);
+}
+
+@media (max-width: 820px) {
+  .shared-db-status-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .shared-db-status-panel > div:last-child {
+    justify-content: flex-start;
+  }
+}
+
