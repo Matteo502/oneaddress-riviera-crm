@@ -38,7 +38,7 @@ const propertyStatuses: PropertyStatus[] = ["Disponible", "Mandat en cours", "Lo
 const vehicleStatuses: VehicleStatus[] = ["Disponible", "En location", "En maintenance", "Vendu"];
 const boatStatuses: BoatStatus[] = ["Disponible", "En charter", "En maintenance", "Vendu"];
 const taskStatuses: TaskStatus[] = ["À faire", "En cours", "Terminé"];
-const contactKinds: ContactKind[] = ["Client", "Fournisseur", "Propriétaire", "Partenaire"];
+const contactKinds: ContactKind[] = ["Client", "Prestataire", "Propriétaire", "Partenaire"];
 const contactLevels = ["Standard", "VIP", "Ultra VIP"] as const;
 const contactLanguages = ["Français", "Anglais", "Italien", "Autre"] as const;
 const contactRelationshipStatuses = ["Prospect", "Actif", "Dormant"] as const;
@@ -65,7 +65,7 @@ const emptyData: CRMData = {
 
 
 function isSupplierContact(contact: Contact) {
-  return contact.kind === "Fournisseur" || Boolean(contact.supplierCategory);
+  return contact.kind === "Prestataire" || Boolean(contact.supplierCategory);
 }
 
 function getContactSupplierCategory(contact: Contact) {
@@ -87,14 +87,14 @@ function supplierToContact(supplier: Supplier): Contact {
 
   return {
     id: `contact-${supplier.id}`,
-    name: supplierName || contactName || "Fournisseur à compléter",
-    kind: "Fournisseur",
+    name: supplierName || contactName || "Prestataire à compléter",
+    kind: "Prestataire",
     email: supplier.email || "",
     phone: supplier.phone || "",
     city: supplier.zone || "",
     postalAddress: supplier.zone || "",
     budget: 0,
-    source: "Ancien module Fournisseurs",
+    source: "Ancien module Prestataires",
     notes,
     clientLevel: "Standard",
     preferredLanguage: "Français",
@@ -236,8 +236,8 @@ function normalizeVendorInvoice(value: unknown): VendorInvoice | null {
     id: String(raw.id || makeId("invoice")),
     contactId: String(raw.contactId || ""),
     contactName: String(raw.contactName || ""),
-    category: String(raw.category || "Fournisseur"),
-    title: String(raw.title || "Facture fournisseur"),
+    category: String(raw.category || "Prestataire"),
+    title: String(raw.title || "Facture prestataire"),
     invoiceDate: String(raw.invoiceDate || ""),
     dueDate: String(raw.dueDate || ""),
     amount: Number.isFinite(amount) ? amount : 0,
@@ -2134,7 +2134,7 @@ function SuppliersView({
     };
 
     if (!supplier.name) {
-      window.alert("Ajoutez au minimum le nom du fournisseur.");
+      window.alert("Ajoutez au minimum le nom du prestataire.");
       return;
     }
 
@@ -2154,7 +2154,7 @@ function SuppliersView({
         <div className="section-heading">
           <div>
             <p className="eyebrow">Réseau privé</p>
-            <h3>{visibleSuppliers.length} fournisseur{visibleSuppliers.length > 1 ? "s" : ""}</h3>
+            <h3>{visibleSuppliers.length} prestataire{visibleSuppliers.length > 1 ? "s" : ""}</h3>
           </div>
           <p className="muted-line">Partenaires et prestataires privés à activer rapidement.</p>
         </div>
@@ -2173,7 +2173,7 @@ function SuppliersView({
         </div>
 
         {visibleSuppliers.length === 0 ? (
-          <p className="muted-line">Aucun fournisseur dans cette catégorie.</p>
+          <p className="muted-line">Aucun prestataire dans cette catégorie.</p>
         ) : (
           <div className="list-stack">
             {visibleSuppliers.map((supplier) => (
@@ -2209,7 +2209,7 @@ function SuppliersView({
                     className="danger-button"
                     type="button"
                     onClick={() => {
-                      if (window.confirm("Supprimer ce fournisseur ?")) {
+                      if (window.confirm("Supprimer ce prestataire ?")) {
                         onDelete(supplier.id);
                       }
                     }}
@@ -2225,10 +2225,10 @@ function SuppliersView({
 
       <section className="card">
         <p className="eyebrow">{editingSupplier ? "Modification" : "Nouveau"}</p>
-        <h3>{editingSupplier ? "Modifier le fournisseur" : "Ajouter un fournisseur"}</h3>
+        <h3>{editingSupplier ? "Modifier le prestataire" : "Ajouter un prestataire"}</h3>
 
         <form className="form-grid" onSubmit={submitSupplier}>
-          <label>Nom fournisseur
+          <label>Nom prestataire
             <input name="name" defaultValue={editingSupplier?.name ?? ""} placeholder="Ex : Riviera Chauffeur Premium" />
           </label>
 
@@ -2294,7 +2294,7 @@ function SuppliersView({
           </label>
 
           <button className="primary-button" type="submit">
-            {editingSupplier ? "Enregistrer" : "Ajouter fournisseur"}
+            {editingSupplier ? "Enregistrer" : "Ajouter prestataire"}
           </button>
 
           {editingSupplier && (
@@ -2433,7 +2433,7 @@ function BookingsView({
                       <strong>{formatQuotePrice(clientPrice)}</strong>
                     </div>
                     <div className="mini-stat">
-                      <span>Coût fournisseur</span>
+                      <span>Coût prestataire</span>
                       <strong>{formatQuotePrice(supplierCost)}</strong>
                     </div>
                     <div className="mini-stat">
@@ -2502,7 +2502,7 @@ function BookingsView({
                       <input name="paymentDueDate" type="date" defaultValue={quote.paymentDueDate || ""} />
                     </label>
 
-                    <label>Coût fournisseur
+                    <label>Coût prestataire
                       <input name="supplierCost" type="number" min="0" step="1" defaultValue={quote.supplierCost || ""} placeholder="Ex : 2500" />
                     </label>
 
@@ -3126,7 +3126,7 @@ function VendorInvoicesView({
 
   const supplierContacts = contacts.filter((contact) => {
     const kind = String((contact as any).kind || "");
-    return kind === "Fournisseur" || kind === "Partenaire" || kind === "Propriétaire";
+    return kind === "Prestataire" || kind === "Partenaire" || kind === "Propriétaire";
   });
 
   const selectableContacts = supplierContacts.length > 0 ? supplierContacts : contacts;
@@ -3153,8 +3153,8 @@ function VendorInvoicesView({
       id: editingInvoice?.id || makeId("invoice"),
       contactId,
       contactName: contact?.name || String(form.get("contactName") ?? "").trim(),
-      category: String(form.get("category") ?? "Fournisseur").trim(),
-      title: String(form.get("title") ?? "").trim() || "Facture fournisseur",
+      category: String(form.get("category") ?? "Prestataire").trim(),
+      title: String(form.get("title") ?? "").trim() || "Facture prestataire",
       invoiceDate: String(form.get("invoiceDate") ?? ""),
       dueDate,
       amount,
@@ -3165,7 +3165,7 @@ function VendorInvoicesView({
       createdAt: editingInvoice?.createdAt || new Date().toISOString()
     };
 
-    if (!invoice.contactName) return window.alert("Choisissez un contact fournisseur.");
+    if (!invoice.contactName) return window.alert("Choisissez un contact prestataire.");
     if (!invoice.amount || invoice.amount <= 0) return window.alert("Ajoutez un montant de facture.");
 
     if (editingInvoice) {
@@ -3183,7 +3183,7 @@ function VendorInvoicesView({
       <section className="card vendor-invoices-list-card">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Factures fournisseurs</p>
+            <p className="eyebrow">Factures prestataires</p>
             <h3>{visibleInvoices.length} facture{visibleInvoices.length > 1 ? "s" : ""}</h3>
           </div>
           <div>
@@ -3206,7 +3206,7 @@ function VendorInvoicesView({
         </div>
 
         {visibleInvoices.length === 0 ? (
-          <p className="muted-line">Aucune facture fournisseur pour ce filtre.</p>
+          <p className="muted-line">Aucune facture prestataire pour ce filtre.</p>
         ) : (
           <div className="list-stack">
             {visibleInvoices.map((invoice) => (
@@ -3249,7 +3249,7 @@ function VendorInvoicesView({
                     className="danger-link"
                     type="button"
                     onClick={() => {
-                      if (window.confirm("Supprimer cette facture fournisseur ?")) {
+                      if (window.confirm("Supprimer cette facture prestataire ?")) {
                         onDelete(invoice.id);
                       }
                     }}
@@ -3265,10 +3265,10 @@ function VendorInvoicesView({
 
       <section className="card form-card vendor-invoices-form-card">
         <p className="eyebrow">{editingInvoice ? "Modification" : "Nouvelle"}</p>
-        <h3>{editingInvoice ? "Modifier facture" : "Ajouter une facture fournisseur"}</h3>
+        <h3>{editingInvoice ? "Modifier facture" : "Ajouter une facture prestataire"}</h3>
 
         <form key={editingInvoice?.id || "new-vendor-invoice"} className="form-grid" onSubmit={submitInvoice}>
-          <label>Contact fournisseur
+          <label>Contact prestataire
             <select name="contactId" defaultValue={editingInvoice?.contactId || ""} required>
               <option value="">Choisir un contact</option>
               {selectableContacts.map((contact) => (
@@ -3280,8 +3280,8 @@ function VendorInvoicesView({
           </label>
 
           <label>Catégorie
-            <select name="category" defaultValue={editingInvoice?.category || "Fournisseur"}>
-              <option>Fournisseur</option>
+            <select name="category" defaultValue={editingInvoice?.category || "Prestataire"}>
+              <option>Prestataire</option>
               <option>Paysagiste</option>
               <option>Jardinier</option>
               <option>Pisciniste</option>
@@ -4048,7 +4048,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
 
       items.push({
         id: `vendor-invoice-payment-${invoice.id}`,
-        title: days !== null && days < 0 ? "Facture fournisseur en retard" : "Facture fournisseur à payer",
+        title: days !== null && days < 0 ? "Facture prestataire en retard" : "Facture prestataire à payer",
         detail: `${invoice.contactName} · ${formatQuotePrice(remaining)} restant`,
         tab: "vendorInvoices",
         tone: days !== null && days < 0 ? "danger" : "warning",
@@ -5561,7 +5561,7 @@ const toneRank: Record<ActionNotification["tone"], number> = {
       vendorInvoices: [invoice, ...(((current as any).vendorInvoices ?? []) as VendorInvoice[])]
     }));
 
-    notify("Facture fournisseur ajoutée.");
+    notify("Facture prestataire ajoutée.");
   }
 
   function updateVendorInvoice(updatedInvoice: VendorInvoice) {
@@ -5572,7 +5572,7 @@ const toneRank: Record<ActionNotification["tone"], number> = {
       )
     }));
 
-    notify("Facture fournisseur mise à jour.");
+    notify("Facture prestataire mise à jour.");
   }
 
   function deleteVendorInvoice(id: string) {
@@ -5581,7 +5581,7 @@ const toneRank: Record<ActionNotification["tone"], number> = {
       vendorInvoices: (((current as any).vendorInvoices ?? []) as VendorInvoice[]).filter((invoice) => invoice.id !== id)
     }));
 
-    notify("Facture fournisseur supprimée.");
+    notify("Facture prestataire supprimée.");
   }
 
   function addSupplier(supplier: Supplier) {
@@ -5589,7 +5589,7 @@ const toneRank: Record<ActionNotification["tone"], number> = {
       ...current,
       suppliers: [supplier, ...(((current as any).suppliers ?? []) as Supplier[])]
     }));
-    notify("Fournisseur ajouté.");
+    notify("Prestataire ajouté.");
   }
 
   function updateSupplier(updatedSupplier: Supplier) {
@@ -5599,7 +5599,7 @@ const toneRank: Record<ActionNotification["tone"], number> = {
         supplier.id === updatedSupplier.id ? updatedSupplier : supplier
       )
     }));
-    notify("Fournisseur mis à jour.");
+    notify("Prestataire mis à jour.");
   }
 
   function deleteSupplier(id: string) {
@@ -5607,7 +5607,7 @@ const toneRank: Record<ActionNotification["tone"], number> = {
       ...current,
       suppliers: (((current as any).suppliers ?? []) as Supplier[]).filter((supplier) => supplier.id !== id)
     }));
-    notify("Fournisseur supprimé.");
+    notify("Prestataire supprimé.");
   }
 
 function addContact(event: React.FormEvent<HTMLFormElement>) {
@@ -5825,7 +5825,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
     const entry = stampCreated({
       id: makeId("planning"),
       title: String(form.get("title") ?? "").trim(),
-      type: String(form.get("type") ?? "Intervention fournisseur") as PlanningEntryType,
+      type: String(form.get("type") ?? "Intervention prestataire") as PlanningEntryType,
       contactName: String(form.get("contactName") ?? "").trim(),
       assetType: assetSelection.assetType,
       assetId: assetSelection.assetId,
@@ -5874,7 +5874,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
 
     const nextEntry = {
       title: String(form.get("title") ?? "").trim(),
-      type: String(form.get("type") ?? "Intervention fournisseur") as PlanningEntryType,
+      type: String(form.get("type") ?? "Intervention prestataire") as PlanningEntryType,
       contactName: String(form.get("contactName") ?? "").trim(),
       assetType: assetSelection.assetType,
       assetId: assetSelection.assetId,
@@ -6228,7 +6228,7 @@ function createQuoteDraftFromLead(lead: Lead) {
         <NavButton label="Tâches" icon="✓" active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} />
         <NavButton label="Devis" icon="🧾" active={activeTab === "quotes"} onClick={() => setActiveTab("quotes")} />
         <NavButton label="Réservations" icon="✓" active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} />
-        <NavButton label="Factures fournisseurs" icon="€" active={activeTab === "vendorInvoices"} onClick={() => setActiveTab("vendorInvoices")} />
+        <NavButton label="Factures prestataires" icon="€" active={activeTab === "vendorInvoices"} onClick={() => setActiveTab("vendorInvoices")} />
         <NavButton label="Suivi maison" icon="⏱" active={activeTab === "houseTracking"} onClick={() => setActiveTab("houseTracking")} />
         <NavButton label="Réponses rapides" icon="💬" active={activeTab === "quickReplies"} onClick={() => setActiveTab("quickReplies")} />
         <NavButton label="Planning" icon="🗓" active={activeTab === "planning"} onClick={() => setActiveTab("planning")} />
@@ -6508,7 +6508,7 @@ function titleForTab(tab: Tab) {
     tasks: "Tâches",
     quotes: "Devis",
     bookings: "Réservations",
-    vendorInvoices: "Factures fournisseurs",
+    vendorInvoices: "Factures prestataires",
     houseTracking: "Suivi maison",
     quickReplies: "Réponses rapides",
     planning: "Planning",
@@ -6535,7 +6535,7 @@ type PlanningAsset = {
 };
 
 const planningEntryTypes: PlanningEntryType[] = [
-  "Intervention fournisseur",
+  "Intervention prestataire",
   "Maintenance",
   "Tâche interne",
   "Réservation",
@@ -6687,7 +6687,7 @@ function PlanningView({
 
   const supplierContacts = useMemo(() => {
     return contacts
-      .filter((contact) => contact.kind === "Fournisseur" || Boolean(contact.supplierCategory))
+      .filter((contact) => contact.kind === "Prestataire" || Boolean(contact.supplierCategory))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [contacts]);
 
@@ -7007,21 +7007,21 @@ function PlanningView({
           </label>
 
           <label>Type
-            <select name="type" defaultValue={editingPlanningEntry?.type ?? "Intervention fournisseur"}>
+            <select name="type" defaultValue={editingPlanningEntry?.type ?? "Intervention prestataire"}>
               {planningEntryTypes.map((type) => (
                 <option key={type}>{type}</option>
               ))}
             </select>
           </label>
 
-          <label>Contact / fournisseur
+          <label>Contact / prestataire
             <select name="contactName" defaultValue={editingPlanningEntry?.contactName ?? ""}>
               <option value="">Aucun contact lié</option>
               {supplierContacts.map((contact) => (
                 <option key={contact.id} value={contact.name}>{contact.name}</option>
               ))}
               {contacts
-                .filter((contact) => contact.kind !== "Fournisseur" && !contact.supplierCategory)
+                .filter((contact) => contact.kind !== "Prestataire" && !contact.supplierCategory)
                 .sort((a, b) => a.name.localeCompare(b.name))
                 .map((contact) => (
                   <option key={contact.id} value={contact.name}>{contact.name}</option>
@@ -7075,7 +7075,7 @@ function PlanningView({
 
         <div className="list-stack">
           {planningEntries.length === 0 ? (
-            <p className="muted-line">Aucune intervention interne. Ajoutez ici les fournisseurs, maintenances et passages qui ne doivent pas devenir des leads.</p>
+            <p className="muted-line">Aucune intervention interne. Ajoutez ici les prestataires, maintenances et passages qui ne doivent pas devenir des leads.</p>
           ) : (
             planningEntries
               .slice()
@@ -7611,7 +7611,7 @@ function Dashboard({
 
         <div className="stats-grid">
           <StatCard label="CA confirmé" value={currency.format(confirmedRevenue)} caption="Total des devis gagnés" />
-          <StatCard label="Marge estimée" value={currency.format(estimatedMargin)} caption="Prix client - coût fournisseur" />
+          <StatCard label="Marge estimée" value={currency.format(estimatedMargin)} caption="Prix client - coût prestataire" />
           <StatCard label="Paiements restants" value={currency.format(remainingPayments)} caption="Solde encore à recevoir" />
           <StatCard label="Réservations à préparer" value={String(bookingsToPrepare.length)} caption="Services gagnés non terminés" />
         </div>
@@ -7763,7 +7763,7 @@ function ContactsView({
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
 
-  const filterOptions = ["Tous", "Clients", "Fournisseurs", "Propriétaires", "Partenaires"];
+  const filterOptions = ["Tous", "Clients", "Prestataires", "Propriétaires", "Partenaires"];
 
   function getContactLeads(contact: Contact) {
     return leads.filter((lead) => lead.contactName === contact.name);
@@ -7781,13 +7781,13 @@ function ContactsView({
     const matchesType =
       contactFilter === "Tous" ||
       (contactFilter === "Clients" && contact.kind === "Client" && !supplier) ||
-      (contactFilter === "Fournisseurs" && supplier) ||
+      (contactFilter === "Prestataires" && supplier) ||
       (contactFilter === "Propriétaires" && contact.kind === "Propriétaire") ||
       (contactFilter === "Partenaires" && contact.kind === "Partenaire");
 
     const matchesSupplierCategory = supplierCategoryFilter === "Toutes" || getContactSupplierCategory(contact) === supplierCategoryFilter;
 
-    return matchesType && (contactFilter === "Fournisseurs" ? matchesSupplierCategory : true);
+    return matchesType && (contactFilter === "Prestataires" ? matchesSupplierCategory : true);
   });
 
   const clientCount = contacts.filter((contact) => contact.kind === "Client" && !isSupplierContact(contact)).length;
@@ -7847,7 +7847,7 @@ function ContactsView({
   }
 
   function typeLabel(contact: Contact) {
-    return isSupplierContact(contact) ? "Fournisseur" : contact.kind;
+    return isSupplierContact(contact) ? "Prestataire" : contact.kind;
   }
 
   return (
@@ -7858,12 +7858,12 @@ function ContactsView({
             <p className="eyebrow">Contacts</p>
             <h3>{visibleContacts.length} contact{visibleContacts.length > 1 ? "s" : ""}</h3>
           </div>
-          <p className="muted-line">Clients et réseau fournisseurs au même endroit. Filtrez vite, ouvrez uniquement si nécessaire.</p>
+          <p className="muted-line">Clients et réseau prestataires au même endroit. Filtrez vite, ouvrez uniquement si nécessaire.</p>
         </div>
 
         <div className="stats-grid">
           <StatCard label="Clients" value={String(clientCount)} caption="Demandes et leads" />
-          <StatCard label="Fournisseurs" value={String(supplierCount)} caption="Prestataires activables" />
+          <StatCard label="Prestataires" value={String(supplierCount)} caption="Prestataires activables" />
           <StatCard label="Propriétaires" value={String(ownerCount)} caption="Actifs privés" />
           <StatCard label="Partenaires" value={String(partnerCount)} caption="Apporteurs / réseau" />
         </div>
@@ -7881,9 +7881,9 @@ function ContactsView({
           ))}
         </div>
 
-        {contactFilter === "Fournisseurs" && (
+        {contactFilter === "Prestataires" && (
           <div style={{ marginTop: 16 }}>
-            <label>Service fournisseur
+            <label>Service prestataire
               <select value={supplierCategoryFilter} onChange={(event) => setSupplierCategoryFilter(event.target.value)}>
                 <option>Toutes</option>
                 {supplierCategories.map((category) => (
@@ -7979,7 +7979,7 @@ function ContactsView({
               </select>
             </label>
 
-            <label>Service fournisseur
+            <label>Service prestataire
               <select name="supplierCategory" defaultValue="">
                 <option value="">—</option>
                 {supplierCategories.map((category) => <option key={category}>{category}</option>)}
@@ -7993,8 +7993,8 @@ function ContactsView({
                 <option>À éviter</option>
               </select>
             </label>
-            <label>Contact fournisseur<input name="supplierContactName" placeholder="Nom du contact" /></label>
-            <label>Statut fournisseur
+            <label>Contact prestataire<input name="supplierContactName" placeholder="Nom du contact" /></label>
+            <label>Statut prestataire
               <select name="supplierStatus" defaultValue="Actif">
                 <option>Actif</option>
                 <option>À vérifier</option>
@@ -8110,13 +8110,13 @@ function ContactsView({
                 </select>
               </label>
 
-              <label>Service fournisseur
+              <label>Service prestataire
                 <select name="supplierCategory" defaultValue={editingContact.supplierCategory || ""}>
                   <option value="">—</option>
                   {supplierCategories.map((category) => <option key={category}>{category}</option>)}
                 </select>
               </label>
-              <label>Contact fournisseur<input name="supplierContactName" defaultValue={editingContact.supplierContactName || ""} /></label>
+              <label>Contact prestataire<input name="supplierContactName" defaultValue={editingContact.supplierContactName || ""} /></label>
               <label>Fiabilité
                 <select name="supplierReliability" defaultValue={editingContact.supplierReliability || "À tester"}>
                   <option>À tester</option>
@@ -8125,7 +8125,7 @@ function ContactsView({
                   <option>À éviter</option>
                 </select>
               </label>
-              <label>Statut fournisseur
+              <label>Statut prestataire
                 <select name="supplierStatus" defaultValue={editingContact.supplierStatus || "Actif"}>
                   <option>Actif</option>
                   <option>À vérifier</option>

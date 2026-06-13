@@ -1,4 +1,4 @@
-export type ContactKind = "Client" | "Propriétaire" | "Partenaire" | "Fournisseur";
+export type ContactKind = "Client" | "Propriétaire" | "Partenaire" | "Prestataire";
 export type SupplierCategory = "Villa" | "Voiture" | "Bateau" | "Chauffeur" | "Chef" | "Sécurité" | "Conciergerie" | "Paysagiste" | "Gestion nuisibles" | "Pisciniste" | "Femme de ménage" | "Nounou" | "Artisan rénovation" | "Lavage voiture" | "Garage / mécanicien" | "Jardinier" | "Autre";
 export type SupplierQuality = "Standard" | "Premium" | "Très premium";
 export type SupplierReliability = "À tester" | "Fiable" | "Très fiable" | "À éviter";
@@ -11,7 +11,7 @@ export type PropertyStatus = "Disponible" | "Mandat en cours" | "Loué" | "Vendu
 export type VehicleStatus = "Disponible" | "En location" | "En maintenance" | "Vendu";
 export type BoatStatus = "Disponible" | "En charter" | "En maintenance" | "Vendu";
 export type TaskStatus = "À faire" | "En cours" | "Terminé";
-export type PlanningEntryType = "Réservation" | "Intervention fournisseur" | "Maintenance" | "Tâche interne" | "Autre";
+export type PlanningEntryType = "Réservation" | "Intervention prestataire" | "Maintenance" | "Tâche interne" | "Autre";
 
 export type ActionAuditFields = {
   createdBy?: string;
