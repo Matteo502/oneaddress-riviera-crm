@@ -3179,8 +3179,8 @@ function VendorInvoicesView({
   }
 
   return (
-    <div className="two-columns wide-left">
-      <section className="card">
+    <div className="two-columns wide-left vendor-invoices-view">
+      <section className="card vendor-invoices-list-card">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Factures fournisseurs</p>
@@ -3210,7 +3210,7 @@ function VendorInvoicesView({
         ) : (
           <div className="list-stack">
             {visibleInvoices.map((invoice) => (
-              <article className="item-card" key={invoice.id}>
+              <article className="item-card vendor-invoice-card" key={invoice.id}>
                 <div>
                   <p className="eyebrow">{invoice.category} · {invoice.status}</p>
                   <h3>{invoice.contactName}</h3>
@@ -3219,7 +3219,7 @@ function VendorInvoicesView({
                     Facture : {invoice.invoiceDate || "À compléter"} · Échéance : {invoice.dueDate || "À compléter"}
                   </p>
 
-                  <div className="stats-grid" style={{ marginTop: 14 }}>
+                  <div className="stats-grid vendor-invoice-stats">
                     <div className="mini-stat">
                       <span>Montant</span>
                       <strong>{currency.format(invoice.amount)}</strong>
@@ -3236,7 +3236,7 @@ function VendorInvoicesView({
                 </div>
 
                 <div className="item-actions">
-                  <span className="status-pill">{invoice.status}</span>
+                  <span className={`status-pill vendor-invoice-status ${getSemanticToneFromText(invoice.status) ? `semantic-${getSemanticToneFromText(invoice.status)}` : ""}`}>{invoice.status}</span>
                   <button className="secondary-button" type="button" onClick={() => setEditingInvoice(invoice)}>
                     Modifier
                   </button>
@@ -3258,7 +3258,7 @@ function VendorInvoicesView({
         )}
       </section>
 
-      <section className="card form-card">
+      <section className="card form-card vendor-invoices-form-card">
         <p className="eyebrow">{editingInvoice ? "Modification" : "Nouvelle"}</p>
         <h3>{editingInvoice ? "Modifier facture" : "Ajouter une facture fournisseur"}</h3>
 
