@@ -3560,3 +3560,38 @@ main > header::after,
   background-color: #001434 !important;
   background-image: none !important;
 }
+
+/* CRM_FULL_TOP_NAVY_FILL_20260613 */
+main {
+  background:
+    linear-gradient(
+      to bottom,
+      #001434 0px,
+      #001434 330px,
+      #f4efe5 330px,
+      #f4efe5 100%
+    ) !important;
+}
+
+main > header,
+.crm-header,
+.app-header,
+.page-header,
+.content-header,
+.dashboard-header,
+.hero-header,
+.hero-section,
+.topbar,
+[class*="hero"],
+[class*="Header"] {
+  margin-top: 0 !important;
+  background: #001434 !important;
+  background-color: #001434 !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+main > header {
+  width: 100% !important;
+  max-width: none !important;
+}
