@@ -3520,3 +3520,43 @@ aside::after,
   display: block !important;
   background-color: #001434 !important;
 }
+
+/* CRM_TOP_HEADER_MATCH_LOGO_NAVY */
+main > header,
+.crm-header,
+.app-header,
+.page-header,
+.content-header,
+.dashboard-header,
+.hero-header,
+.hero-section,
+.topbar,
+[class*="hero"],
+[class*="Header"] {
+  background: #001434 !important;
+  background-color: #001434 !important;
+  background-image: none !important;
+}
+
+main > header::before,
+main > header::after,
+.crm-header::before,
+.crm-header::after,
+.app-header::before,
+.app-header::after,
+.page-header::before,
+.page-header::after,
+.content-header::before,
+.content-header::after,
+.dashboard-header::before,
+.dashboard-header::after,
+.hero-header::before,
+.hero-header::after,
+.hero-section::before,
+.hero-section::after,
+.topbar::before,
+.topbar::after {
+  background: #001434 !important;
+  background-color: #001434 !important;
+  background-image: none !important;
+}
