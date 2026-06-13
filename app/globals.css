@@ -3469,3 +3469,54 @@ article {
   border-left: 4px solid rgba(7, 31, 39, 0.28) !important;
 }
 
+
+/* SIDEBAR_LOGO_COLOR_MATCH_FINAL */
+:root {
+  --oar-logo-bg-final: #001434;
+}
+
+aside,
+.sidebar,
+.crm-sidebar,
+.app-sidebar,
+[class*="sidebar"] {
+  background: #001434 !important;
+  background-color: #001434 !important;
+  background-image: none !important;
+}
+
+aside::before,
+aside::after,
+.sidebar::before,
+.sidebar::after,
+.crm-sidebar::before,
+.crm-sidebar::after,
+.app-sidebar::before,
+.app-sidebar::after,
+[class*="sidebar"]::before,
+[class*="sidebar"]::after {
+  background: #001434 !important;
+  background-color: #001434 !important;
+  background-image: none !important;
+}
+
+.brand-block,
+.brand-logo,
+.crm-logo,
+.sidebar-logo,
+.logo-card,
+[class*="brand"],
+[class*="logo"] {
+  background-color: #001434 !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.brand-block img,
+.brand-logo img,
+.crm-logo img,
+.sidebar-logo img,
+.logo-card img {
+  display: block !important;
+  background-color: #001434 !important;
+}
