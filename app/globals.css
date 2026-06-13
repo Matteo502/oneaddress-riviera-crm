@@ -3667,3 +3667,79 @@ td {
   }
 }
 
+
+/* TASK_LAYOUT_FIX_20260613 */
+.task-pipeline-grid,
+.tasks-grid,
+.kanban-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+}
+
+.task-column,
+.kanban-column {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+}
+
+.task-column .item-card,
+.task-column article,
+.kanban-column .item-card,
+.kanban-column article {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-wrap: anywhere !important;
+  word-break: normal !important;
+}
+
+.task-column h3,
+.task-column h4,
+.task-column p,
+.task-column strong,
+.kanban-column h3,
+.kanban-column h4,
+.kanban-column p,
+.kanban-column strong {
+  max-width: 100% !important;
+  overflow-wrap: anywhere !important;
+  white-space: normal !important;
+}
+
+.two-columns:has(.task-pipeline-grid),
+.two-columns:has(.tasks-grid),
+.two-columns:has(.kanban-grid) {
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 430px) !important;
+  gap: 32px !important;
+  align-items: start !important;
+}
+
+.two-columns:has(.task-pipeline-grid) > .card,
+.two-columns:has(.tasks-grid) > .card,
+.two-columns:has(.kanban-grid) > .card {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+}
+
+@media (max-width: 1250px) {
+  .two-columns:has(.task-pipeline-grid),
+  .two-columns:has(.tasks-grid),
+  .two-columns:has(.kanban-grid) {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .task-pipeline-grid,
+  .tasks-grid,
+  .kanban-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
