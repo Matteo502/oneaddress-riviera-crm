@@ -3595,3 +3595,64 @@ main > header {
   width: 100% !important;
   max-width: none !important;
 }
+
+/* CRM_FULL_HEADER_AREA_COLOR_FIX_FINAL */
+html,
+body {
+  background: #001434 !important;
+}
+
+body,
+#__next,
+.app-shell,
+.crm-shell,
+.crm-layout,
+.layout,
+.main-layout {
+  background:
+    linear-gradient(
+      to bottom,
+      #001434 0px,
+      #001434 360px,
+      #f4efe5 360px,
+      #f4efe5 100%
+    ) !important;
+}
+
+main,
+main.crm-main,
+main.app-main,
+.main-content,
+.content-area,
+.crm-content {
+  background:
+    linear-gradient(
+      to bottom,
+      #001434 0px,
+      #001434 360px,
+      #f4efe5 360px,
+      #f4efe5 100%
+    ) !important;
+}
+
+main > header,
+main header,
+.crm-header,
+.page-header,
+.content-header,
+.dashboard-header,
+.hero-header,
+.hero-section,
+.topbar {
+  background: #001434 !important;
+  background-color: #001434 !important;
+  background-image: none !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+main > header > *,
+main header > * {
+  background-color: transparent !important;
+}
