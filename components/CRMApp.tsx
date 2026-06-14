@@ -286,8 +286,8 @@ function normalizeVendorInvoice(value: unknown): VendorInvoice | null {
   if (!value || typeof value !== "object") return null;
 
   const raw = value as Record<string, unknown>;
-  const amount = Number(raw.amount || 0);
-  const paidAmount = Number(raw.paidAmount || 0);
+  const amount = parseEuroAmount(raw.amount);
+  const paidAmount = parseEuroAmount(raw.paidAmount);
   const status = String(raw.status || getVendorInvoiceStatus(amount, paidAmount, String(raw.dueDate || ""))) as VendorInvoice["status"];
 
   return {
@@ -412,7 +412,7 @@ function normalizeHousePayment(value: unknown): HousePayment | null {
   if (!value || typeof value !== "object") return null;
 
   const raw = value as Record<string, unknown>;
-  const amount = Number(raw.amount || 0);
+  const amount = parseEuroAmount(raw.amount);
   const methodValue = String(raw.method || "Virement");
   const method = (methodValue === "Espèces" || methodValue === "CB" || methodValue === "Chèque" || methodValue === "Autre" ? methodValue : "Virement") as HousePayment["method"];
 
@@ -1034,6 +1034,19 @@ function formatQuoteLongDate(value: string) {
     month: "long",
     year: "numeric"
   }).format(parsedDate);
+}
+
+function parseEuroAmount(value: unknown) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+
+  const cleaned = String(value || "")
+    .trim()
+    .replace(/\s/g, "")
+    .replace(",", ".");
+
+  const parsed = Number(cleaned);
+
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function formatQuotePrice(value: number) {
@@ -3489,7 +3502,7 @@ function HouseTrackingView({
                 </select>
               </label>
               <label>Montant
-                <input name="amount" type="number" min="0" step="1" placeholder="Ex : 150" />
+                <input name="amount" type="text" inputMode="decimal" min="0" step="1" placeholder="Ex : 150" />
               </label>
               <label>Moyen
                 <select name="method" defaultValue="Virement">
@@ -3781,11 +3794,11 @@ function VendorInvoicesView({
           </label>
 
           <label>Montant facture
-            <input name="amount" type="number" min="0" step="1" defaultValue={editingInvoice?.amount || ""} placeholder="Ex : 450" required />
+            <input name="amount" type="text" inputMode="decimal" min="0" step="1" defaultValue={editingInvoice?.amount || ""} placeholder="Ex : 450" required />
           </label>
 
           <label>Montant payé
-            <input name="paidAmount" type="number" min="0" step="1" defaultValue={editingInvoice?.paidAmount || ""} placeholder="Ex : 0" />
+            <input name="paidAmount" type="text" inputMode="decimal" min="0" step="1" defaultValue={editingInvoice?.paidAmount || ""} placeholder="Ex : 0" />
           </label>
 
           <label>Moyen de paiement
