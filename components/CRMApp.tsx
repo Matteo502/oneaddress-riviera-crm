@@ -406,6 +406,13 @@ function formatHours(value: number) {
   return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(value)} h`;
 }
 
+
+function formatHouseBalanceLabel(balance: number) {
+  if (balance > 0) return `${currency.format(balance)} à payer`;
+  if (balance < 0) return `${currency.format(Math.abs(balance))} d’avance`;
+  return "À jour";
+}
+
 function makeId(prefix: string) {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
@@ -2659,10 +2666,13 @@ function HouseTrackingView({
     return matchesMonth && matchesHouse && matchesWorker;
   });
 
-  const totalHours = filteredEntries.reduce((sum, entry) => sum + getHouseTimeHours(entry), 0);
-  const totalDue = filteredEntries.reduce((sum, entry) => sum + getHouseTimeAmount(entry), 0);
-  const totalPaid = filteredPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-  const totalBalance = Math.max(totalDue - totalPaid, 0);
+  const globalEntries = timeEntries.filter((entry) => workerFilter === "Tous" || entry.workerId === workerFilter);
+  const globalPayments = payments.filter((payment) => workerFilter === "Tous" || payment.workerId === workerFilter);
+
+  const totalHours = globalEntries.reduce((sum, entry) => sum + getHouseTimeHours(entry), 0);
+  const totalDue = globalEntries.reduce((sum, entry) => sum + getHouseTimeAmount(entry), 0);
+  const totalPaid = globalPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const totalBalance = totalDue - totalPaid;
 
   const selectedWorker = workers.find((worker) => worker.id === hourDraft.workerId);
   const currentRate = Number(hourDraft.hourlyRate || selectedWorker?.hourlyRate || 0);
@@ -2677,21 +2687,23 @@ function HouseTrackingView({
 
   const balanceRows = workers
     .map((worker) => {
-      const workerEntries = filteredEntries.filter((entry) => entry.workerId === worker.id);
-      const workerPayments = filteredPayments.filter((payment) => payment.workerId === worker.id);
+      const workerEntries = timeEntries.filter((entry) => entry.workerId === worker.id);
+      const workerPayments = payments.filter((payment) => payment.workerId === worker.id);
+
       const hours = workerEntries.reduce((sum, entry) => sum + getHouseTimeHours(entry), 0);
       const due = workerEntries.reduce((sum, entry) => sum + getHouseTimeAmount(entry), 0);
       const paid = workerPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+      const balance = due - paid;
 
       return {
         worker,
         hours,
         due,
         paid,
-        balance: Math.max(due - paid, 0)
+        balance
       };
     })
-    .filter((row) => row.hours > 0 || row.paid > 0 || row.balance > 0);
+    .filter((row) => row.hours > 0 || row.paid > 0 || row.balance !== 0);
 
   function submitHouse(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -2854,10 +2866,10 @@ function HouseTrackingView({
         </div>
 
         <div className="stats-grid">
-          <StatCard label="Heures travaillées" value={formatHours(totalHours)} caption="Période filtrée" />
-          <StatCard label="Salaire dû" value={currency.format(totalDue)} caption="Heures x taux" />
-          <StatCard label="Déjà payé" value={currency.format(totalPaid)} caption="Paiements saisis" />
-          <StatCard label="Solde restant" value={currency.format(totalBalance)} caption="À payer" />
+          <StatCard label="Heures travaillées" value={formatHours(totalHours)} caption="Toutes dates" />
+          <StatCard label="Dette créée" value={currency.format(totalDue)} caption="Toutes dates" />
+          <StatCard label="Déjà payé" value={currency.format(totalPaid)} caption="Toutes dates" />
+          <StatCard label="Delta global" value={formatHouseBalanceLabel(totalBalance)} caption="Dette ou avance" />
         </div>
 
         <div className="form-grid" style={{ marginTop: 18 }}>
@@ -3038,11 +3050,11 @@ function HouseTrackingView({
             <div className="section-heading">
               <div>
                 <p className="eyebrow">Soldes</p>
-                <h3>Soldes par intervenant</h3>
+                <h3>Delta global par intervenant</h3>
               </div>
             </div>
             {balanceRows.length === 0 ? (
-              <p className="muted-line">Aucun solde sur la période.</p>
+              <p className="muted-line">Aucun solde ouvert.</p>
             ) : (
               <div className="table-wrapper">
                 <table>
@@ -3050,9 +3062,9 @@ function HouseTrackingView({
                     <tr>
                       <th>Intervenant</th>
                       <th>Heures</th>
-                      <th>Dû</th>
+                      <th>Dette créée</th>
                       <th>Payé</th>
-                      <th>Solde</th>
+                      <th>Delta</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -3062,7 +3074,7 @@ function HouseTrackingView({
                         <td>{formatHours(row.hours)}</td>
                         <td>{currency.format(row.due)}</td>
                         <td>{currency.format(row.paid)}</td>
-                        <td><strong>{currency.format(row.balance)}</strong></td>
+                        <td><strong className={row.balance > 0 ? "house-balance-positive" : row.balance < 0 ? "house-balance-negative" : "house-balance-zero"}>{formatHouseBalanceLabel(row.balance)}</strong></td>
                       </tr>
                     ))}
                   </tbody>
@@ -3482,6 +3494,55 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
   const [sharedWorkspaceMessage, setSharedWorkspaceMessage] = useState("Chargement de la base partagée...");
   const [sharedWorkspaceUpdatedAt, setSharedWorkspaceUpdatedAt] = useState("");
   const [toast, setToast] = useState<Toast | null>(null);
+
+  useEffect(() => {
+    let cleanupInterval: number | null = null;
+
+    async function lockActionActorSelect() {
+      const { data } = await supabase.auth.getUser();
+      const email = (data.user?.email || "").trim().toLowerCase();
+
+      const lockedActor =
+        email === "matteobuggianipro@gmail.com"
+          ? "Matteo"
+          : email === "vg@oneaddressriviera.com"
+            ? "Vincent"
+            : null;
+
+      if (!lockedActor) return;
+
+      setActiveActor(lockedActor as "Matteo" | "Vincent");
+      window.localStorage.setItem(ACTOR_STORAGE_KEY, lockedActor);
+
+      const enforce = () => {
+        const selects = Array.from(document.querySelectorAll("select")) as HTMLSelectElement[];
+
+        selects.forEach((select) => {
+          const options = Array.from(select.options).map((option) => `${option.value} ${option.textContent || ""}`.toLowerCase());
+          const isActorSelect = options.some((option) => option.includes("matteo")) && options.some((option) => option.includes("vincent"));
+
+          if (!isActorSelect) return;
+
+          select.value = lockedActor;
+          select.disabled = true;
+          select.setAttribute("aria-disabled", "true");
+          select.classList.add("actor-select-hard-locked");
+          select.style.pointerEvents = "none";
+        });
+      };
+
+      enforce();
+      cleanupInterval = window.setInterval(enforce, 300);
+    }
+
+    lockActionActorSelect();
+
+    return () => {
+      if (cleanupInterval) window.clearInterval(cleanupInterval);
+    };
+  }, []);
+
+
 
   useEffect(() => {
     const targets = Array.from(
@@ -4020,13 +4081,13 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       const paid = housePayments
         .filter((payment) => payment.workerId === worker.id)
         .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-      const balance = Math.max(due - paid, 0);
+      const balance = due - paid;
 
       if (balance > 0) {
         items.push({
           id: `house-balance-${worker.id}`,
           title: "Intervenant à payer",
-          detail: `${worker.contactName} · ${currency.format(balance)} restant`,
+          detail: `${worker.contactName} · ${currency.format(balance)} à payer`,
           tab: "houseTracking",
           tone: "warning",
           targetId: `house-worker-${worker.id}`
@@ -8475,6 +8536,8 @@ const visibleLeads = leads.filter((lead) => {
       <section className="pipeline-grid compact-pipeline" aria-label="Pipeline leads">
         {leadStatuses.map((status) => {
           const columnLeads = sortByUrgency(visibleLeads.filter((lead) => lead.status === status));
+
+
           const isCollapsed = Boolean(collapsedLeadStatuses[status]);
 
           return (
