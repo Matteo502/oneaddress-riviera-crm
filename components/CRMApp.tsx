@@ -300,6 +300,9 @@ function normalizeVendorInvoice(value: unknown): VendorInvoice | null {
     dueDate: String(raw.dueDate || ""),
     amount: Number.isFinite(amount) ? amount : 0,
     paidAmount: Number.isFinite(paidAmount) ? paidAmount : 0,
+    linkedDocumentId: String(raw.linkedDocumentId || ""),
+    invoiceDocumentUrl: String(raw.invoiceDocumentUrl || raw.documentUrl || raw.url || ""),
+    invoiceDocumentName: String(raw.invoiceDocumentName || raw.documentName || ""),
     status: getVendorInvoiceStatusFromValue(status),
     paymentMethod: String(raw.paymentMethod || ""),
     notes: String(raw.notes || ""),
@@ -479,8 +482,7 @@ function makeId(prefix: string) {
 }
 
 function safeNumber(value: FormDataEntryValue | null) {
-  const parsed = Number(value ?? 0);
-  return Number.isFinite(parsed) ? parsed : 0;
+  return parseEuroAmount(value);
 }
 
 type ActionTrackedItem = {
@@ -3596,12 +3598,14 @@ function HouseTrackingView({
 
 function VendorInvoicesView({
   contacts,
+  documents,
   invoices,
   onAdd,
   onUpdate,
   onDelete
 }: {
   contacts: Contact[];
+  documents: CRMDocument[];
   invoices: VendorInvoice[];
   onAdd: (invoice: VendorInvoice) => void;
   onUpdate: (invoice: VendorInvoice) => void;
@@ -3679,6 +3683,9 @@ function VendorInvoicesView({
       dueDate,
       amount,
       paidAmount,
+      linkedDocumentId: editingInvoice?.linkedDocumentId || "",
+      invoiceDocumentUrl: editingInvoice?.invoiceDocumentUrl || "",
+      invoiceDocumentName: editingInvoice?.invoiceDocumentName || "",
       status: getVendorInvoiceStatus(amount, paidAmount, dueDate),
       paymentMethod: String(form.get("paymentMethod") ?? "").trim(),
       notes: String(form.get("notes") ?? "").trim(),
@@ -3713,11 +3720,11 @@ function VendorInvoicesView({
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
-          {(["Tous", "À payer", "Partiellement payé", "En retard", "Payé", "Annulé"] as Array<VendorInvoice["status"] | "Tous">).map((status) => (
+          {(["Tous", "À payer", "Partiellement payé", "En retard", "Payé"] as Array<VendorInvoice["status"] | "Tous">).map((status) => (
             <button
               key={status}
               type="button"
-              className={statusFilter === status ? "primary-button" : "secondary-button"}
+              className={`${statusFilter === status ? "primary-button" : "secondary-button"} ${status === "Payé" ? "invoice-filter-paid" : status === "Tous" ? "" : "invoice-filter-danger"}`}
               onClick={() => setStatusFilter(status)}
             >
               {status}
@@ -3732,7 +3739,7 @@ function VendorInvoicesView({
             {visibleInvoices.map((invoice) => (
               <article className="item-card vendor-invoice-card" key={invoice.id} id={`vendor-invoice-${invoice.id}`}>
                 <div>
-                  <p className="eyebrow">{invoice.category} · {invoice.status}</p>
+                  <p className={`eyebrow ${invoice.status === "Payé" ? "invoice-eyebrow-paid" : "invoice-eyebrow-danger"}`}>{invoice.category} · {invoice.status}</p>
                   <h3>{invoice.contactName}</h3>
                   <p>{invoice.title}</p>
                   <p className="muted-line">
@@ -3756,7 +3763,17 @@ function VendorInvoicesView({
                 </div>
 
                 <div className="item-actions">
-                  <span className={`status-pill vendor-invoice-status ${getSemanticToneFromText(invoice.status) ? `semantic-${getSemanticToneFromText(invoice.status)}` : ""}`}>{invoice.status}</span>
+                  <span className={`status-pill vendor-invoice-status ${invoice.status === "Payé" ? "semantic-success invoice-status-paid" : "semantic-danger invoice-status-danger"}`}>{invoice.status}</span>
+                  {(invoice.invoiceDocumentUrl || documents.find((crmDocument) => crmDocument.id === invoice.linkedDocumentId)?.url) && (
+                    <a
+                      className="secondary-button vendor-invoice-document-button"
+                      href={invoice.invoiceDocumentUrl || documents.find((crmDocument) => crmDocument.id === invoice.linkedDocumentId)?.url || "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Voir facture
+                    </a>
+                  )}
                   <button className="secondary-button" type="button" onClick={() => {
                       setEditingInvoice(invoice);
                       window.setTimeout(() => {
@@ -3776,6 +3793,31 @@ function VendorInvoicesView({
                   >
                     Supprimer
                   </button>
+
+                  <label className="invoice-document-link-select">
+                    <span>Document lié</span>
+                    <select
+                      value={invoice.linkedDocumentId || ""}
+                      onChange={(event) => {
+                        const documentId = event.currentTarget.value;
+                        const selectedDocument = documents.find((crmDocument) => crmDocument.id === documentId);
+
+                        onUpdate({
+                          ...invoice,
+                          linkedDocumentId: documentId,
+                          invoiceDocumentUrl: selectedDocument?.url || invoice.invoiceDocumentUrl || "",
+                          invoiceDocumentName: selectedDocument?.title || invoice.invoiceDocumentName || ""
+                        });
+                      }}
+                    >
+                      <option value="">Aucun document</option>
+                      {documents.map((crmDocument) => (
+                        <option key={crmDocument.id} value={crmDocument.id}>
+                          {crmDocument.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
               </article>
             ))}
@@ -3865,7 +3907,14 @@ function getSemanticToneFromText(text: string) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
+  // CRM_PROVIDER_INVOICE_DANGER_WORDS_20260614
   if (
+    value.includes("en retard") ||
+    value.includes("retard") ||
+    value.includes("partiellement") ||
+    value.includes("partiel") ||
+    value.includes("a payer") ||
+    value.includes("reste a payer") ||
     value.includes("non paye") ||
     value.includes("a payer") ||
     value.includes("reste a payer") ||
@@ -7097,6 +7146,7 @@ function createQuoteDraftFromLead(lead: Lead) {
         {activeTab === "vendorInvoices" && (
           <VendorInvoicesView
             contacts={data.contacts}
+            documents={(((data as any).documents ?? []) as CRMDocument[])}
             invoices={(((data as any).vendorInvoices ?? []) as VendorInvoice[])}
             onAdd={addVendorInvoice}
             onUpdate={updateVendorInvoice}

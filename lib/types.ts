@@ -237,6 +237,9 @@ export type VendorInvoice = {
   amount: number;
   paidAmount: number;
   status: "À payer" | "Partiellement payé" | "Payé" | "En retard" | "Annulé";
+  linkedDocumentId?: string;
+  invoiceDocumentUrl?: string;
+  invoiceDocumentName?: string;
   paymentMethod?: string;
   notes?: string;
   createdAt: string;
