@@ -16,6 +16,7 @@ export type PlanningEntryType = "Réservation" | "Intervention prestataire" | "M
 export type ActionAuditFields = {
   createdBy?: string;
   updatedBy?: string;
+  completedAt?: string;
   updatedAt?: string;
 };
 
@@ -128,6 +129,7 @@ export type Task = {
   createdBy?: string;
   updatedBy?: string;
   updatedAt?: string;
+  completedAt?: string;
 };
 
 

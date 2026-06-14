@@ -38,6 +38,26 @@ const propertyStatuses: PropertyStatus[] = ["Disponible", "Mandat en cours", "Lo
 const vehicleStatuses: VehicleStatus[] = ["Disponible", "En location", "En maintenance", "Vendu"];
 const boatStatuses: BoatStatus[] = ["Disponible", "En charter", "En maintenance", "Vendu"];
 const taskStatuses: TaskStatus[] = ["À faire", "En cours", "Terminé"];
+
+function isCompletedTaskStatus(status: unknown) {
+  return String(status || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim() === "termine";
+}
+
+function isCompletedTaskExpired(task: Task) {
+  if (!isCompletedTaskStatus(task.status)) return false;
+  if (!task.completedAt) return false;
+
+  const completedTime = new Date(task.completedAt).getTime();
+  if (Number.isNaN(completedTime)) return false;
+
+  const threeDays = 3 * 24 * 60 * 60 * 1000;
+  return Date.now() - completedTime > threeDays;
+}
+
 const contactKinds: ContactKind[] = ["Client", "Prestataire", "Propriétaire", "Partenaire"];
 const contactLevels = ["Standard", "VIP", "Ultra VIP"] as const;
 const contactLanguages = ["Français", "Anglais", "Italien", "Autre"] as const;
@@ -4053,6 +4073,33 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
   const [sharedWorkspaceUpdatedAt, setSharedWorkspaceUpdatedAt] = useState("");
   const [toast, setToast] = useState<Toast | null>(null);
 
+  // TASK_COMPLETED_COMPACT_THEN_PURGE_20260614
+  useEffect(() => {
+    const nowIso = new Date().toISOString();
+    const needsCleanup = ((data.tasks ?? []) as Task[]).some((task) =>
+      (isCompletedTaskStatus(task.status) && !task.completedAt) || isCompletedTaskExpired(task)
+    );
+
+    if (!needsCleanup) return;
+
+    setData((current) => ({
+      ...current,
+      tasks: ((current.tasks ?? []) as Task[])
+        .map((task) => {
+          if (!isCompletedTaskStatus(task.status)) return task;
+          if (task.completedAt) return task;
+
+          return {
+            ...task,
+            completedAt: nowIso
+          } as Task;
+        })
+        .filter((task) => !isCompletedTaskExpired(task))
+    }));
+  }, [data.tasks]);
+
+
+
 
 
   useEffect(() => {
@@ -6474,7 +6521,8 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
       owner: String(form.get("owner") ?? "").trim() || activeActor,
       status: String(form.get("status") ?? "À faire") as TaskStatus,
       dueDate: String(form.get("dueDate") ?? ""),
-      linkedTo: String(form.get("linkedTo") ?? "").trim()
+      linkedTo: String(form.get("linkedTo") ?? "").trim(),
+      completedAt: isCompletedTaskStatus(String(form.get("status") ?? "À faire")) ? new Date().toISOString() : ""
     }, activeActor) as Task;
     if (!task.title) return notify("Ajoutez au minimum un titre de tâche.", "warning");
     setData((current) => ({ ...current, tasks: [task, ...current.tasks] }));
@@ -6745,10 +6793,20 @@ function createQuoteDraftFromLead(lead: Lead) {
 
 
   function updateTask(updatedTask: Task) {
+    const taskToSave = isCompletedTaskStatus(updatedTask.status)
+      ? {
+          ...updatedTask,
+          completedAt: updatedTask.completedAt || new Date().toISOString()
+        }
+      : {
+          ...updatedTask,
+          completedAt: ""
+        };
+
     setData((current) => ({
       ...current,
       tasks: current.tasks.map((task) =>
-        task.id === updatedTask.id ? stampUpdated(updatedTask, activeActor) as Task : task
+        task.id === updatedTask.id ? stampUpdated(taskToSave, activeActor) as Task : task
       )
     }));
 
@@ -6756,9 +6814,27 @@ function createQuoteDraftFromLead(lead: Lead) {
   }
 
   function updateTaskStatus(id: string, status: TaskStatus) {
+    const nowIso = new Date().toISOString();
+
     setData((current) => ({
       ...current,
-      tasks: current.tasks.map((task) => (task.id === id ? stampUpdated({ ...task, status }, activeActor) as Task : task))
+      tasks: current.tasks.map((task) => {
+        if (task.id !== id) return task;
+
+        const nextTask = isCompletedTaskStatus(status)
+          ? {
+              ...task,
+              status,
+              completedAt: task.completedAt || nowIso
+            }
+          : {
+              ...task,
+              status,
+              completedAt: ""
+            };
+
+        return stampUpdated(nextTask, activeActor) as Task;
+      })
     }));
   }
 
@@ -10198,7 +10274,8 @@ function TasksView({
       owner: String(form.get("owner") ?? "").trim(),
       status: String(form.get("status") ?? "À faire") as TaskStatus,
       dueDate: String(form.get("dueDate") ?? ""),
-      linkedTo: String(form.get("linkedTo") ?? "").trim()
+      linkedTo: String(form.get("linkedTo") ?? "").trim(),
+      completedAt: isCompletedTaskStatus(String(form.get("status") ?? "À faire")) ? editingTask.completedAt || new Date().toISOString() : ""
     };
 
     if (!updatedTask.title) return;
@@ -10253,7 +10330,7 @@ function TasksView({
                         const linkedLead = leads.find((lead) => lead.id === task.linkedTo);
 
                         return (
-                          <article className="task-row" key={task.id} data-notification-target={`task-${task.id}`}>
+                          <article className={`task-row ${isCompletedTaskStatus(task.status) ? "task-row-completed" : ""}`} key={task.id} data-notification-target={`task-${task.id}`}>
                             <div>
                               <strong>{task.title}</strong>
                               <small>
@@ -10270,6 +10347,10 @@ function TasksView({
                               )}
 
                               <ActionMeta item={task} />
+
+                              {isCompletedTaskStatus(task.status) && (
+                                <small className="task-completed-hint">Disparaît automatiquement après 3 jours</small>
+                              )}
 
                               <button
                                 className="task-edit-button"

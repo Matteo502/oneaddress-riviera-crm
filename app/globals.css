@@ -4214,3 +4214,49 @@ select.actor-select-hard-locked {
   }
 }
 
+
+/* TASK_COMPLETED_COMPACT_THEN_PURGE_20260614 */
+.task-row.task-row-completed {
+  min-height: 0 !important;
+  padding: 10px 12px !important;
+  gap: 10px !important;
+  opacity: 0.58 !important;
+  background: rgba(7, 31, 39, 0.035) !important;
+  border-style: dashed !important;
+}
+
+.task-row.task-row-completed strong {
+  font-size: 13px !important;
+  line-height: 1.15 !important;
+  display: block !important;
+  max-width: 100% !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.task-row.task-row-completed small,
+.task-row.task-row-completed .action-meta,
+.task-row.task-row-completed .task-edit-button {
+  display: none !important;
+}
+
+.task-row.task-row-completed .task-completed-hint {
+  display: block !important;
+  margin-top: 4px !important;
+  font-size: 10px !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: rgba(7, 31, 39, 0.48) !important;
+}
+
+.task-row.task-row-completed .task-actions select {
+  min-height: 34px !important;
+  padding: 4px 8px !important;
+  font-size: 11px !important;
+}
+
+.task-column .pipeline-title strong {
+  white-space: nowrap !important;
+}
+
