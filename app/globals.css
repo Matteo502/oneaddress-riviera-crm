@@ -3994,3 +3994,20 @@ select.actor-select-hard-locked {
   font-weight: 800 !important;
 }
 
+
+/* HOUSE_TRACKING_DATE_RANGE_AND_DELTA */
+.house-balance-positive {
+  color: #973333 !important;
+  font-weight: 900 !important;
+}
+
+.house-balance-negative {
+  color: #1f7a4c !important;
+  font-weight: 900 !important;
+}
+
+.house-balance-zero {
+  color: rgba(7, 31, 39, 0.62) !important;
+  font-weight: 800 !important;
+}
+

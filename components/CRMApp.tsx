@@ -2638,7 +2638,7 @@ function HouseTrackingView({
   onDeletePayment: (id: string) => void;
 }) {
   const today = new Date().toISOString().slice(0, 10);
-  const [monthFilter, setMonthFilter] = useState(getCurrentMonthValue());
+  const [dateRange, setDateRange] = useState(() => ({ start: `${today.slice(0, 8)}01`, end: today }));
   const [houseFilter, setHouseFilter] = useState("Tous");
   const [workerFilter, setWorkerFilter] = useState("Tous");
   const [hourDraft, setHourDraft] = useState({
@@ -2652,26 +2652,30 @@ function HouseTrackingView({
     note: ""
   });
 
+  function isDateInSelectedRange(date: string) {
+    if (!date) return false;
+    if (dateRange.start && date < dateRange.start) return false;
+    if (dateRange.end && date > dateRange.end) return false;
+    return true;
+  }
+
   const filteredEntries = timeEntries.filter((entry) => {
-    const matchesMonth = !monthFilter || getMonthFromDate(entry.date) === monthFilter;
+    const matchesDate = isDateInSelectedRange(entry.date);
     const matchesHouse = houseFilter === "Tous" || entry.houseId === houseFilter;
     const matchesWorker = workerFilter === "Tous" || entry.workerId === workerFilter;
-    return matchesMonth && matchesHouse && matchesWorker;
+    return matchesDate && matchesHouse && matchesWorker;
   });
 
   const filteredPayments = payments.filter((payment) => {
-    const matchesMonth = !monthFilter || getMonthFromDate(payment.date) === monthFilter;
+    const matchesDate = isDateInSelectedRange(payment.date);
     const matchesHouse = houseFilter === "Tous" || payment.houseId === houseFilter;
     const matchesWorker = workerFilter === "Tous" || payment.workerId === workerFilter;
-    return matchesMonth && matchesHouse && matchesWorker;
+    return matchesDate && matchesHouse && matchesWorker;
   });
 
-  const globalEntries = timeEntries.filter((entry) => workerFilter === "Tous" || entry.workerId === workerFilter);
-  const globalPayments = payments.filter((payment) => workerFilter === "Tous" || payment.workerId === workerFilter);
-
-  const totalHours = globalEntries.reduce((sum, entry) => sum + getHouseTimeHours(entry), 0);
-  const totalDue = globalEntries.reduce((sum, entry) => sum + getHouseTimeAmount(entry), 0);
-  const totalPaid = globalPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const totalHours = filteredEntries.reduce((sum, entry) => sum + getHouseTimeHours(entry), 0);
+  const totalDue = filteredEntries.reduce((sum, entry) => sum + getHouseTimeAmount(entry), 0);
+  const totalPaid = filteredPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
   const totalBalance = totalDue - totalPaid;
 
   const selectedWorker = workers.find((worker) => worker.id === hourDraft.workerId);
@@ -2687,8 +2691,8 @@ function HouseTrackingView({
 
   const balanceRows = workers
     .map((worker) => {
-      const workerEntries = timeEntries.filter((entry) => entry.workerId === worker.id);
-      const workerPayments = payments.filter((payment) => payment.workerId === worker.id);
+      const workerEntries = filteredEntries.filter((entry) => entry.workerId === worker.id);
+      const workerPayments = filteredPayments.filter((payment) => payment.workerId === worker.id);
 
       const hours = workerEntries.reduce((sum, entry) => sum + getHouseTimeHours(entry), 0);
       const due = workerEntries.reduce((sum, entry) => sum + getHouseTimeAmount(entry), 0);
@@ -2849,7 +2853,7 @@ function HouseTrackingView({
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `suivi-maison-${monthFilter || "toutes-dates"}.csv`;
+    link.download = `suivi-maison-${dateRange.start || "debut"}-${dateRange.end || "fin"}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -2866,15 +2870,27 @@ function HouseTrackingView({
         </div>
 
         <div className="stats-grid">
-          <StatCard label="Heures travaillées" value={formatHours(totalHours)} caption="Toutes dates" />
-          <StatCard label="Dette créée" value={currency.format(totalDue)} caption="Toutes dates" />
-          <StatCard label="Déjà payé" value={currency.format(totalPaid)} caption="Toutes dates" />
-          <StatCard label="Delta global" value={formatHouseBalanceLabel(totalBalance)} caption="Dette ou avance" />
+          <StatCard label="Heures travaillées" value={formatHours(totalHours)} caption="Dates sélectionnées" />
+          <StatCard label="Dette créée" value={currency.format(totalDue)} caption="Dates sélectionnées" />
+          <StatCard label="Déjà payé" value={currency.format(totalPaid)} caption="Dates sélectionnées" />
+          <StatCard label="Delta période" value={formatHouseBalanceLabel(totalBalance)} caption="Sur la période" />
         </div>
 
         <div className="form-grid" style={{ marginTop: 18 }}>
-          <label>Mois
-            <input type="month" value={monthFilter} onChange={(event) => setMonthFilter(event.target.value)} />
+          <label>Date début
+            <input
+              type="date"
+              value={dateRange.start}
+              onChange={(event) => setDateRange((current) => ({ ...current, start: event.target.value }))}
+            />
+          </label>
+
+          <label>Date fin
+            <input
+              type="date"
+              value={dateRange.end}
+              onChange={(event) => setDateRange((current) => ({ ...current, end: event.target.value }))}
+            />
           </label>
 
           <label>Maison
@@ -3050,11 +3066,11 @@ function HouseTrackingView({
             <div className="section-heading">
               <div>
                 <p className="eyebrow">Soldes</p>
-                <h3>Delta global par intervenant</h3>
+                <h3>Delta par intervenant sur la période</h3>
               </div>
             </div>
             {balanceRows.length === 0 ? (
-              <p className="muted-line">Aucun solde ouvert.</p>
+              <p className="muted-line">Aucun delta sur la période sélectionnée.</p>
             ) : (
               <div className="table-wrapper">
                 <table>
