@@ -4078,3 +4078,12 @@ select.actor-select-hard-locked {
   }
 }
 
+
+/* CONTACT_DETAILS_AUTO_SCROLL_TARGET */
+.contact-details-panel,
+.contact-detail-panel,
+.contact-form-card,
+[data-contact-details-panel],
+#contact-details-panel {
+  scroll-margin-top: 24px !important;
+}
