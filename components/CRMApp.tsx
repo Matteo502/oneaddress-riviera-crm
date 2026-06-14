@@ -2652,10 +2652,51 @@ function HouseTrackingView({
     note: ""
   });
 
+  function normalizeHouseDateValue(value: string) {
+    if (!value) return "";
+
+    const trimmed = value.trim();
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return trimmed;
+    }
+
+    const frenchMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+
+    if (frenchMatch) {
+      const day = frenchMatch[1].padStart(2, "0");
+      const month = frenchMatch[2].padStart(2, "0");
+      const year = frenchMatch[3];
+      return `${year}-${month}-${day}`;
+    }
+
+    const parsed = new Date(trimmed);
+
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString().slice(0, 10);
+    }
+
+    return "";
+  }
+
+  function getHouseDateTime(value: string) {
+    const normalized = normalizeHouseDateValue(value);
+
+    if (!normalized) return null;
+
+    const time = new Date(`${normalized}T12:00:00`).getTime();
+    return Number.isNaN(time) ? null : time;
+  }
+
   function isDateInSelectedRange(date: string) {
-    if (!date) return false;
-    if (dateRange.start && date < dateRange.start) return false;
-    if (dateRange.end && date > dateRange.end) return false;
+    const entryTime = getHouseDateTime(date);
+    const startTime = dateRange.start ? getHouseDateTime(dateRange.start) : null;
+    const endTime = dateRange.end ? getHouseDateTime(dateRange.end) : null;
+
+    if (entryTime === null) return false;
+    if (startTime !== null && entryTime < startTime) return false;
+    if (endTime !== null && entryTime > endTime) return false;
+
     return true;
   }
 
@@ -2663,6 +2704,7 @@ function HouseTrackingView({
     const matchesDate = isDateInSelectedRange(entry.date);
     const matchesHouse = houseFilter === "Tous" || entry.houseId === houseFilter;
     const matchesWorker = workerFilter === "Tous" || entry.workerId === workerFilter;
+
     return matchesDate && matchesHouse && matchesWorker;
   });
 
@@ -2670,6 +2712,7 @@ function HouseTrackingView({
     const matchesDate = isDateInSelectedRange(payment.date);
     const matchesHouse = houseFilter === "Tous" || payment.houseId === houseFilter;
     const matchesWorker = workerFilter === "Tous" || payment.workerId === workerFilter;
+
     return matchesDate && matchesHouse && matchesWorker;
   });
 
