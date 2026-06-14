@@ -142,7 +142,7 @@ function mergeContactsWithLegacySuppliers(contacts: Contact[], suppliers: Suppli
 type CRMDocument = {
   id: string;
   title: string;
-  category: "Logo" | "Assurance" | "Contrat" | "Administratif" | "Identité / Kbis" | "Maison" | "Véhicule" | "Bateau" | "Autre";
+  category: "Logo" | "Documents" | "Assurance" | "Contrat" | "Administratif" | "Identité / Kbis" | "Maison" | "Véhicule" | "Bateau" | "Autre";
   status: "À jour" | "À vérifier" | "Expiré";
   url: string;
   location: string;
@@ -166,6 +166,7 @@ function normalizeCRMDocument(value: unknown): CRMDocument | null {
     title: String(raw.title || "Document"),
     category: (
       category === "Logo" ||
+      category === "Documents" ||
       category === "Assurance" ||
       category === "Contrat" ||
       category === "Administratif" ||
@@ -2721,6 +2722,7 @@ function DocumentsView({
   const categories: Array<CRMDocument["category"] | "Tous"> = [
     "Tous",
     "Logo",
+    "Documents",
     "Assurance",
     "Contrat",
     "Administratif",
@@ -2868,7 +2870,7 @@ function DocumentsView({
                           onClick={() => {
                             setEditingDocument(crmDocument);
                             window.setTimeout(() => {
-                              window.document.querySelector(".documents-form-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                              window.globalThis.document.querySelector(".documents-form-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
                             }, 80);
                           }}
                         >
@@ -2915,6 +2917,7 @@ function DocumentsView({
             <label>Catégorie
               <select name="category" defaultValue={editingDocument?.category || "Autre"}>
                 <option>Logo</option>
+                <option>Documents</option>
                 <option>Assurance</option>
                 <option>Contrat</option>
                 <option>Administratif</option>
