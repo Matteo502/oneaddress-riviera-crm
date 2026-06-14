@@ -6873,7 +6873,7 @@ function createQuoteDraftFromLead(lead: Lead) {
           </div>
         </section>
 
-        {actionNotifications.length > 0 && (
+        {activeTab === "dashboard" && actionNotifications.length > 0 && (
           <section className="crm-notification-panel">
             <div className="crm-notification-heading">
               <div>
