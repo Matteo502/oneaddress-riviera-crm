@@ -56,6 +56,7 @@ const emptyData: CRMData = {
   suppliers: [],
   planningEntries: [],
   quotes: [],
+  documents: [],
   vendorInvoices: [],
   houseTrackingHouses: [],
   houseTrackingWorkers: [],
@@ -138,6 +139,58 @@ function mergeContactsWithLegacySuppliers(contacts: Contact[], suppliers: Suppli
   return merged;
 }
 
+type CRMDocument = {
+  id: string;
+  title: string;
+  category: "Logo" | "Assurance" | "Contrat" | "Administratif" | "Identité / Kbis" | "Maison" | "Véhicule" | "Bateau" | "Autre";
+  status: "À jour" | "À vérifier" | "Expiré";
+  url: string;
+  location: string;
+  expiryDate: string;
+  notes: string;
+  addedAt: string;
+  addedBy: string;
+  updatedAt?: string;
+  updatedBy?: string;
+};
+
+function normalizeCRMDocument(value: unknown): CRMDocument | null {
+  if (!value || typeof value !== "object") return null;
+
+  const raw = value as Record<string, unknown>;
+  const category = String(raw.category || "Autre") as CRMDocument["category"];
+  const status = String(raw.status || "À jour") as CRMDocument["status"];
+
+  return {
+    id: String(raw.id || makeId("doc")),
+    title: String(raw.title || "Document"),
+    category: (
+      category === "Logo" ||
+      category === "Assurance" ||
+      category === "Contrat" ||
+      category === "Administratif" ||
+      category === "Identité / Kbis" ||
+      category === "Maison" ||
+      category === "Véhicule" ||
+      category === "Bateau" ||
+      category === "Autre"
+    ) ? category : "Autre",
+    status: (
+      status === "À jour" ||
+      status === "À vérifier" ||
+      status === "Expiré"
+    ) ? status : "À jour",
+    url: String(raw.url || ""),
+    location: String(raw.location || ""),
+    expiryDate: String(raw.expiryDate || ""),
+    notes: String(raw.notes || ""),
+    addedAt: String(raw.addedAt || new Date().toISOString()),
+    addedBy: String(raw.addedBy || "À compléter"),
+    updatedAt: raw.updatedAt ? String(raw.updatedAt) : "",
+    updatedBy: raw.updatedBy ? String(raw.updatedBy) : ""
+  };
+}
+
 function normalizeSharedCRMData(payload: any): CRMData {
   const contacts = Array.isArray(payload?.contacts) ? payload.contacts as Contact[] : [];
   const legacySuppliers = Array.isArray(payload?.suppliers) ? payload.suppliers as Supplier[] : [];
@@ -153,6 +206,9 @@ function normalizeSharedCRMData(payload: any): CRMData {
     planningEntries: Array.isArray(payload?.planningEntries) ? payload.planningEntries : [],
     quotes: Array.isArray(payload?.quotes)
       ? payload.quotes.map(normalizeQuoteRequest).filter((quote: QuoteRequest | null): quote is QuoteRequest => Boolean(quote))
+      : [],
+    documents: Array.isArray(payload?.documents)
+      ? payload.documents.map(normalizeCRMDocument).filter((document: CRMDocument | null): document is CRMDocument => Boolean(document))
       : [],
     vendorInvoices: Array.isArray(payload?.vendorInvoices)
       ? payload.vendorInvoices.map(normalizeVendorInvoice).filter((invoice: VendorInvoice | null): invoice is VendorInvoice => Boolean(invoice))
@@ -182,6 +238,7 @@ function crmDataHasContent(value: CRMData) {
     (((value as any).suppliers ?? []) as Supplier[]).length > 0 ||
     (((value as any).planningEntries ?? []) as PlanningEntry[]).length > 0 ||
     (((value as any).quotes ?? []) as QuoteRequest[]).length > 0 ||
+    (((value as any).documents ?? []) as CRMDocument[]).length > 0 ||
     (((value as any).vendorInvoices ?? []) as VendorInvoice[]).length > 0 ||
     (((value as any).houseTrackingHouses ?? []) as HouseTrackingHouse[]).length > 0 ||
     (((value as any).houseTrackingWorkers ?? []) as HouseTrackingWorker[]).length > 0 ||
@@ -201,7 +258,7 @@ function readLocalCRMDataSafely() {
   }
 }
 
-type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "bookings" | "vendorInvoices" | "houseTracking" | "quickReplies" | "planning" | "properties" | "vehicles" | "boats";
+type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "bookings" | "vendorInvoices" | "houseTracking" | "quickReplies" | "planning" | "properties" | "vehicles" | "boats" | "documents";
 
 type Toast = {
   message: string;
@@ -2608,6 +2665,307 @@ function BookingsView({
 
 
 
+function getDocumentDaysUntil(date: string) {
+  if (!date) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const target = new Date(`${date}T12:00:00`);
+  target.setHours(0, 0, 0, 0);
+
+  if (Number.isNaN(target.getTime())) return null;
+
+  return Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function DocumentsView({
+  documents,
+  activeActor,
+  onAdd,
+  onUpdate,
+  onDelete
+}: {
+  documents: CRMDocument[];
+  activeActor: "Matteo" | "Vincent";
+  onAdd: (crmDocument: CRMDocument) => void;
+  onUpdate: (crmDocument: CRMDocument) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [categoryFilter, setCategoryFilter] = useState<CRMDocument["category"] | "Tous">("Tous");
+  const [statusFilter, setStatusFilter] = useState<CRMDocument["status"] | "Tous">("Tous");
+  const [editingDocument, setEditingDocument] = useState<CRMDocument | null>(null);
+  const [connectedEmail, setConnectedEmail] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadEmail() {
+      const { data } = await supabase.auth.getUser();
+      if (!cancelled) {
+        setConnectedEmail(String(data.user?.email || "").toLowerCase());
+      }
+    }
+
+    loadEmail();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const canManageDocuments =
+    connectedEmail === "matteobuggianipro@gmail.com" ||
+    connectedEmail === "vg@oneaddressriviera.com";
+
+  const categories: Array<CRMDocument["category"] | "Tous"> = [
+    "Tous",
+    "Logo",
+    "Assurance",
+    "Contrat",
+    "Administratif",
+    "Identité / Kbis",
+    "Maison",
+    "Véhicule",
+    "Bateau",
+    "Autre"
+  ];
+
+  const statuses: Array<CRMDocument["status"] | "Tous"> = ["Tous", "À jour", "À vérifier", "Expiré"];
+
+  const visibleDocuments = documents.filter((crmDocument) => {
+    const matchesCategory = categoryFilter === "Tous" || crmDocument.category === categoryFilter;
+    const matchesStatus = statusFilter === "Tous" || crmDocument.status === statusFilter;
+
+    return matchesCategory && matchesStatus;
+  });
+
+  const documentsToCheck = documents.filter((crmDocument) => {
+    if (crmDocument.status === "Expiré" || crmDocument.status === "À vérifier") return true;
+
+    const days = getDocumentDaysUntil(crmDocument.expiryDate);
+    return days !== null && days <= 30;
+  });
+
+  function submitDocument(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!canManageDocuments) {
+      window.alert("Seuls Matteo et Vincent peuvent modifier les documents.");
+      return;
+    }
+
+    const form = new FormData(event.currentTarget);
+    const now = new Date().toISOString();
+
+    const crmDocument: CRMDocument = {
+      id: editingDocument?.id || makeId("doc"),
+      title: String(form.get("title") || "").trim(),
+      category: String(form.get("category") || "Autre") as CRMDocument["category"],
+      status: String(form.get("status") || "À jour") as CRMDocument["status"],
+      url: String(form.get("url") || "").trim(),
+      location: String(form.get("location") || "").trim(),
+      expiryDate: String(form.get("expiryDate") || ""),
+      notes: String(form.get("notes") || "").trim(),
+      addedAt: editingDocument?.addedAt || now,
+      addedBy: editingDocument?.addedBy || activeActor,
+      updatedAt: editingDocument ? now : "",
+      updatedBy: editingDocument ? activeActor : ""
+    };
+
+    if (!crmDocument.title) {
+      window.alert("Ajoutez un nom de document.");
+      return;
+    }
+
+    if (editingDocument) {
+      onUpdate(crmDocument);
+      setEditingDocument(null);
+    } else {
+      onAdd(crmDocument);
+    }
+
+    event.currentTarget.reset();
+  }
+
+  return (
+    <div className="two-columns wide-left documents-view">
+      <section className="card documents-list-card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Documents</p>
+            <h3>{visibleDocuments.length} document{visibleDocuments.length > 1 ? "s" : ""}</h3>
+          </div>
+          <div>
+            <p className="eyebrow">À vérifier</p>
+            <h3>{documentsToCheck.length}</h3>
+          </div>
+        </div>
+
+        <div className="document-filters">
+          {categories.map((category) => (
+            <button
+              key={category}
+              type="button"
+              className={categoryFilter === category ? "primary-button" : "secondary-button"}
+              onClick={() => setCategoryFilter(category)}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+
+        <div className="document-filters">
+          {statuses.map((status) => (
+            <button
+              key={status}
+              type="button"
+              className={statusFilter === status ? "primary-button" : "secondary-button"}
+              onClick={() => setStatusFilter(status)}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+
+        {visibleDocuments.length === 0 ? (
+          <p className="muted-line">Aucun document pour ce filtre.</p>
+        ) : (
+          <div className="documents-grid">
+            {visibleDocuments.map((crmDocument) => {
+              const days = getDocumentDaysUntil(crmDocument.expiryDate);
+              const needsCheck = crmDocument.status !== "À jour" || (days !== null && days <= 30);
+
+              return (
+                <article className={`item-card document-card ${needsCheck ? "document-card-warning" : ""}`} key={crmDocument.id} id={`document-${crmDocument.id}`}>
+                  <div>
+                    <p className="eyebrow">{crmDocument.category} · {crmDocument.status}</p>
+                    <h3>{crmDocument.title}</h3>
+                    <p className="muted-line">
+                      Ajouté le {new Date(crmDocument.addedAt).toLocaleDateString("fr-FR")} par {crmDocument.addedBy}
+                    </p>
+                    {crmDocument.expiryDate && (
+                      <p className="muted-line">
+                        Échéance : {new Date(`${crmDocument.expiryDate}T12:00:00`).toLocaleDateString("fr-FR")}
+                      </p>
+                    )}
+                    {crmDocument.location && <p>{crmDocument.location}</p>}
+                    {crmDocument.notes && <p className="muted-line">{crmDocument.notes}</p>}
+                  </div>
+
+                  <div className="item-actions">
+                    {crmDocument.url && (
+                      <a className="secondary-button" href={crmDocument.url} target="_blank" rel="noreferrer">
+                        Ouvrir
+                      </a>
+                    )}
+
+                    {canManageDocuments && (
+                      <>
+                        <button
+                          className="secondary-button"
+                          type="button"
+                          onClick={() => {
+                            setEditingDocument(crmDocument);
+                            window.setTimeout(() => {
+                              window.document.querySelector(".documents-form-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                            }, 80);
+                          }}
+                        >
+                          Modifier
+                        </button>
+
+                        <button
+                          className="danger-link"
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm("Supprimer ce document du CRM ?")) {
+                              onDelete(crmDocument.id);
+                            }
+                          }}
+                        >
+                          Supprimer
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="card form-card documents-form-card">
+        <p className="eyebrow">{editingDocument ? "Modification" : "Nouveau"}</p>
+        <h3>{editingDocument ? "Modifier document" : "Ajouter un document"}</h3>
+
+        {!canManageDocuments && (
+          <p className="muted-line">
+            Lecture seule. Seuls Matteo et Vincent peuvent modifier les documents.
+          </p>
+        )}
+
+        {canManageDocuments && (
+          <form key={editingDocument?.id || "new-document"} className="form-grid" onSubmit={submitDocument}>
+            <label>Nom du document
+              <input name="title" defaultValue={editingDocument?.title || ""} placeholder="Ex : Assurance villa, logo OAR, contrat..." required />
+            </label>
+
+            <label>Catégorie
+              <select name="category" defaultValue={editingDocument?.category || "Autre"}>
+                <option>Logo</option>
+                <option>Assurance</option>
+                <option>Contrat</option>
+                <option>Administratif</option>
+                <option>Identité / Kbis</option>
+                <option>Maison</option>
+                <option>Véhicule</option>
+                <option>Bateau</option>
+                <option>Autre</option>
+              </select>
+            </label>
+
+            <label>Statut
+              <select name="status" defaultValue={editingDocument?.status || "À jour"}>
+                <option>À jour</option>
+                <option>À vérifier</option>
+                <option>Expiré</option>
+              </select>
+            </label>
+
+            <label>Lien du document
+              <input name="url" defaultValue={editingDocument?.url || ""} placeholder="Lien Google Drive, Dropbox, Supabase..." />
+            </label>
+
+            <label>Emplacement / description
+              <input name="location" defaultValue={editingDocument?.location || ""} placeholder="Ex : Drive OAR / Assurances / 2026" />
+            </label>
+
+            <label>Échéance
+              <input name="expiryDate" type="date" defaultValue={editingDocument?.expiryDate || ""} />
+            </label>
+
+            <label>Notes
+              <textarea name="notes" defaultValue={editingDocument?.notes || ""} placeholder="Détails, version, remarque..." />
+            </label>
+
+            <button className="primary-button" type="submit">
+              {editingDocument ? "Enregistrer" : "Ajouter document"}
+            </button>
+
+            {editingDocument && (
+              <button className="secondary-button" type="button" onClick={() => setEditingDocument(null)}>
+                Annuler
+              </button>
+            )}
+          </form>
+        )}
+      </section>
+    </div>
+  );
+}
+
 function HouseTrackingView({
   contacts,
   houses,
@@ -4217,6 +4575,26 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       });
     });
 
+
+    const crmDocuments = (((data as any).documents ?? []) as CRMDocument[]);
+
+    crmDocuments.forEach((crmDocument) => {
+      const days = getDocumentDaysUntil(crmDocument.expiryDate);
+      const isExpired = crmDocument.status === "Expiré" || (days !== null && days < 0);
+      const shouldCheck = crmDocument.status === "À vérifier" || (days !== null && days >= 0 && days <= 30);
+
+      if (!isExpired && !shouldCheck) return;
+
+      items.push({
+        id: `document-check-${crmDocument.id}`,
+        title: isExpired ? "Document expiré" : "Document à vérifier",
+        detail: `${crmDocument.title} · ${crmDocument.category}`,
+        tab: "documents",
+        tone: isExpired ? "danger" : "warning",
+        targetId: `document-${crmDocument.id}`
+      });
+    });
+
 const toneRank: Record<ActionNotification["tone"], number> = {
       danger: 0,
       warning: 1,
@@ -5716,6 +6094,35 @@ const toneRank: Record<ActionNotification["tone"], number> = {
     notify("Paiement supprimé.");
   }
 
+  function addCRMDocument(crmDocument: CRMDocument) {
+    setData((current) => ({
+      ...current,
+      documents: [crmDocument, ...(((current as any).documents ?? []) as CRMDocument[])]
+    }));
+
+    notify("Document ajouté.");
+  }
+
+  function updateCRMDocument(updatedDocument: CRMDocument) {
+    setData((current) => ({
+      ...current,
+      documents: (((current as any).documents ?? []) as CRMDocument[]).map((crmDocument) =>
+        crmDocument.id === updatedDocument.id ? updatedDocument : crmDocument
+      )
+    }));
+
+    notify("Document mis à jour.");
+  }
+
+  function deleteCRMDocument(id: string) {
+    setData((current) => ({
+      ...current,
+      documents: (((current as any).documents ?? []) as CRMDocument[]).filter((crmDocument) => crmDocument.id !== id)
+    }));
+
+    notify("Document supprimé.");
+  }
+
   function addVendorInvoice(invoice: VendorInvoice) {
     setData((current) => ({
       ...current,
@@ -6391,6 +6798,7 @@ function createQuoteDraftFromLead(lead: Lead) {
         <NavButton label="Réservations" icon="✓" active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} />
         <NavButton label="Factures prestataires" icon="€" active={activeTab === "vendorInvoices"} onClick={() => setActiveTab("vendorInvoices")} />
         <NavButton label="Suivi maison" icon="⏱" active={activeTab === "houseTracking"} onClick={() => setActiveTab("houseTracking")} />
+        <NavButton label="Documents" icon="📁" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} />
         <NavButton label="Réponses rapides" icon="💬" active={activeTab === "quickReplies"} onClick={() => setActiveTab("quickReplies")} />
         <NavButton label="Planning" icon="🗓" active={activeTab === "planning"} onClick={() => setActiveTab("planning")} />
         <NavButton label="Biens" icon="🏠" active={activeTab === "properties"} onClick={() => setActiveTab("properties")} />
@@ -6671,6 +7079,7 @@ function titleForTab(tab: Tab) {
     bookings: "Réservations",
     vendorInvoices: "Factures prestataires",
     houseTracking: "Suivi maison",
+    documents: "Documents",
     quickReplies: "Réponses rapides",
     planning: "Planning",
     properties: "Biens",
@@ -8636,6 +9045,8 @@ const visibleLeads = leads.filter((lead) => {
       <section className="pipeline-grid compact-pipeline" aria-label="Pipeline leads">
         {leadStatuses.map((status) => {
           const columnLeads = sortByUrgency(visibleLeads.filter((lead) => lead.status === status));
+
+
 
 
           const isCollapsed = Boolean(collapsedLeadStatuses[status]);

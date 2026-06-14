@@ -257,4 +257,5 @@ export type CRMData = {
   houseTrackingWorkers?: HouseTrackingWorker[];
   houseTimeEntries?: HouseTimeEntry[];
   housePayments?: HousePayment[];
+  documents?: any[];
 };

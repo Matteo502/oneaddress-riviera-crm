@@ -4011,3 +4011,70 @@ select.actor-select-hard-locked {
   font-weight: 800 !important;
 }
 
+
+/* DOCUMENTS_MODULE_20260614 */
+.documents-view {
+  grid-template-columns: minmax(0, 1.55fr) minmax(360px, 430px) !important;
+  align-items: start !important;
+  gap: 32px !important;
+}
+
+.document-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.documents-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.document-card {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 22px !important;
+  padding: 22px !important;
+  border: 1px solid rgba(194, 157, 94, 0.25) !important;
+  background: rgba(255, 250, 242, 0.96) !important;
+}
+
+.document-card-warning {
+  border-left: 4px solid #c9a156 !important;
+}
+
+.document-card h3 {
+  margin: 8px 0 6px !important;
+  font-size: 26px !important;
+  line-height: 1.08 !important;
+}
+
+.documents-form-card {
+  position: sticky !important;
+  top: 24px !important;
+  scroll-margin-top: 24px !important;
+}
+
+.documents-form-card textarea {
+  min-height: 110px !important;
+}
+
+@media (max-width: 1250px) {
+  .documents-view {
+    grid-template-columns: 1fr !important;
+  }
+
+  .documents-form-card {
+    position: static !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .document-card {
+    grid-template-columns: 1fr !important;
+  }
+}
+
