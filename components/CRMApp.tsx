@@ -2716,9 +2716,51 @@ function HouseTrackingView({
     return matchesDate && matchesHouse && matchesWorker;
   });
 
+  function getAutoAllocatedPaidForSelectedEntries(targetEntries: typeof filteredEntries) {
+    const selectedIds = new Set(targetEntries.map((entry) => entry.id));
+    const selectedWorkerIds = Array.from(new Set(targetEntries.map((entry) => entry.workerId)));
+    let selectedPaidTotal = 0;
+
+    selectedWorkerIds.forEach((workerId) => {
+      let availablePaid = payments
+        .filter((payment) => payment.workerId === workerId)
+        .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+
+      const orderedDebts = timeEntries
+        .filter((entry) => entry.workerId === workerId)
+        .slice()
+        .sort((a, b) => {
+          const aDate = normalizeHouseDateValue(a.date);
+          const bDate = normalizeHouseDateValue(b.date);
+
+          if (aDate !== bDate) return aDate.localeCompare(bDate);
+
+          const aStart = String(a.startTime || "");
+          const bStart = String(b.startTime || "");
+
+          if (aStart !== bStart) return aStart.localeCompare(bStart);
+
+          return String(a.id).localeCompare(String(b.id));
+        });
+
+      orderedDebts.forEach((entry) => {
+        const debt = Math.max(getHouseTimeAmount(entry), 0);
+        const paidForThisDebt = Math.min(debt, Math.max(availablePaid, 0));
+
+        if (selectedIds.has(entry.id)) {
+          selectedPaidTotal += paidForThisDebt;
+        }
+
+        availablePaid -= paidForThisDebt;
+      });
+    });
+
+    return selectedPaidTotal;
+  }
+
   const totalHours = filteredEntries.reduce((sum, entry) => sum + getHouseTimeHours(entry), 0);
   const totalDue = filteredEntries.reduce((sum, entry) => sum + getHouseTimeAmount(entry), 0);
-  const totalPaid = filteredPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const totalPaid = getAutoAllocatedPaidForSelectedEntries(filteredEntries);
   const totalBalance = totalDue - totalPaid;
 
   const selectedWorker = workers.find((worker) => worker.id === hourDraft.workerId);
@@ -2735,11 +2777,10 @@ function HouseTrackingView({
   const balanceRows = workers
     .map((worker) => {
       const workerEntries = filteredEntries.filter((entry) => entry.workerId === worker.id);
-      const workerPayments = filteredPayments.filter((payment) => payment.workerId === worker.id);
 
       const hours = workerEntries.reduce((sum, entry) => sum + getHouseTimeHours(entry), 0);
       const due = workerEntries.reduce((sum, entry) => sum + getHouseTimeAmount(entry), 0);
-      const paid = workerPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+      const paid = getAutoAllocatedPaidForSelectedEntries(workerEntries);
       const balance = due - paid;
 
       return {
@@ -2915,7 +2956,7 @@ function HouseTrackingView({
         <div className="stats-grid">
           <StatCard label="Heures travaillées" value={formatHours(totalHours)} caption="Dates sélectionnées" />
           <StatCard label="Dette créée" value={currency.format(totalDue)} caption="Dates sélectionnées" />
-          <StatCard label="Déjà payé" value={currency.format(totalPaid)} caption="Dates sélectionnées" />
+          <StatCard label="Payé imputé" value={currency.format(totalPaid)} caption="Dates sélectionnées" />
           <StatCard label="Delta période" value={formatHouseBalanceLabel(totalBalance)} caption="Sur la période" />
         </div>
 
@@ -3109,7 +3150,7 @@ function HouseTrackingView({
             <div className="section-heading">
               <div>
                 <p className="eyebrow">Soldes</p>
-                <h3>Delta par intervenant sur la période</h3>
+                <h3>Delta réel par intervenant</h3>
               </div>
             </div>
             {balanceRows.length === 0 ? (
