@@ -6958,6 +6958,16 @@ function createQuoteDraftFromLead(lead: Lead) {
                 }} />
         )}
 
+        {activeTab === "documents" && (
+          <DocumentsView
+            documents={(((data as any).documents ?? []) as CRMDocument[])}
+            activeActor={activeActor}
+            onAdd={addCRMDocument}
+            onUpdate={updateCRMDocument}
+            onDelete={deleteCRMDocument}
+          />
+        )}
+
         {activeTab === "quickReplies" && (
           <QuickRepliesView />
         )}
