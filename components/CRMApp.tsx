@@ -2547,7 +2547,7 @@ function BookingsView({
                         <strong>{assignedProvider.name}</strong>
                       </div>
                       <div>
-                        <span>Service</span>
+                        <span>Profession</span>
                         <strong>{getContactSupplierCategory(assignedProvider)}</strong>
                       </div>
                       <div>
@@ -3617,6 +3617,40 @@ function VendorInvoicesView({
 
   const selectableContacts = supplierContacts.length > 0 ? supplierContacts : contacts;
 
+  function getContactProfessionForInvoice(contactId: string) {
+    const contact = contacts.find((item) => item.id === contactId);
+
+    if (!contact) return "";
+
+    return String(
+      (contact as any).profession ||
+      (contact as any).supplierCategory ||
+      (contact as any).supplierService ||
+      ""
+    ).trim();
+  }
+
+  function fillInvoiceCategoryFromContact(select: HTMLSelectElement) {
+    const profession = getContactProfessionForInvoice(select.value);
+    const form = select.form;
+
+    if (!profession || !form) return;
+
+    const categorySelect = form.elements.namedItem("category") as HTMLSelectElement | null;
+
+    if (!categorySelect) return;
+
+    const existingOption = Array.from(categorySelect.options).some((option) =>
+      option.value === profession || option.textContent === profession
+    );
+
+    if (!existingOption) {
+      categorySelect.appendChild(new Option(profession, profession));
+    }
+
+    categorySelect.value = profession;
+  }
+
   const visibleInvoices = statusFilter === "Tous"
     ? invoices
     : invoices.filter((invoice) => invoice.status === statusFilter);
@@ -3639,7 +3673,7 @@ function VendorInvoicesView({
       id: editingInvoice?.id || makeId("invoice"),
       contactId,
       contactName: contact?.name || String(form.get("contactName") ?? "").trim(),
-      category: String(form.get("category") ?? "Prestataire").trim(),
+      category: getContactProfessionForInvoice(contactId) || String(form.get("category") ?? "Prestataire").trim() || "Prestataire",
       title: String(form.get("title") ?? "").trim() || "Facture prestataire",
       invoiceDate: String(form.get("invoiceDate") ?? ""),
       dueDate,
@@ -3754,8 +3788,8 @@ function VendorInvoicesView({
         <h3>{editingInvoice ? "Modifier facture" : "Ajouter une facture prestataire"}</h3>
 
         <form key={editingInvoice?.id || "new-vendor-invoice"} className="form-grid" onSubmit={submitInvoice}>
-          <label>Contact prestataire
-            <select name="contactId" defaultValue={editingInvoice?.contactId || ""} required>
+          <label>Contact référent
+            <select name="contactId" defaultValue={editingInvoice?.contactId || ""} required onChange={(event) => fillInvoiceCategoryFromContact(event.currentTarget)}>
               <option value="">Choisir un contact</option>
               {selectableContacts.map((contact) => (
                 <option key={contact.id} value={contact.id}>
@@ -8479,7 +8513,7 @@ function ContactsView({
 
         {contactFilter === "Prestataires" && (
           <div style={{ marginTop: 16 }}>
-            <label>Service prestataire
+            <label>Profession / activité
               <select value={supplierCategoryFilter} onChange={(event) => setSupplierCategoryFilter(event.target.value)}>
                 <option>Toutes</option>
                 {supplierCategories.map((category) => (
@@ -8575,7 +8609,7 @@ function ContactsView({
               </select>
             </label>
 
-            <label>Service prestataire
+            <label>Profession / activité
               <select name="supplierCategory" defaultValue="">
                 <option value="">—</option>
                 {supplierCategories.map((category) => <option key={category}>{category}</option>)}
@@ -8589,7 +8623,7 @@ function ContactsView({
                 <option>À éviter</option>
               </select>
             </label>
-            <label>Contact prestataire<input name="supplierContactName" placeholder="Nom du contact" /></label>
+            <label>Contact référent<input name="supplierContactName" placeholder="Nom du contact" /></label>
             <label>Statut prestataire
               <select name="supplierStatus" defaultValue="Actif">
                 <option>Actif</option>
@@ -8598,7 +8632,7 @@ function ContactsView({
               </select>
             </label>
 
-            <label className="full">Notes prix / accord
+            <label className="full">Notes prix / accord prestataire
               <textarea name="supplierPriceNotes" placeholder="Tarifs, minimum spend, conditions..." />
             </label>
             <label className="full">Notes
@@ -8625,7 +8659,7 @@ function ContactsView({
 
               {isSupplierContact(selectedContact) ? (
                 <>
-                  <div><span>Service</span><strong>{getContactSupplierCategory(selectedContact)}</strong></div>
+                  <div><span>Profession</span><strong>{getContactSupplierCategory(selectedContact)}</strong></div>
                   <div><span>Fiabilité</span><strong>{selectedContact.supplierReliability || "À tester"}</strong></div>
                   <div><span>Qualité</span><strong>{selectedContact.supplierQuality || "Standard"}</strong></div>
                   <div><span>Statut</span><strong>{selectedContact.supplierStatus || "Actif"}</strong></div>
@@ -8706,13 +8740,13 @@ function ContactsView({
                 </select>
               </label>
 
-              <label>Service prestataire
+              <label>Profession / activité
                 <select name="supplierCategory" defaultValue={editingContact.supplierCategory || ""}>
                   <option value="">—</option>
                   {supplierCategories.map((category) => <option key={category}>{category}</option>)}
                 </select>
               </label>
-              <label>Contact prestataire<input name="supplierContactName" defaultValue={editingContact.supplierContactName || ""} /></label>
+              <label>Contact référent<input name="supplierContactName" defaultValue={editingContact.supplierContactName || ""} /></label>
               <label>Fiabilité
                 <select name="supplierReliability" defaultValue={editingContact.supplierReliability || "À tester"}>
                   <option>À tester</option>
