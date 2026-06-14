@@ -4165,3 +4165,52 @@ select.actor-select-hard-locked {
   color: #071f27 !important;
 }
 
+
+/* CONTACT_EDIT_MODAL_FIXED_20260614 */
+.confirm-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  overflow-y: auto !important;
+  padding: 48px 28px !important;
+  background: rgba(0, 20, 52, 0.58) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.confirm-dialog {
+  width: min(900px, calc(100vw - 56px)) !important;
+  max-height: calc(100vh - 96px) !important;
+  overflow-y: auto !important;
+  margin: 0 auto !important;
+  background: #fffaf2 !important;
+  border: 1px solid rgba(194, 157, 94, 0.35) !important;
+  box-shadow: 0 28px 80px rgba(0, 20, 52, 0.32) !important;
+}
+
+#contact-edit-panel {
+  width: min(900px, calc(100vw - 56px)) !important;
+}
+
+#contact-edit#contact-edit-panel {
+  width: min(900px, calc(100vw - 56px)) !important;
+}
+
+#contact-edit-panel .form-grid {
+  max-height: none !important;
+}
+
+@media (max-width: 760px) {
+  .confirm-backdrop {
+    padding: 24px 14px !important;
+  }
+
+  .confirm-dialog,
+  #contact-edit-panel {
+    width: calc(100vw - 28px) !important;
+    max-height: calc(100vh - 48px) !important;
+  }
+}
+

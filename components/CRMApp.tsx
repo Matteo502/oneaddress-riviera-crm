@@ -4053,58 +4053,6 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
   const [sharedWorkspaceUpdatedAt, setSharedWorkspaceUpdatedAt] = useState("");
   const [toast, setToast] = useState<Toast | null>(null);
 
-  // CONTACT_DETAILS_FORCE_SCROLL_20260614
-  useEffect(() => {
-    function normalizeButtonText(value: string) {
-      return value
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .trim();
-    }
-
-    function forceScrollDown() {
-      window.setTimeout(() => {
-        const scrollTarget = globalThis.document.scrollingElement || globalThis.document.documentElement;
-        scrollTarget.scrollTo({
-          top: scrollTarget.scrollHeight,
-          behavior: "smooth"
-        });
-      }, 120);
-
-      window.setTimeout(() => {
-        const scrollTarget = globalThis.document.scrollingElement || globalThis.document.documentElement;
-        scrollTarget.scrollTo({
-          top: scrollTarget.scrollHeight,
-          behavior: "smooth"
-        });
-      }, 450);
-    }
-
-    function handleClick(event: MouseEvent) {
-      const target = event.target as HTMLElement | null;
-      const button = target?.closest("button, a") as HTMLElement | null;
-
-      if (!button) return;
-
-      const text = normalizeButtonText(button.textContent || "");
-      const pageText = normalizeButtonText(globalThis.document.body.textContent || "");
-
-      const isContactsPage = pageText.includes("contacts");
-      const isDetailsButton = text.includes("details") || text.includes("detail") || text.includes("voir");
-
-      if (!isContactsPage || !isDetailsButton) return;
-
-      forceScrollDown();
-    }
-
-    globalThis.document.addEventListener("click", handleClick, true);
-
-    return () => {
-      globalThis.document.removeEventListener("click", handleClick, true);
-    };
-  }, []);
-
 
 
   useEffect(() => {
@@ -8571,14 +8519,8 @@ function ContactsView({
   }
 
   function openEdit(contact: Contact) {
+    setSelectedContact(null);
     setEditingContact(contact);
-
-    setTimeout(() => {
-      document.getElementById("contact-edit-panel")?.scrollIntoView({
-        behavior: "smooth",
-        block: "center"
-      });
-    }, 50);
   }
 
   function typeLabel(contact: Contact) {
