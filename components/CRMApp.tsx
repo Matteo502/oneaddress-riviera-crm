@@ -3925,69 +3925,6 @@ function getSemanticToneFromText(text: string) {
 function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
 
-  // CONTACT_DETAILS_AUTO_SCROLL_20260614
-  useEffect(() => {
-    if (activeTab !== "contacts") return;
-
-    function normalizeText(value: string) {
-      return value
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-    }
-
-    function findContactDetailsTarget() {
-      const directTarget = globalThis.document.querySelector(
-        "#contact-details-panel, [data-contact-details-panel], .contact-details-panel, .contact-detail-panel, .contact-form-card"
-      );
-
-      if (directTarget) return directTarget;
-
-      const cards = Array.from(
-        globalThis.document.querySelectorAll("section, article, form, .card")
-      ) as HTMLElement[];
-
-      return cards.find((card) => {
-        const text = normalizeText(card.textContent || "");
-
-        return (
-          text.includes("details") && text.includes("contact")
-        ) || (
-          text.includes("modifier") && text.includes("contact")
-        ) || (
-          text.includes("nom") &&
-          text.includes("email") &&
-          text.includes("telephone")
-        );
-      }) || null;
-    }
-
-    function handleContactDetailsClick(event: MouseEvent) {
-      const target = event.target as HTMLElement | null;
-      const clickable = target?.closest("button, a") as HTMLElement | null;
-
-      if (!clickable) return;
-
-      const text = normalizeText(clickable.textContent || "");
-
-      if (!text.includes("details")) return;
-
-      window.setTimeout(() => {
-        const detailsTarget = findContactDetailsTarget();
-
-        if (detailsTarget) {
-          detailsTarget.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }, 120);
-    }
-
-    globalThis.document.addEventListener("click", handleContactDetailsClick, true);
-
-    return () => {
-      globalThis.document.removeEventListener("click", handleContactDetailsClick, true);
-    };
-  }, [activeTab]);
-
 
   const [quickEntryText, setQuickEntryText] = useState("");
   const [quickEntryOpen, setQuickEntryOpen] = useState(false);
@@ -4066,6 +4003,60 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
   const [sharedWorkspaceMessage, setSharedWorkspaceMessage] = useState("Chargement de la base partagée...");
   const [sharedWorkspaceUpdatedAt, setSharedWorkspaceUpdatedAt] = useState("");
   const [toast, setToast] = useState<Toast | null>(null);
+
+  // CONTACT_DETAILS_FORCE_SCROLL_20260614
+  useEffect(() => {
+    function normalizeButtonText(value: string) {
+      return value
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+    }
+
+    function forceScrollDown() {
+      window.setTimeout(() => {
+        const scrollTarget = globalThis.document.scrollingElement || globalThis.document.documentElement;
+        scrollTarget.scrollTo({
+          top: scrollTarget.scrollHeight,
+          behavior: "smooth"
+        });
+      }, 120);
+
+      window.setTimeout(() => {
+        const scrollTarget = globalThis.document.scrollingElement || globalThis.document.documentElement;
+        scrollTarget.scrollTo({
+          top: scrollTarget.scrollHeight,
+          behavior: "smooth"
+        });
+      }, 450);
+    }
+
+    function handleClick(event: MouseEvent) {
+      const target = event.target as HTMLElement | null;
+      const button = target?.closest("button, a") as HTMLElement | null;
+
+      if (!button) return;
+
+      const text = normalizeButtonText(button.textContent || "");
+      const pageText = normalizeButtonText(globalThis.document.body.textContent || "");
+
+      const isContactsPage = pageText.includes("contacts");
+      const isDetailsButton = text.includes("details") || text.includes("detail") || text.includes("voir");
+
+      if (!isContactsPage || !isDetailsButton) return;
+
+      forceScrollDown();
+    }
+
+    globalThis.document.addEventListener("click", handleClick, true);
+
+    return () => {
+      globalThis.document.removeEventListener("click", handleClick, true);
+    };
+  }, []);
+
+
 
   useEffect(() => {
     let cleanupInterval: number | null = null;
