@@ -4260,3 +4260,35 @@ select.actor-select-hard-locked {
   white-space: nowrap !important;
 }
 
+
+
+/* DOCUMENTS_INTERNAL_STORAGE_20260616 */
+.documents-list-card,
+.documents-form-card {
+  align-self: start !important;
+}
+
+.documents-form-card .form-grid {
+  align-items: start !important;
+}
+
+.documents-form-card input[type="file"] {
+  padding: 13px !important;
+  border: 1px dashed rgba(194, 157, 94, 0.55) !important;
+  background: rgba(255, 250, 242, 0.7) !important;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 6px;
+  color: rgba(7, 31, 39, 0.58);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.document-storage-note {
+  margin: -6px 0 16px;
+  color: rgba(7, 31, 39, 0.62);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}

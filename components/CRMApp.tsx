@@ -33,6 +33,7 @@ const STORAGE_KEY = "oneaddress-riviera-crm-v1";
 const QUOTES_STORAGE_KEY = "oneaddress-riviera-crm-quotes-v1";
 const ACTOR_STORAGE_KEY = "oneaddress-riviera-crm-active-actor-v1";
 const SHARED_WORKSPACE_ID = "oneaddress-riviera";
+const CRM_DOCUMENTS_BUCKET = "crm-documents";
 const leadStatuses: LeadStatus[] = ["Nouveau", "Contacté", "Devis", "Négociation", "Gagné", "Perdu"];
 const propertyStatuses: PropertyStatus[] = ["Disponible", "Mandat en cours", "Loué", "Vendu"];
 const vehicleStatuses: VehicleStatus[] = ["Disponible", "En location", "En maintenance", "Vendu"];
@@ -165,6 +166,9 @@ type CRMDocument = {
   category: "Logo" | "Documents" | "Assurance" | "Contrat" | "Administratif" | "Identité / Kbis" | "Maison" | "Véhicule" | "Bateau" | "Autre";
   status: "À jour" | "À vérifier" | "Expiré";
   url: string;
+  storagePath?: string;
+  fileName?: string;
+  uploadedAt?: string;
   location: string;
   expiryDate: string;
   notes: string;
@@ -202,8 +206,11 @@ function normalizeCRMDocument(value: unknown): CRMDocument | null {
       status === "Expiré"
     ) ? status : "À jour",
     url: String(raw.url || ""),
+    storagePath: String(raw.storagePath || ""),
+    fileName: String(raw.fileName || ""),
+    uploadedAt: String(raw.uploadedAt || ""),
     location: String(raw.location || ""),
-    expiryDate: String(raw.expiryDate || ""),
+    expiryDate: String(raw.expiryDate || raw.uploadDate || ""),
     notes: String(raw.notes || ""),
     addedAt: String(raw.addedAt || new Date().toISOString()),
     addedBy: String(raw.addedBy || "À compléter"),
@@ -2739,6 +2746,7 @@ function DocumentsView({
   const [statusFilter, setStatusFilter] = useState<CRMDocument["status"] | "Tous">("Tous");
   const [editingDocument, setEditingDocument] = useState<CRMDocument | null>(null);
   const [connectedEmail, setConnectedEmail] = useState("");
+  const [uploadingDocument, setUploadingDocument] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -2784,14 +2792,65 @@ function DocumentsView({
     return matchesCategory && matchesStatus;
   });
 
-  const documentsToCheck = documents.filter((crmDocument) => {
-    if (crmDocument.status === "Expiré" || crmDocument.status === "À vérifier") return true;
+  const documentsToCheck = documents.filter((crmDocument) =>
+    crmDocument.status === "Expiré" || crmDocument.status === "À vérifier"
+  );
 
-    const days = getDocumentDaysUntil(crmDocument.expiryDate);
-    return days !== null && days <= 30;
-  });
+  async function uploadInternalCRMDocument(file: File, documentId: string) {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
 
-  function submitDocument(event: React.FormEvent<HTMLFormElement>) {
+    if (userError || !userData.user) {
+      throw new Error("Utilisateur Supabase non connecté.");
+    }
+
+    const safeName = file.name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9._-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "") || "document";
+
+    const storagePath = `${SHARED_WORKSPACE_ID}/${documentId}/${Date.now()}-${safeName}`;
+
+    const { error } = await supabase.storage
+      .from(CRM_DOCUMENTS_BUCKET)
+      .upload(storagePath, file, {
+        cacheControl: "3600",
+        upsert: true
+      });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return {
+      storagePath,
+      fileName: file.name,
+      uploadedAt: new Date().toISOString()
+    };
+  }
+
+  async function downloadInternalCRMDocument(crmDocument: CRMDocument) {
+    if (!crmDocument.storagePath) return;
+
+    const { data: fileData, error } = await supabase.storage
+      .from(CRM_DOCUMENTS_BUCKET)
+      .download(crmDocument.storagePath);
+
+    if (error || !fileData) {
+      window.alert(`Téléchargement impossible : ${error?.message || "fichier introuvable"}`);
+      return;
+    }
+
+    const url = URL.createObjectURL(fileData);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = crmDocument.fileName || crmDocument.title || "document";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function submitDocument(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!canManageDocuments) {
@@ -2799,15 +2858,36 @@ function DocumentsView({
       return;
     }
 
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const now = new Date().toISOString();
+    const documentId = editingDocument?.id || makeId("doc");
+    const file = form.get("file");
+
+    let uploadedFile: Partial<CRMDocument> = {};
+
+    if (file instanceof File && file.size > 0) {
+      try {
+        setUploadingDocument(true);
+        uploadedFile = await uploadInternalCRMDocument(file, documentId);
+      } catch (error) {
+        window.alert(`Document non chargé dans Supabase Storage : ${error instanceof Error ? error.message : "erreur inconnue"}`);
+        setUploadingDocument(false);
+        return;
+      } finally {
+        setUploadingDocument(false);
+      }
+    }
 
     const crmDocument: CRMDocument = {
-      id: editingDocument?.id || makeId("doc"),
+      id: documentId,
       title: String(form.get("title") || "").trim(),
       category: String(form.get("category") || "Autre") as CRMDocument["category"],
       status: String(form.get("status") || "À jour") as CRMDocument["status"],
       url: String(form.get("url") || "").trim(),
+      storagePath: uploadedFile.storagePath || editingDocument?.storagePath || "",
+      fileName: uploadedFile.fileName || editingDocument?.fileName || "",
+      uploadedAt: uploadedFile.uploadedAt || editingDocument?.uploadedAt || "",
       location: String(form.get("location") || "").trim(),
       expiryDate: String(form.get("expiryDate") || ""),
       notes: String(form.get("notes") || "").trim(),
@@ -2822,6 +2902,11 @@ function DocumentsView({
       return;
     }
 
+    if (!crmDocument.storagePath && !crmDocument.url) {
+      window.alert("Ajoutez un fichier à charger ou un lien externe de secours.");
+      return;
+    }
+
     if (editingDocument) {
       onUpdate(crmDocument);
       setEditingDocument(null);
@@ -2829,7 +2914,7 @@ function DocumentsView({
       onAdd(crmDocument);
     }
 
-    event.currentTarget.reset();
+    formElement.reset();
   }
 
   return (
@@ -2877,8 +2962,7 @@ function DocumentsView({
         ) : (
           <div className="documents-grid">
             {visibleDocuments.map((crmDocument) => {
-              const days = getDocumentDaysUntil(crmDocument.expiryDate);
-              const needsCheck = crmDocument.status !== "À jour" || (days !== null && days <= 30);
+              const needsCheck = crmDocument.status !== "À jour";
 
               return (
                 <article className={`item-card document-card ${needsCheck ? "document-card-warning" : ""}`} key={crmDocument.id} id={`document-${crmDocument.id}`}>
@@ -2890,7 +2974,13 @@ function DocumentsView({
                     </p>
                     {crmDocument.expiryDate && (
                       <p className="muted-line">
-                        Échéance : {new Date(`${crmDocument.expiryDate}T12:00:00`).toLocaleDateString("fr-FR")}
+                        Date : {new Date(`${crmDocument.expiryDate}T12:00:00`).toLocaleDateString("fr-FR")}
+                      </p>
+                    )}
+                    {crmDocument.fileName && <p className="muted-line">Fichier : {crmDocument.fileName}</p>}
+                    {crmDocument.uploadedAt && (
+                      <p className="muted-line">
+                        Téléchargé le {new Date(crmDocument.uploadedAt).toLocaleDateString("fr-FR")}
                       </p>
                     )}
                     {crmDocument.location && <p>{crmDocument.location}</p>}
@@ -2898,9 +2988,15 @@ function DocumentsView({
                   </div>
 
                   <div className="item-actions">
+                    {crmDocument.storagePath && (
+                      <button className="secondary-button" type="button" onClick={() => void downloadInternalCRMDocument(crmDocument)}>
+                        Télécharger
+                      </button>
+                    )}
+
                     {crmDocument.url && (
                       <a className="secondary-button" href={crmDocument.url} target="_blank" rel="noreferrer">
-                        Ouvrir
+                        Ouvrir lien
                       </a>
                     )}
 
@@ -2943,6 +3039,7 @@ function DocumentsView({
       <section className="card form-card documents-form-card">
         <p className="eyebrow">{editingDocument ? "Modification" : "Nouveau"}</p>
         <h3>{editingDocument ? "Modifier document" : "Ajouter un document"}</h3>
+        <p className="document-storage-note">Les fichiers sont stockés dans Supabase Storage, pas dans le Drive personnel d’une personne.</p>
 
         {!canManageDocuments && (
           <p className="muted-line">
@@ -2979,15 +3076,20 @@ function DocumentsView({
               </select>
             </label>
 
-            <label>Lien du document
-              <input name="url" defaultValue={editingDocument?.url || ""} placeholder="Lien Google Drive, Dropbox, Supabase..." />
+            <label>Document à charger
+              <input name="file" type="file" />
+              {editingDocument?.fileName && <span className="field-hint">Fichier actuel : {editingDocument.fileName}</span>}
+            </label>
+
+            <label>Lien externe optionnel
+              <input name="url" defaultValue={editingDocument?.url || ""} placeholder="Lien externe uniquement si nécessaire" />
             </label>
 
             <label>Emplacement / description
               <input name="location" defaultValue={editingDocument?.location || ""} placeholder="Ex : Drive OAR / Assurances / 2026" />
             </label>
 
-            <label>Échéance
+            <label>Date
               <input name="expiryDate" type="date" defaultValue={editingDocument?.expiryDate || ""} />
             </label>
 
@@ -2995,8 +3097,8 @@ function DocumentsView({
               <textarea name="notes" defaultValue={editingDocument?.notes || ""} placeholder="Détails, version, remarque..." />
             </label>
 
-            <button className="primary-button" type="submit">
-              {editingDocument ? "Enregistrer" : "Ajouter document"}
+            <button className="primary-button" type="submit" disabled={uploadingDocument}>
+              {uploadingDocument ? "Chargement..." : editingDocument ? "Enregistrer" : "Ajouter document"}
             </button>
 
             {editingDocument && (
@@ -4800,9 +4902,8 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     const crmDocuments = (((data as any).documents ?? []) as CRMDocument[]);
 
     crmDocuments.forEach((crmDocument) => {
-      const days = getDocumentDaysUntil(crmDocument.expiryDate);
-      const isExpired = crmDocument.status === "Expiré" || (days !== null && days < 0);
-      const shouldCheck = crmDocument.status === "À vérifier" || (days !== null && days >= 0 && days <= 30);
+      const isExpired = crmDocument.status === "Expiré";
+      const shouldCheck = crmDocument.status === "À vérifier";
 
       if (!isExpired && !shouldCheck) return;
 
