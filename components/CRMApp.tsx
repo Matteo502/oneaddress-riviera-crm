@@ -58,7 +58,7 @@ function isCompletedTaskExpired(task: Task) {
   return Date.now() - completedTime > threeDays;
 }
 
-const contactKinds: ContactKind[] = ["Client", "Prestataire", "Propriétaire", "Prestataire"];
+const contactKinds: ContactKind[] = ["Client", "Propriétaire", "Prestataire"];
 const contactLevels = ["Standard", "VIP", "Ultra VIP"] as const;
 const contactLanguages = ["Français", "Anglais", "Italien", "Autre"] as const;
 const contactRelationshipStatuses = ["Prospect", "Actif", "Dormant", "Prestataire"] as const;
@@ -596,7 +596,7 @@ function contactFromSupabaseRow(row: any): Contact {
     firstName: String(row.first_name || ""),
     civility: String(row.civility || "") as Contact["civility"],
     companyName: String(row.company_name || ""),
-    kind: (String(row.kind || "Client") === "Prestataire" ? "Prestataire" : String(row.kind || "Client")) as ContactKind,
+    kind: (() => { const rawKind = String(row.kind || "Client"); return rawKind === "Partenaire" || rawKind === "Prestataire" ? "Prestataire" : rawKind === "Propriétaire" ? "Propriétaire" : "Client"; })() as ContactKind,
     clientLevel: String(row.client_level || "Standard") as Contact["clientLevel"],
     preferredLanguage: String(row.preferred_language || "Français") as Contact["preferredLanguage"],
     relationshipStatus: String(row.relationship_status || "Prospect") as Contact["relationshipStatus"],
@@ -3642,7 +3642,7 @@ function VendorInvoicesView({
 
   const supplierContacts = contacts.filter((contact) => {
     const kind = String((contact as any).kind || "");
-    return kind === "Prestataire" || kind === "Prestataire" || kind === "Propriétaire";
+    return kind === "Prestataire" || kind === "Partenaire" || kind === "Propriétaire";
   });
 
   const selectableContacts = supplierContacts.length > 0 ? supplierContacts : contacts;
@@ -4762,7 +4762,7 @@ const toneRank: Record<ActionNotification["tone"], number> = {
   }, [data]);
 
   const filteredContacts = useMemo(() => {
-    return data.contacts.filter((contact) => searchMatch(query, [contact.name, contact.kind, contact.email, contact.phone, contact.city, contact.postalAddress ?? "", contact.supplierCategory ?? "", contact.supplierZone ?? "", contact.supplierReliability ?? ""]));
+    return data.contacts.filter((contact) => searchMatch(query, [contact.name, contact.firstName ?? "", contact.companyName ?? "", contact.kind, contact.email, contact.phone, contact.city, contact.postalAddress ?? "", contact.supplierCategory ?? "", contact.supplierZone ?? "", contact.supplierReliability ?? ""]));
   }, [data.contacts, query]);
 
   const filteredLeads = useMemo(() => {
@@ -8531,7 +8531,7 @@ function ContactsView({
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
 
-  const filterOptions = ["Tous", "Clients", "Prestataires", "Propriétaires", "Partenaires"];
+  const filterOptions = ["Tous", "Clients", "Prestataires", "Propriétaires"];
 
   function getContactLeads(contact: Contact) {
     return leads.filter((lead) => lead.contactName === contact.name);
@@ -8550,8 +8550,7 @@ function ContactsView({
       contactFilter === "Tous" ||
       (contactFilter === "Clients" && contact.kind === "Client" && !supplier) ||
       (contactFilter === "Prestataires" && supplier) ||
-      (contactFilter === "Propriétaires" && contact.kind === "Propriétaire") ||
-      (contactFilter === "Partenaires" && contact.kind === "Prestataire");
+      (contactFilter === "Propriétaires" && contact.kind === "Propriétaire");
 
     const matchesSupplierCategory = supplierCategoryFilter === "Toutes" || getContactSupplierCategory(contact) === supplierCategoryFilter;
 
@@ -8561,7 +8560,6 @@ function ContactsView({
   const clientCount = contacts.filter((contact) => contact.kind === "Client" && !isSupplierContact(contact)).length;
   const supplierCount = contacts.filter(isSupplierContact).length;
   const ownerCount = contacts.filter((contact) => contact.kind === "Propriétaire").length;
-  const partnerCount = contacts.filter((contact) => contact.kind === "Prestataire").length;
 
   function submitEdit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -8612,7 +8610,9 @@ function ContactsView({
   }
 
   function typeLabel(contact: Contact) {
-    return isSupplierContact(contact) ? "Prestataire" : contact.kind;
+    const kind = String((contact as any).kind || "Client");
+    if (isSupplierContact(contact) || kind === "Partenaire") return "Prestataire";
+    return contact.kind;
   }
 
   return (
@@ -8630,7 +8630,6 @@ function ContactsView({
           <StatCard label="Clients" value={String(clientCount)} caption="Demandes et leads" />
           <StatCard label="Prestataires" value={String(supplierCount)} caption="Prestataires activables" />
           <StatCard label="Propriétaires" value={String(ownerCount)} caption="Actifs privés" />
-          <StatCard label="Partenaires" value={String(partnerCount)} caption="Apporteurs / réseau" />
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 20 }}>
@@ -8672,7 +8671,10 @@ function ContactsView({
                     <p className="eyebrow">
                       {typeLabel(contact)}{isSupplierContact(contact) ? ` · ${getContactSupplierCategory(contact)}` : ""}
                     </p>
-                    <h3>{contact.name}</h3>
+                    <h3>{[contact.civility, contact.firstName, contact.name].filter(Boolean).join(" ") || contact.companyName || "Contact sans nom"}</h3>
+                    {contact.companyName && (
+                      <p className="muted-line">Société : {contact.companyName}</p>
+                    )}
                     <p className="muted-line">
                       {contact.city || getContactSupplierZone(contact) || "Ville / zone à compléter"}
                     </p>
@@ -8727,7 +8729,16 @@ function ContactsView({
           <h3>Ajouter un contact</h3>
 
           <form className="form-grid" onSubmit={onAdd}>
-            <label>Nom<input name="name" placeholder="Nom ou société" /></label>
+            <label>Civilité
+              <select name="civility" defaultValue="">
+                <option value="">—</option>
+                <option value="M">M</option>
+                <option value="MME">MME</option>
+              </select>
+            </label>
+            <label>Prénom<input name="firstName" placeholder="Prénom" /></label>
+            <label>Nom<input name="name" placeholder="Nom" /></label>
+            <label>Société<input name="companyName" placeholder="Nom de la société" /></label>
             <label>Type
               <select name="kind" defaultValue="Client">
                 {contactKinds.map((kind) => <option key={kind}>{kind}</option>)}
@@ -8783,10 +8794,13 @@ function ContactsView({
         <div className="confirm-backdrop">
           <div id="contact-detail-panel" className="confirm-dialog contact-detail-dialog" role="dialog" aria-modal="true">
             <p className="eyebrow">Fiche contact</p>
-            <h3>{selectedContact.name}</h3>
+            <h3>{[selectedContact.civility, selectedContact.firstName, selectedContact.name].filter(Boolean).join(" ") || selectedContact.companyName || "Contact sans nom"}</h3>
 
             <div className="contact-detail-grid">
               <div><span>Type</span><strong>{typeLabel(selectedContact)}</strong></div>
+              <div><span>Civilité</span><strong>{selectedContact.civility || "Non renseignée"}</strong></div>
+              <div><span>Prénom</span><strong>{selectedContact.firstName || "Non renseigné"}</strong></div>
+              <div><span>Société</span><strong>{selectedContact.companyName || "Non renseignée"}</strong></div>
               <div><span>Email</span><strong>{selectedContact.email || "Non renseigné"}</strong></div>
               <div><span>Téléphone</span><strong>{selectedContact.phone || "Non renseigné"}</strong></div>
               <div><span>Ville / zone</span><strong>{selectedContact.city || getContactSupplierZone(selectedContact) || "Non renseignée"}</strong></div>
@@ -8848,7 +8862,6 @@ function ContactsView({
             <h3>Modifier le contact</h3>
 
             <form className="form-grid" onSubmit={submitEdit}>
-              <label>Nom<input name="name" defaultValue={editingContact.name} /></label>
               <label>Civilité
                 <select name="civility" defaultValue={editingContact.civility ?? ""}>
                   <option value="">—</option>
@@ -8856,12 +8869,12 @@ function ContactsView({
                   <option value="MME">MME</option>
                 </select>
               </label>
-
               <label>Prénom<input name="firstName" defaultValue={editingContact.firstName ?? ""} /></label>
+              <label>Nom<input name="name" defaultValue={editingContact.name} /></label>
               <label>Société<input name="companyName" defaultValue={editingContact.companyName ?? ""} /></label>
 
               <label>Type
-                <select name="kind" defaultValue={editingContact.kind === "Prestataire" ? "Prestataire" : editingContact.kind}>
+                <select name="kind" defaultValue={String((editingContact as any).kind) === "Partenaire" ? "Prestataire" : editingContact.kind}>
                   {contactKinds.map((kind) => <option key={kind}>{kind}</option>)}
                 </select>
               </label>

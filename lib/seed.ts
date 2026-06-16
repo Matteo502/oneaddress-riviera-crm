@@ -31,7 +31,7 @@ export const seedData: CRMData = {
     {
       id: "c-003",
       name: "Sophie Lambert",
-      kind: "Partenaire",
+      kind: "Prestataire",
       email: "sophie.lambert@example.com",
       phone: "+33 6 98 76 54 32",
       city: "Nice",

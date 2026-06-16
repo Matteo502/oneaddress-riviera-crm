@@ -1,4 +1,4 @@
-export type ContactKind = "Client" | "Propriétaire" | "Partenaire" | "Prestataire";
+export type ContactKind = "Client" | "Propriétaire" | "Prestataire";
 export type SupplierCategory = "Villa" | "Voiture" | "Bateau" | "Chauffeur" | "Chef" | "Sécurité" | "Conciergerie" | "Paysagiste" | "Gestion nuisibles" | "Pisciniste" | "Femme de ménage" | "Nounou" | "Artisan rénovation" | "Lavage voiture" | "Garage / mécanicien" | "Jardinier" | "Autre";
 export type SupplierQuality = "Standard" | "Premium" | "Très premium";
 export type SupplierReliability = "À tester" | "Fiable" | "Très fiable" | "À éviter";
