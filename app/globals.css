@@ -3242,7 +3242,7 @@ textarea {
 
 .house-tracking-grid {
   display: grid;
-  grid-template-columns: minmax(280px, 0.72fr) minmax(640px, 1.45fr);
+  grid-template-columns: minmax(270px, 370px) minmax(0, 1fr);
   gap: 24px;
   align-items: start;
 }
@@ -3250,6 +3250,11 @@ textarea {
 .house-tracking-grid aside {
   position: sticky;
   top: 20px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 8px;
+  scrollbar-gutter: stable;
 }
 
 .house-tracking-view .table-wrapper {
@@ -3284,6 +3289,9 @@ textarea {
 
   .house-tracking-grid aside {
     position: static;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
   }
 }
 
@@ -4291,4 +4299,17 @@ select.actor-select-hard-locked {
   color: rgba(7, 31, 39, 0.62);
   font-size: 0.86rem;
   line-height: 1.45;
+}
+
+.secondary-link {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }

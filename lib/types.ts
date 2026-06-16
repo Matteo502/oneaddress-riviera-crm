@@ -190,6 +190,9 @@ export type HouseTrackingWorker = {
   role: string;
   hourlyRate: number;
   documentUrl?: string;
+  documentStoragePath?: string;
+  documentFileName?: string;
+  documentUploadedAt?: string;
   status: "Actif" | "Inactif";
   notes?: string;
   createdAt: string;

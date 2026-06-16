@@ -404,6 +404,9 @@ function normalizeHouseTrackingWorker(value: unknown): HouseTrackingWorker | nul
     role: String(raw.role || "Intervenant"),
     hourlyRate: Number.isFinite(hourlyRate) ? hourlyRate : 0,
     documentUrl: String(raw.documentUrl || ""),
+    documentStoragePath: String(raw.documentStoragePath || raw.storagePath || ""),
+    documentFileName: String(raw.documentFileName || raw.fileName || ""),
+    documentUploadedAt: String(raw.documentUploadedAt || raw.uploadedAt || ""),
     status: raw.status === "Inactif" ? "Inactif" : "Actif",
     notes: String(raw.notes || ""),
     createdAt: String(raw.createdAt || new Date().toISOString()),
@@ -3158,6 +3161,7 @@ function HouseTrackingView({
   });
   const [showAllHoursHistory, setShowAllHoursHistory] = useState(false);
   const [showAllPaymentsHistory, setShowAllPaymentsHistory] = useState(false);
+  const [uploadingWorkerDocument, setUploadingWorkerDocument] = useState(false);
 
   function normalizeHouseDateValue(value: string) {
     if (!value) return "";
@@ -3371,27 +3375,102 @@ function HouseTrackingView({
     event.currentTarget.reset();
   }
 
-  function submitWorker(event: React.FormEvent<HTMLFormElement>) {
+  async function uploadHouseWorkerDocument(file: File, workerId: string) {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !userData.user) {
+      throw new Error("Utilisateur Supabase non connecté.");
+    }
+
+    const safeName = file.name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9._-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "") || "document";
+
+    const storagePath = `${SHARED_WORKSPACE_ID}/house-workers/${workerId}/${Date.now()}-${safeName}`;
+
+    const { error } = await supabase.storage
+      .from(CRM_DOCUMENTS_BUCKET)
+      .upload(storagePath, file, {
+        cacheControl: "3600",
+        upsert: true
+      });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return {
+      documentStoragePath: storagePath,
+      documentFileName: file.name,
+      documentUploadedAt: new Date().toISOString()
+    };
+  }
+
+  async function downloadHouseWorkerDocument(worker: HouseTrackingWorker) {
+    if (!worker.documentStoragePath) return;
+
+    const { data: fileData, error } = await supabase.storage
+      .from(CRM_DOCUMENTS_BUCKET)
+      .download(worker.documentStoragePath);
+
+    if (error || !fileData) {
+      window.alert(`Téléchargement impossible : ${error?.message || "fichier introuvable"}`);
+      return;
+    }
+
+    const url = URL.createObjectURL(fileData);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = worker.documentFileName || `${worker.contactName || "intervenant"}-document`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function submitWorker(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const contactInput = String(form.get("contactSearch") ?? "").trim();
     const contact = findHouseTrackingContact(contactInput);
 
     if (!contact) return window.alert("Choisissez un contact CRM existant. Créez-le d’abord dans Contacts si besoin.");
 
+    const workerId = makeId("worker");
+    const file = form.get("documentFile");
+    let uploadedDocument: Partial<HouseTrackingWorker> = {};
+
+    if (file instanceof File && file.size > 0) {
+      try {
+        setUploadingWorkerDocument(true);
+        uploadedDocument = await uploadHouseWorkerDocument(file, workerId);
+      } catch (error) {
+        window.alert(`Document non chargé dans Supabase Storage : ${error instanceof Error ? error.message : "erreur inconnue"}`);
+        setUploadingWorkerDocument(false);
+        return;
+      } finally {
+        setUploadingWorkerDocument(false);
+      }
+    }
+
     onAddWorker({
-      id: makeId("worker"),
+      id: workerId,
       contactId: contact.id,
       contactName: getHouseContactDisplayName(contact),
       role: contact.supplierCategory || contact.kind || "Prestataire",
       hourlyRate: safeNumber(form.get("hourlyRate")),
-      documentUrl: String(form.get("documentUrl") ?? "").trim(),
+      documentUrl: "",
+      documentStoragePath: uploadedDocument.documentStoragePath || "",
+      documentFileName: uploadedDocument.documentFileName || "",
+      documentUploadedAt: uploadedDocument.documentUploadedAt || "",
       status: "Actif",
       notes: String(form.get("notes") ?? "").trim(),
       createdAt: new Date().toISOString()
     });
 
-    event.currentTarget.reset();
+    formElement.reset();
   }
 
   function submitTimeEntry(event: React.FormEvent<HTMLFormElement>) {
@@ -3598,12 +3677,14 @@ function HouseTrackingView({
                 <input name="hourlyRate" type="number" min="0" step="0.5" placeholder="Ex : 18" />
               </label>
               <label>Document à télécharger
-                <input name="documentUrl" placeholder="Lien du document" />
+                <input name="documentFile" type="file" />
               </label>
               <label>Notes
                 <textarea name="notes" placeholder="Disponibilités, conditions, préférences..." />
               </label>
-              <button className="primary-button" type="submit">Ajouter l’intervenant</button>
+              <button className="primary-button" type="submit" disabled={uploadingWorkerDocument}>
+                {uploadingWorkerDocument ? "Chargement..." : "Ajouter l’intervenant"}
+              </button>
             </form>
 
             <div className="list-stack" style={{ marginTop: 18 }}>
@@ -3612,8 +3693,9 @@ function HouseTrackingView({
                   <div>
                     <strong>{worker.contactName}</strong>
                     <span>{worker.role} · {currency.format(worker.hourlyRate)}/h</span>
-                    {worker.documentUrl && (
-                      <a className="secondary-link" href={worker.documentUrl} target="_blank" rel="noreferrer">Télécharger document</a>
+                    {worker.documentFileName && <span>Document : {worker.documentFileName}</span>}
+                    {worker.documentStoragePath && (
+                      <button className="secondary-link" type="button" onClick={() => void downloadHouseWorkerDocument(worker)}>Télécharger document</button>
                     )}
                   </div>
                   <button className="danger-link" type="button" onClick={() => window.confirm("Supprimer cet intervenant ?") && onDeleteWorker(worker.id)}>Suppr.</button>
