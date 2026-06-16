@@ -189,6 +189,7 @@ export type HouseTrackingWorker = {
   contactName: string;
   role: string;
   hourlyRate: number;
+  documentUrl?: string;
   status: "Actif" | "Inactif";
   notes?: string;
   createdAt: string;

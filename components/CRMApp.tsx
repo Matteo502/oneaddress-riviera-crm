@@ -396,6 +396,7 @@ function normalizeHouseTrackingWorker(value: unknown): HouseTrackingWorker | nul
     contactName: String(raw.contactName || "Intervenant à compléter"),
     role: String(raw.role || "Intervenant"),
     hourlyRate: Number.isFinite(hourlyRate) ? hourlyRate : 0,
+    documentUrl: String(raw.documentUrl || ""),
     status: raw.status === "Inactif" ? "Inactif" : "Actif",
     notes: String(raw.notes || ""),
     createdAt: String(raw.createdAt || new Date().toISOString()),
@@ -3053,6 +3054,8 @@ function HouseTrackingView({
     hourlyRate: workers[0]?.hourlyRate ? String(workers[0].hourlyRate) : "",
     note: ""
   });
+  const [showAllHoursHistory, setShowAllHoursHistory] = useState(false);
+  const [showAllPaymentsHistory, setShowAllPaymentsHistory] = useState(false);
 
   function normalizeHouseDateValue(value: string) {
     if (!value) return "";
@@ -3101,6 +3104,56 @@ function HouseTrackingView({
 
     return true;
   }
+
+  function normalizeContactSearchValue(value: string) {
+    return value
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/\s+/g, " ");
+  }
+
+  function getHouseContactDisplayName(contact: Contact) {
+    return [contact.civility, contact.firstName, contact.name].filter(Boolean).join(" ").trim() || contact.name || contact.companyName || "Contact";
+  }
+
+  function getHouseContactSearchLabel(contact: Contact) {
+    const displayName = getHouseContactDisplayName(contact);
+    const company = contact.companyName ? ` · ${contact.companyName}` : "";
+    const email = contact.email ? ` · ${contact.email}` : "";
+
+    return `${displayName}${company} · ${contact.kind}${email}`;
+  }
+
+  function getHouseTrackingContactSearchValues(contact: Contact) {
+    return [
+      contact.id,
+      getHouseContactDisplayName(contact),
+      getHouseContactSearchLabel(contact),
+      contact.name,
+      [contact.firstName, contact.name].filter(Boolean).join(" "),
+      contact.companyName || "",
+      contact.email || "",
+      contact.phone || ""
+    ].map((value) => normalizeContactSearchValue(String(value || "")));
+  }
+
+  function findHouseTrackingContact(input: string) {
+    const normalizedInput = normalizeContactSearchValue(input);
+
+    if (!normalizedInput) return undefined;
+
+    const exactMatch = contacts.find((contact) => getHouseTrackingContactSearchValues(contact).some((value) => value === normalizedInput));
+
+    if (exactMatch) return exactMatch;
+
+    return contacts.find((contact) => getHouseTrackingContactSearchValues(contact).some((value) => value.includes(normalizedInput)));
+  }
+
+  const sortedHouseContacts = contacts
+    .slice()
+    .sort((a, b) => getHouseContactDisplayName(a).localeCompare(getHouseContactDisplayName(b), "fr", { sensitivity: "base" }));
 
   const filteredEntries = timeEntries.filter((entry) => {
     const matchesDate = isDateInSelectedRange(entry.date);
@@ -3160,6 +3213,9 @@ function HouseTrackingView({
     return selectedPaidTotal;
   }
 
+  const visibleHourEntries = showAllHoursHistory ? filteredEntries : filteredEntries.slice(0, 7);
+  const visiblePaymentEntries = showAllPaymentsHistory ? filteredPayments : filteredPayments.slice(0, 7);
+
   const totalHours = filteredEntries.reduce((sum, entry) => sum + getHouseTimeHours(entry), 0);
   const totalDue = filteredEntries.reduce((sum, entry) => sum + getHouseTimeAmount(entry), 0);
   const totalPaid = getAutoAllocatedPaidForSelectedEntries(filteredEntries);
@@ -3216,18 +3272,18 @@ function HouseTrackingView({
   function submitWorker(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const contactId = String(form.get("contactId") ?? "");
-    const contact = contacts.find((item) => item.id === contactId);
-    const contactName = contact?.name || String(form.get("contactName") ?? "").trim();
+    const contactInput = String(form.get("contactSearch") ?? "").trim();
+    const contact = findHouseTrackingContact(contactInput);
 
-    if (!contactName) return window.alert("Choisissez ou créez un contact intervenant.");
+    if (!contact) return window.alert("Choisissez un contact CRM existant. Créez-le d’abord dans Contacts si besoin.");
 
     onAddWorker({
       id: makeId("worker"),
-      contactId,
-      contactName,
-      role: String(form.get("role") ?? "Intervenant").trim() || "Intervenant",
+      contactId: contact.id,
+      contactName: getHouseContactDisplayName(contact),
+      role: contact.supplierCategory || contact.kind || "Prestataire",
       hourlyRate: safeNumber(form.get("hourlyRate")),
+      documentUrl: String(form.get("documentUrl") ?? "").trim(),
       status: "Actif",
       notes: String(form.get("notes") ?? "").trim(),
       createdAt: new Date().toISOString()
@@ -3431,19 +3487,16 @@ function HouseTrackingView({
             <h3>Intervenants</h3>
             <form className="form-grid" onSubmit={submitWorker}>
               <label>Contact CRM
-                <select name="contactId" defaultValue="">
-                  <option value="">Choisir un contact</option>
-                  {contacts.map((contact) => <option key={contact.id} value={contact.id}>{contact.name} · {contact.kind}</option>)}
-                </select>
-              </label>
-              <label>Nom manuel si besoin
-                <input name="contactName" placeholder="Nom" />
-              </label>
-              <label>Rôle
-                <input name="role" placeholder="Ménage, nounou, chauffeur..." />
+                <input name="contactSearch" list="house-contact-options" placeholder="Tapez un nom, prénom, société, email ou téléphone" autoComplete="off" />
+                <datalist id="house-contact-options">
+                  {sortedHouseContacts.map((contact) => <option key={contact.id} value={getHouseContactSearchLabel(contact)} />)}
+                </datalist>
               </label>
               <label>Taux horaire
                 <input name="hourlyRate" type="number" min="0" step="0.5" placeholder="Ex : 18" />
+              </label>
+              <label>Document à télécharger
+                <input name="documentUrl" placeholder="Lien du document" />
               </label>
               <label>Notes
                 <textarea name="notes" placeholder="Disponibilités, conditions, préférences..." />
@@ -3457,6 +3510,9 @@ function HouseTrackingView({
                   <div>
                     <strong>{worker.contactName}</strong>
                     <span>{worker.role} · {currency.format(worker.hourlyRate)}/h</span>
+                    {worker.documentUrl && (
+                      <a className="secondary-link" href={worker.documentUrl} target="_blank" rel="noreferrer">Télécharger document</a>
+                    )}
                   </div>
                   <button className="danger-link" type="button" onClick={() => window.confirm("Supprimer cet intervenant ?") && onDeleteWorker(worker.id)}>Suppr.</button>
                 </article>
@@ -3589,7 +3645,7 @@ function HouseTrackingView({
             <p className="eyebrow">Historique</p>
             <h3>Historique des heures</h3>
             <div className="list-stack">
-              {filteredEntries.length === 0 ? <p className="muted-line">Aucune heure saisie.</p> : filteredEntries.map((entry) => (
+              {filteredEntries.length === 0 ? <p className="muted-line">Aucune heure saisie.</p> : visibleHourEntries.map((entry) => (
                 <article className="mini-row" key={entry.id}>
                   <div>
                     <strong>{entry.workerName}</strong>
@@ -3599,13 +3655,18 @@ function HouseTrackingView({
                 </article>
               ))}
             </div>
+            {filteredEntries.length > 7 && (
+              <button className="secondary-button" type="button" onClick={() => setShowAllHoursHistory((current) => !current)}>
+                {showAllHoursHistory ? "Réduire à 7 lignes" : `Afficher tout (${filteredEntries.length})`}
+              </button>
+            )}
           </section>
 
           <section className="card">
             <p className="eyebrow">Historique</p>
             <h3>Historique des paiements</h3>
             <div className="list-stack">
-              {filteredPayments.length === 0 ? <p className="muted-line">Aucun paiement saisi.</p> : filteredPayments.map((payment) => (
+              {filteredPayments.length === 0 ? <p className="muted-line">Aucun paiement saisi.</p> : visiblePaymentEntries.map((payment) => (
                 <article className="mini-row" key={payment.id}>
                   <div>
                     <strong>{payment.workerName}</strong>
@@ -3615,6 +3676,11 @@ function HouseTrackingView({
                 </article>
               ))}
             </div>
+            {filteredPayments.length > 7 && (
+              <button className="secondary-button" type="button" onClick={() => setShowAllPaymentsHistory((current) => !current)}>
+                {showAllPaymentsHistory ? "Réduire à 7 lignes" : `Afficher tout (${filteredPayments.length})`}
+              </button>
+            )}
           </section>
         </main>
       </div>
