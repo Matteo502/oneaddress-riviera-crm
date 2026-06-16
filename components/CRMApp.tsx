@@ -8799,12 +8799,21 @@ function ContactsView({
     return raw === "Partenaire" || raw === "Prestataire" ? "Prestataire" : raw === "Propriétaire" ? "Propriétaire" : "Client";
   }
 
+  function normalizeContactLookupKey(value?: string | number | null) {
+    return String(value ?? "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ");
+  }
+
   function getContactLeads(contact: Contact) {
     const labels = [contact.name, getContactDisplayName(contact), contact.companyName, contact.email, contact.phone]
-      .map((value) => normalizeDuplicateKey(value))
+      .map((value) => normalizeContactLookupKey(value))
       .filter(Boolean);
 
-    return leads.filter((lead) => labels.includes(normalizeDuplicateKey(lead.contactName)));
+    return leads.filter((lead) => labels.includes(normalizeContactLookupKey(lead.contactName)));
   }
 
   function getContactTasks(contact: Contact) {
