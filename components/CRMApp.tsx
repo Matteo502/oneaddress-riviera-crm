@@ -58,10 +58,10 @@ function isCompletedTaskExpired(task: Task) {
   return Date.now() - completedTime > threeDays;
 }
 
-const contactKinds: ContactKind[] = ["Client", "Prestataire", "Propriétaire", "Partenaire"];
+const contactKinds: ContactKind[] = ["Client", "Prestataire", "Propriétaire", "Prestataire"];
 const contactLevels = ["Standard", "VIP", "Ultra VIP"] as const;
 const contactLanguages = ["Français", "Anglais", "Italien", "Autre"] as const;
-const contactRelationshipStatuses = ["Prospect", "Actif", "Dormant"] as const;
+const contactRelationshipStatuses = ["Prospect", "Actif", "Dormant", "Prestataire"] as const;
 const supplierCategories = ["Villa", "Voiture", "Bateau", "Chauffeur", "Chef", "Sécurité", "Conciergerie", "Paysagiste", "Gestion nuisibles", "Pisciniste", "Femme de ménage", "Nounou", "Artisan rénovation", "Lavage voiture", "Garage / mécanicien", "Jardinier", "Autre"] as const;
 const crmActors = ["Matteo", "Vincent"] as const;
 type CRMActor = typeof crmActors[number];
@@ -569,6 +569,9 @@ function contactToSupabaseRow(contact: Contact, userId: string) {
     id: contact.id,
     user_id: userId,
     name: contact.name,
+    first_name: contact.firstName || "",
+    civility: contact.civility || "",
+    company_name: contact.companyName || "",
     kind: contact.kind || "Client",
     client_level: contact.clientLevel || "Standard",
     preferred_language: contact.preferredLanguage || "Français",
@@ -590,7 +593,10 @@ function contactFromSupabaseRow(row: any): Contact {
   return {
     id: String(row.id || makeId("contact")),
     name: String(row.name || ""),
-    kind: String(row.kind || "Client") as ContactKind,
+    firstName: String(row.first_name || ""),
+    civility: String(row.civility || "") as Contact["civility"],
+    companyName: String(row.company_name || ""),
+    kind: (String(row.kind || "Client") === "Prestataire" ? "Prestataire" : String(row.kind || "Client")) as ContactKind,
     clientLevel: String(row.client_level || "Standard") as Contact["clientLevel"],
     preferredLanguage: String(row.preferred_language || "Français") as Contact["preferredLanguage"],
     relationshipStatus: String(row.relationship_status || "Prospect") as Contact["relationshipStatus"],
@@ -3636,7 +3642,7 @@ function VendorInvoicesView({
 
   const supplierContacts = contacts.filter((contact) => {
     const kind = String((contact as any).kind || "");
-    return kind === "Prestataire" || kind === "Partenaire" || kind === "Propriétaire";
+    return kind === "Prestataire" || kind === "Prestataire" || kind === "Propriétaire";
   });
 
   const selectableContacts = supplierContacts.length > 0 ? supplierContacts : contacts;
@@ -6333,6 +6339,9 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
     const contact: Contact = stampCreated({
       id: makeId("c"),
       name: String(form.get("name") ?? "").trim(),
+      firstName: String(form.get("firstName") ?? "").trim(),
+      civility: String(form.get("civility") ?? "") as Contact["civility"],
+      companyName: String(form.get("companyName") ?? "").trim(),
       kind: String(form.get("kind") ?? "Client") as ContactKind,
       email: String(form.get("email") ?? "").trim(),
       phone: String(form.get("phone") ?? "").trim(),
@@ -8542,7 +8551,7 @@ function ContactsView({
       (contactFilter === "Clients" && contact.kind === "Client" && !supplier) ||
       (contactFilter === "Prestataires" && supplier) ||
       (contactFilter === "Propriétaires" && contact.kind === "Propriétaire") ||
-      (contactFilter === "Partenaires" && contact.kind === "Partenaire");
+      (contactFilter === "Partenaires" && contact.kind === "Prestataire");
 
     const matchesSupplierCategory = supplierCategoryFilter === "Toutes" || getContactSupplierCategory(contact) === supplierCategoryFilter;
 
@@ -8552,7 +8561,7 @@ function ContactsView({
   const clientCount = contacts.filter((contact) => contact.kind === "Client" && !isSupplierContact(contact)).length;
   const supplierCount = contacts.filter(isSupplierContact).length;
   const ownerCount = contacts.filter((contact) => contact.kind === "Propriétaire").length;
-  const partnerCount = contacts.filter((contact) => contact.kind === "Partenaire").length;
+  const partnerCount = contacts.filter((contact) => contact.kind === "Prestataire").length;
 
   function submitEdit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -8564,6 +8573,9 @@ function ContactsView({
     const updatedContact: Contact = {
       ...editingContact,
       name: String(form.get("name") ?? "").trim(),
+      firstName: String(form.get("firstName") ?? "").trim(),
+      civility: String(form.get("civility") ?? "") as Contact["civility"],
+      companyName: String(form.get("companyName") ?? "").trim(),
       kind: String(form.get("kind") ?? "Client") as Contact["kind"],
       email: String(form.get("email") ?? "").trim(),
       phone: String(form.get("phone") ?? "").trim(),
@@ -8837,8 +8849,19 @@ function ContactsView({
 
             <form className="form-grid" onSubmit={submitEdit}>
               <label>Nom<input name="name" defaultValue={editingContact.name} /></label>
+              <label>Civilité
+                <select name="civility" defaultValue={editingContact.civility ?? ""}>
+                  <option value="">—</option>
+                  <option value="M">M</option>
+                  <option value="MME">MME</option>
+                </select>
+              </label>
+
+              <label>Prénom<input name="firstName" defaultValue={editingContact.firstName ?? ""} /></label>
+              <label>Société<input name="companyName" defaultValue={editingContact.companyName ?? ""} /></label>
+
               <label>Type
-                <select name="kind" defaultValue={editingContact.kind}>
+                <select name="kind" defaultValue={editingContact.kind === "Prestataire" ? "Prestataire" : editingContact.kind}>
                   {contactKinds.map((kind) => <option key={kind}>{kind}</option>)}
                 </select>
               </label>

@@ -5,7 +5,7 @@ export type SupplierReliability = "À tester" | "Fiable" | "Très fiable" | "À 
 export type SupplierStatus = "Actif" | "À vérifier" | "Inactif";
 export type ContactLevel = "Standard" | "VIP" | "Ultra VIP";
 export type ContactLanguage = "Français" | "Anglais" | "Italien" | "Autre";
-export type ContactRelationshipStatus = "Prospect" | "Actif" | "Dormant";
+export type ContactRelationshipStatus = "Prospect" | "Actif" | "Dormant" | "Prestataire";
 export type LeadStatus = "Nouveau" | "Contacté" | "Devis" | "Négociation" | "Gagné" | "Perdu";
 export type PropertyStatus = "Disponible" | "Mandat en cours" | "Loué" | "Vendu";
 export type VehicleStatus = "Disponible" | "En location" | "En maintenance" | "Vendu";
@@ -23,6 +23,9 @@ export type ActionAuditFields = {
 export type Contact = {
   id: string;
   name: string;
+  firstName?: string;
+  civility?: "M" | "MME" | "";
+  companyName?: string;
   kind: ContactKind;
   email: string;
   phone: string;
