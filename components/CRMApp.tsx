@@ -63,7 +63,7 @@ const contactKinds: ContactKind[] = ["Client", "Propriétaire", "Prestataire"];
 const contactLevels = ["Standard", "VIP", "Ultra VIP"] as const;
 const contactLanguages = ["Français", "Anglais", "Italien", "Autre"] as const;
 const contactRelationshipStatuses = ["Prospect", "Actif", "Dormant", "Prestataire"] as const;
-const supplierCategories = ["Villa", "Voiture", "Bateau", "Chauffeur", "Chef", "Sécurité", "Conciergerie", "Paysagiste", "Gestion nuisibles", "Pisciniste", "Femme de ménage", "Nounou", "Artisan rénovation", "Lavage voiture", "Garage / mécanicien", "Jardinier", "Autre"] as const;
+const supplierCategories = ["Chauffeur", "Chef", "Sécurité", "Conciergerie", "Paysagiste", "Gestion nuisibles", "Pisciniste", "Femme de ménage", "Nounou", "Artisan rénovation", "Technicien volets", "Lavage voiture", "Garage / mécanicien", "Jardinier", "Autre"] as const;
 const crmActors = ["Matteo", "Vincent"] as const;
 type CRMActor = typeof crmActors[number];
 
@@ -92,6 +92,12 @@ function isSupplierContact(contact: Contact) {
 
 function getContactSupplierCategory(contact: Contact) {
   return contact.supplierCategory || "Autre";
+}
+
+function getSupplierCategoryFromForm(form: FormData) {
+  const customCategory = String(form.get("supplierCategoryCustom") ?? "").trim();
+  const selectedCategory = String(form.get("supplierCategory") ?? "").trim();
+  return customCategory || selectedCategory;
 }
 
 function getContactSupplierZone(contact: Contact) {
@@ -2221,7 +2227,7 @@ function SuppliersView({
   const [categoryFilter, setCategoryFilter] = useState("Tous");
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
 
-  const categories = ["Tous", "Villa", "Voiture", "Bateau", "Chauffeur", "Chef", "Sécurité", "Conciergerie", "Paysagiste", "Gestion nuisibles", "Pisciniste", "Femme de ménage", "Nounou", "Artisan rénovation", "Lavage voiture", "Garage / mécanicien", "Jardinier", "Autre"];
+  const categories = ["Tous", "Chauffeur", "Chef", "Sécurité", "Conciergerie", "Paysagiste", "Gestion nuisibles", "Pisciniste", "Femme de ménage", "Nounou", "Artisan rénovation", "Technicien volets", "Lavage voiture", "Garage / mécanicien", "Jardinier", "Autre"];
 
   const visibleSuppliers =
     categoryFilter === "Tous"
@@ -6606,7 +6612,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
       relationshipStatus: (isPrestataire ? "Prestataire" : String(form.get("relationshipStatus") ?? "Prospect")) as NonNullable<Contact["relationshipStatus"]>,
       preferences: String(form.get("preferences") ?? "").trim(),
       importantNotes: String(form.get("importantNotes") ?? "").trim(),
-      supplierCategory: (isPrestataire ? String(form.get("supplierCategory") ?? "").trim() : "") as Contact["supplierCategory"],
+      supplierCategory: (isPrestataire ? getSupplierCategoryFromForm(form) : "") as Contact["supplierCategory"],
       supplierContactName: isPrestataire ? String(form.get("supplierContactName") ?? "").trim() : "",
       supplierZone: isPrestataire ? String(form.get("supplierZone") ?? "").trim() : "",
       supplierQuality: (isPrestataire ? String(form.get("supplierQuality") ?? "Standard") : "Standard") as Contact["supplierQuality"],
@@ -8785,6 +8791,13 @@ function ContactsView({
 
   const filterOptions = ["Tous", "Clients", "Prestataires", "Propriétaires"];
   const nonSupplierRelationshipStatuses = contactRelationshipStatuses.filter((status) => status !== "Prestataire");
+  const supplierProfessionOptions = useMemo(() => {
+    const legacyAssetCategories = new Set(["Villa", "Voiture", "Bateau"]);
+    const savedProfessions = contacts
+      .map((contact) => String(contact.supplierCategory || "").trim())
+      .filter((profession) => Boolean(profession) && !legacyAssetCategories.has(profession));
+    return Array.from(new Set([...supplierCategories, ...savedProfessions]));
+  }, [contacts]);
 
   function getContactDisplayName(contact: Contact) {
     return [contact.civility, contact.firstName, contact.name].filter(Boolean).join(" ").trim();
@@ -8869,7 +8882,7 @@ function ContactsView({
       relationshipStatus: (isPrestataire ? "Prestataire" : String(form.get("relationshipStatus") ?? getContactRelationshipStatus(editingContact) ?? "Prospect")) as NonNullable<Contact["relationshipStatus"]>,
       preferences: String(form.get("preferences") ?? "").trim(),
       importantNotes: String(form.get("importantNotes") ?? "").trim(),
-      supplierCategory: (isPrestataire ? String(form.get("supplierCategory") ?? "").trim() : "") as Contact["supplierCategory"],
+      supplierCategory: (isPrestataire ? getSupplierCategoryFromForm(form) : "") as Contact["supplierCategory"],
       supplierContactName: isPrestataire ? String(form.get("supplierContactName") ?? "").trim() : "",
       supplierZone: isPrestataire ? String(form.get("supplierZone") ?? "").trim() : "",
       supplierQuality: (isPrestataire ? String(form.get("supplierQuality") ?? "Standard") : "Standard") as Contact["supplierQuality"],
@@ -8931,7 +8944,7 @@ function ContactsView({
             <label>Profession / activité
               <select value={supplierCategoryFilter} onChange={(event) => setSupplierCategoryFilter(event.target.value)}>
                 <option>Toutes</option>
-                {supplierCategories.map((category) => (
+                {supplierProfessionOptions.map((category) => (
                   <option key={category}>{category}</option>
                 ))}
               </select>
@@ -9065,8 +9078,11 @@ function ContactsView({
                 <label>Profession / activité
                   <select name="supplierCategory" defaultValue="">
                     <option value="">—</option>
-                    {supplierCategories.map((category) => <option key={category}>{category}</option>)}
+                    {supplierProfessionOptions.map((category) => <option key={category}>{category}</option>)}
                   </select>
+                </label>
+                <label>Ajouter une profession
+                  <input name="supplierCategoryCustom" placeholder="Ex : Technicien volets" />
                 </label>
                 <label>Fiabilité
                   <select name="supplierReliability" defaultValue="À tester">
@@ -9237,8 +9253,11 @@ function ContactsView({
                   <label>Profession / activité
                     <select name="supplierCategory" defaultValue={editingContact.supplierCategory || ""}>
                       <option value="">—</option>
-                      {supplierCategories.map((category) => <option key={category}>{category}</option>)}
+                      {supplierProfessionOptions.map((category) => <option key={category}>{category}</option>)}
                     </select>
+                  </label>
+                  <label>Ajouter une profession
+                    <input name="supplierCategoryCustom" placeholder="Nouvelle profession si absente de la liste" />
                   </label>
                   <label>Contact référent<input name="supplierContactName" defaultValue={editingContact.supplierContactName || ""} /></label>
                   <label>Fiabilité
