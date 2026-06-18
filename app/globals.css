@@ -4369,3 +4369,167 @@ select.actor-select-hard-locked {
     grid-column: span 1;
   }
 }
+
+
+/* CRM_UI_CLEANUP_STEP_1_20260618 */
+/* Passe visuelle légère : lisibilité, alignement, vitesse de saisie. Pas de logique métier modifiée. */
+
+.crm-card,
+.dashboard-card,
+.section-card,
+.panel-card,
+.form-card,
+.content-card,
+.document-card,
+.contact-card,
+.lead-card,
+.quote-card,
+.asset-card,
+.planning-card {
+  border: 1px solid rgba(212, 177, 106, 0.24);
+  box-shadow: 0 18px 42px rgba(2, 29, 48, 0.08);
+}
+
+.crm-card h2,
+.dashboard-card h2,
+.section-card h2,
+.panel-card h2,
+.form-card h2,
+.content-card h2 {
+  line-height: 1.08;
+}
+
+form label,
+.crm-form label,
+.form-grid label,
+.planning-entry-form label {
+  min-width: 0;
+}
+
+input,
+select,
+textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 52px;
+}
+
+textarea {
+  min-height: 108px;
+  resize: vertical;
+}
+
+button,
+.primary-button,
+.secondary-button,
+.danger-button {
+  min-height: 52px;
+  white-space: normal;
+}
+
+.form-grid,
+.crm-form-grid,
+.planning-entry-form,
+.documents-form-grid,
+.contact-form-grid,
+.lead-form-grid {
+  align-items: end;
+}
+
+.form-grid > *,
+.crm-form-grid > *,
+.planning-entry-form > *,
+.documents-form-grid > *,
+.contact-form-grid > *,
+.lead-form-grid > * {
+  min-width: 0;
+}
+
+.crm-table,
+table {
+  width: 100%;
+}
+
+.crm-table th,
+.crm-table td,
+table th,
+table td {
+  vertical-align: middle;
+}
+
+.crm-table td,
+table td {
+  line-height: 1.35;
+}
+
+.action-row,
+.card-actions,
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.action-row button,
+.card-actions button,
+.form-actions button {
+  flex: 0 1 auto;
+}
+
+.inline-help,
+.field-help,
+small {
+  line-height: 1.35;
+}
+
+.compact-list,
+.history-list {
+  display: grid;
+  gap: 10px;
+}
+
+/* Les champs de recherche/saisie rapide doivent rester sobres et alignés. */
+.contact-search-field,
+.quick-search-field,
+.autocomplete-field {
+  position: relative;
+}
+
+/* Évite les blocs trop larges qui forcent un scroll horizontal inutile. */
+main,
+.crm-main,
+.app-main,
+.page-content,
+.content-area {
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .form-grid,
+  .crm-form-grid,
+  .planning-entry-form,
+  .documents-form-grid,
+  .contact-form-grid,
+  .lead-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .form-grid,
+  .crm-form-grid,
+  .planning-entry-form,
+  .documents-form-grid,
+  .contact-form-grid,
+  .lead-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  button,
+  .primary-button,
+  .secondary-button,
+  .danger-button {
+    width: 100%;
+  }
+}
