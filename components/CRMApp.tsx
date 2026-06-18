@@ -852,14 +852,16 @@ function exportCRMAsCsv(data: CRMData) {
     },
     {
       title: "PLANNING",
-      headers: ["Titre", "Type", "Contact", "Actif", "Date début", "Date fin", "Bloque disponibilité", "Notes"],
+      headers: ["Titre", "Type", "Contact", "Actif", "Date début", "Heure arrivée", "Date fin", "Heure départ", "Bloque disponibilité", "Notes"],
       rows: ((data as any).planningEntries ?? []).map((entry: PlanningEntry) => [
         entry.title,
         entry.type,
         entry.contactName,
         entry.assetId || "",
         entry.startDate,
+        entry.startTime || "",
         entry.endDate,
+        entry.endTime || "",
         entry.blocksAvailability ? "Oui" : "Non",
         entry.notes ?? ""
       ])
@@ -6813,7 +6815,9 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
       assetType: assetSelection.assetType,
       assetId: assetSelection.assetId,
       startDate: start,
+      startTime: String(form.get("startTime") ?? "").trim(),
       endDate: end,
+      endTime: String(form.get("endTime") ?? "").trim(),
       blocksAvailability: String(form.get("blocksAvailability") ?? "false") === "true",
       notes: String(form.get("notes") ?? "").trim()
     }, activeActor) as PlanningEntry;
@@ -6862,7 +6866,9 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
       assetType: assetSelection.assetType,
       assetId: assetSelection.assetId,
       startDate: start,
+      startTime: String(form.get("startTime") ?? "").trim(),
       endDate: end,
+      endTime: String(form.get("endTime") ?? "").trim(),
       blocksAvailability: String(form.get("blocksAvailability") ?? "false") === "true",
       notes: String(form.get("notes") ?? "").trim()
     };
@@ -7615,6 +7621,33 @@ function getPlanningMonthTitle(monthValue: string) {
   }).format(new Date(year, month - 1, 1));
 }
 
+function formatPlanningTimeRange(startTime?: string, endTime?: string) {
+  const start = String(startTime || "").trim();
+  const end = String(endTime || "").trim();
+
+  if (start && end) return `${start} → ${end}`;
+  if (start) return start;
+  if (end) return `Jusqu’à ${end}`;
+
+  return "";
+}
+
+function formatPlanningDateTimeRange(entry: Pick<PlanningEntry, "startDate" | "endDate" | "startTime" | "endTime">) {
+  const startDateLabel = formatDateFR(entry.startDate);
+  const endDateLabel = entry.endDate && entry.endDate !== entry.startDate ? formatDateFR(entry.endDate) : "";
+  const startTime = String(entry.startTime || "").trim();
+  const endTime = String(entry.endTime || "").trim();
+
+  if (endDateLabel) {
+    const startPart = [startDateLabel, startTime].filter(Boolean).join(" · ");
+    const endPart = [endDateLabel, endTime].filter(Boolean).join(" · ");
+    return `${startPart} → ${endPart}`;
+  }
+
+  const timeRange = formatPlanningTimeRange(startTime, endTime);
+  return timeRange ? `${startDateLabel} · ${timeRange}` : startDateLabel;
+}
+
 function getPlanningCalendarWeeks(monthValue: string) {
   const [yearText, monthText] = monthValue.split("-");
   const today = new Date();
@@ -7758,12 +7791,18 @@ function PlanningView({
           assetCategory: asset?.category ?? lead.category,
           contactName: lead.contactName,
           startDate: lead.rentalStartDate,
+          startTime: "",
           endDate: lead.rentalEndDate,
+          endTime: "",
           value: lead.value,
           nextAction: lead.nextAction
         };
       })
-      .sort((a, b) => planningDateValue(a.startDate) - planningDateValue(b.startDate));
+      .sort((a, b) => {
+        const dateDiff = planningDateValue(a.startDate) - planningDateValue(b.startDate);
+        if (dateDiff !== 0) return dateDiff;
+        return String(a.startTime || "").localeCompare(String(b.startTime || ""));
+      });
   }, [leads, assets]);
 
   const pendingBookings = useMemo(() => {
@@ -7788,12 +7827,18 @@ function PlanningView({
           assetCategory: asset?.category ?? lead.category,
           contactName: lead.contactName,
           startDate: lead.rentalStartDate,
+          startTime: "",
           endDate: lead.rentalEndDate,
+          endTime: "",
           value: lead.value,
           nextAction: lead.nextAction
         };
       })
-      .sort((a, b) => planningDateValue(a.startDate) - planningDateValue(b.startDate));
+      .sort((a, b) => {
+        const dateDiff = planningDateValue(a.startDate) - planningDateValue(b.startDate);
+        if (dateDiff !== 0) return dateDiff;
+        return String(a.startTime || "").localeCompare(String(b.startTime || ""));
+      });
   }, [leads, assets]);
 
   const visibleAssets = assets.filter((asset) => {
@@ -7839,12 +7884,16 @@ function PlanningView({
         ...booking,
         source: "lead" as const,
         planningLabel: "Confirmé",
+        startTime: "",
+        endTime: "",
         blocksAvailability: true
       })),
       ...pendingBookings.map((booking) => ({
         ...booking,
         source: "lead" as const,
         planningLabel: booking.status,
+        startTime: "",
+        endTime: "",
         blocksAvailability: false
       }))
     ];
@@ -7863,7 +7912,9 @@ function PlanningView({
           assetCategory: asset?.category || entry.type,
           contactName: entry.contactName || entry.type,
           startDate: entry.startDate,
+          startTime: entry.startTime || "",
           endDate: entry.endDate || entry.startDate,
+          endTime: entry.endTime || "",
           value: 0,
           nextAction: entry.notes || "",
           planningLabel: entry.type,
@@ -7872,7 +7923,11 @@ function PlanningView({
       });
 
     return [...leadEvents, ...planningEntryEvents]
-      .sort((a, b) => planningDateValue(a.startDate) - planningDateValue(b.startDate));
+      .sort((a, b) => {
+        const dateDiff = planningDateValue(a.startDate) - planningDateValue(b.startDate);
+        if (dateDiff !== 0) return dateDiff;
+        return String(a.startTime || "").localeCompare(String(b.startTime || ""));
+      });
   }, [confirmedBookings, pendingBookings, planningEntries, assets]);
 
   const planningConflicts = useMemo(() => {
@@ -8089,8 +8144,16 @@ function PlanningView({
             <input type="date" name="startDate" defaultValue={editingPlanningEntry?.startDate ?? ""} required />
           </label>
 
+          <label>Heure arrivée
+            <input type="time" name="startTime" defaultValue={editingPlanningEntry?.startTime ?? ""} />
+          </label>
+
           <label>Date fin
             <input type="date" name="endDate" defaultValue={editingPlanningEntry?.endDate ?? ""} />
+          </label>
+
+          <label>Heure départ
+            <input type="time" name="endTime" defaultValue={editingPlanningEntry?.endTime ?? ""} />
           </label>
 
           <label>Bloque la disponibilité
@@ -8134,7 +8197,7 @@ function PlanningView({
                   <article className="mini-row" key={entry.id} data-notification-target={`planning-${entry.id}`}>
                     <div>
                       <strong>{entry.title}</strong>
-                      <span>{entry.type} · {formatDateFR(entry.startDate)}{entry.endDate && entry.endDate !== entry.startDate ? ` → ${formatDateFR(entry.endDate)}` : ""}</span>
+                      <span>{entry.type} · {formatPlanningDateTimeRange(entry)}</span>
                       <span>{entry.contactName || "Aucun contact lié"}{asset ? ` · ${asset.label}` : ""}</span>
                       {entry.notes && <span>{entry.notes}</span>}
                       <ActionMeta item={entry} />
@@ -8249,7 +8312,7 @@ function PlanningView({
                                   className={`planning-event-pill ${event.blocksAvailability ? "blocked" : event.source === "planning" ? "entry" : "option"}`}
                                   key={`${event.source}-${event.id}`}
                                 >
-                                  {event.assetLabel} · {event.contactName} · {event.planningLabel}
+                                  {event.startTime ? `${event.startTime} · ` : ""}{event.assetLabel} · {event.contactName} · {event.planningLabel}
                                 </span>
                               ))
                             )}

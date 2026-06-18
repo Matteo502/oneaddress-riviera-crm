@@ -144,7 +144,9 @@ export type PlanningEntry = {
   assetType?: "" | "Property" | "Vehicle" | "Boat";
   assetId?: string;
   startDate: string;
+  startTime?: string;
   endDate: string;
+  endTime?: string;
   blocksAvailability: boolean;
   notes?: string;
   createdBy?: string;
