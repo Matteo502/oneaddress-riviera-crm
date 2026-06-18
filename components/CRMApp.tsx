@@ -7709,10 +7709,33 @@ function PlanningView({
     }));
   }, [assets]);
 
-  const supplierContacts = useMemo(() => {
+  function getPlanningContactDisplayName(contact: Contact) {
+    return [contact.civility, contact.firstName, contact.name].filter(Boolean).join(" ").trim()
+      || contact.companyName
+      || contact.email
+      || contact.phone
+      || "Contact sans nom";
+  }
+
+  const planningContactOptions = useMemo(() => {
     return contacts
-      .filter((contact) => contact.kind === "Prestataire" || Boolean(contact.supplierCategory))
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .map((contact) => {
+        const displayName = getPlanningContactDisplayName(contact);
+        const meta = [
+          contact.kind,
+          contact.supplierCategory,
+          contact.companyName && contact.companyName !== displayName ? contact.companyName : "",
+          contact.email,
+          contact.phone
+        ].filter(Boolean).join(" · ");
+
+        return {
+          id: contact.id,
+          value: displayName,
+          label: meta ? `${displayName} · ${meta}` : displayName
+        };
+      })
+      .sort((a, b) => a.value.localeCompare(b.value, "fr"));
   }, [contacts]);
 
   const confirmedBookings = useMemo(() => {
@@ -8038,19 +8061,20 @@ function PlanningView({
             </select>
           </label>
 
-          <label>Contact / prestataire
-            <select name="contactName" defaultValue={editingPlanningEntry?.contactName ?? ""}>
-              <option value="">Aucun contact lié</option>
-              {supplierContacts.map((contact) => (
-                <option key={contact.id} value={contact.name}>{contact.name}</option>
+          <label>Contact lié
+            <input
+              name="contactName"
+              list="planning-contact-options"
+              defaultValue={editingPlanningEntry?.contactName ?? ""}
+              placeholder="Tapez un nom, une société, email ou téléphone"
+              autoComplete="off"
+            />
+            <datalist id="planning-contact-options">
+              {planningContactOptions.map((contact) => (
+                <option key={contact.id} value={contact.value}>{contact.label}</option>
               ))}
-              {contacts
-                .filter((contact) => contact.kind !== "Prestataire" && !contact.supplierCategory)
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map((contact) => (
-                  <option key={contact.id} value={contact.name}>{contact.name}</option>
-                ))}
-            </select>
+            </datalist>
+            <span className="field-hint">Tous les contacts sont proposés. Vous pouvez aussi saisir un nom libre.</span>
           </label>
 
           <label>Actif lié
