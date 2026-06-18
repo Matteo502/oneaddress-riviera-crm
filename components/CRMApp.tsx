@@ -2189,7 +2189,7 @@ function QuotesView({
             <textarea name="notes" placeholder="Informations utiles, préférences client, demandes spéciales..." />
           </label>
 
-          <button className="primary-button" type="submit">
+          <button className="primary-button planning-entry-submit" type="submit">
             {editingQuoteId ? "Enregistrer les modifications" : "Créer le devis"}
           </button>
 
@@ -2418,7 +2418,7 @@ function SuppliersView({
             </select>
           </label>
 
-          <button className="primary-button" type="submit">
+          <button className="primary-button planning-entry-submit" type="submit">
             {editingSupplier ? "Enregistrer" : "Ajouter prestataire"}
           </button>
 
@@ -2703,7 +2703,7 @@ function BookingsView({
                       <textarea name="operationNotes" defaultValue={quote.operationNotes || ""} placeholder="Horaires, adresse, contact sur place, contraintes, préférences client..." />
                     </label>
 
-                    <button className="primary-button" type="submit">
+                    <button className="primary-button planning-entry-submit" type="submit">
                       Enregistrer réservation
                     </button>
                   </form>
@@ -3655,7 +3655,7 @@ function HouseTrackingView({
               <label>Notes
                 <textarea name="notes" placeholder="Accès, alarmes, consignes..." />
               </label>
-              <button className="primary-button" type="submit">Ajouter la maison</button>
+              <button className="primary-button planning-entry-submit" type="submit">Ajouter la maison</button>
             </form>
 
             <div className="list-stack" style={{ marginTop: 18 }}>
@@ -3754,7 +3754,7 @@ function HouseTrackingView({
               <div className="full muted-line" style={{ padding: 14, background: "rgba(7,31,39,0.04)" }}>
                 Calcul immédiat : <strong>{formatHours(previewHours)}</strong> — <strong>{currency.format(previewAmount)}</strong>
               </div>
-              <button className="primary-button" type="submit">Ajouter les heures</button>
+              <button className="primary-button planning-entry-submit" type="submit">Ajouter les heures</button>
             </form>
           </section>
 
@@ -3792,7 +3792,7 @@ function HouseTrackingView({
               <label>Note
                 <input name="note" placeholder="Paiement semaine..." />
               </label>
-              <button className="primary-button" type="submit">Ajouter le paiement</button>
+              <button className="primary-button planning-entry-submit" type="submit">Ajouter le paiement</button>
             </form>
           </section>
 
@@ -4165,11 +4165,11 @@ function VendorInvoicesView({
             <input name="paymentMethod" defaultValue={editingInvoice?.paymentMethod || ""} placeholder="Virement, espèces, CB..." />
           </label>
 
-          <label>Notes
+          <label className="planning-entry-notes">Notes
             <textarea name="notes" defaultValue={editingInvoice?.notes || ""} placeholder="Détails, facture reçue, IBAN, remarque..." />
           </label>
 
-          <button className="primary-button" type="submit">
+          <button className="primary-button planning-entry-submit" type="submit">
             {editingInvoice ? "Enregistrer" : "Ajouter facture"}
           </button>
 
@@ -8144,12 +8144,12 @@ function PlanningView({
             <input type="date" name="startDate" defaultValue={editingPlanningEntry?.startDate ?? ""} required />
           </label>
 
-          <label>Heure arrivée
-            <input type="time" name="startTime" defaultValue={editingPlanningEntry?.startTime ?? ""} />
-          </label>
-
           <label>Date fin
             <input type="date" name="endDate" defaultValue={editingPlanningEntry?.endDate ?? ""} />
+          </label>
+
+          <label>Heure arrivée
+            <input type="time" name="startTime" defaultValue={editingPlanningEntry?.startTime ?? ""} />
           </label>
 
           <label>Heure départ
@@ -8163,11 +8163,11 @@ function PlanningView({
             </select>
           </label>
 
-          <label>Notes
+          <label className="planning-entry-notes">Notes
             <textarea name="notes" defaultValue={editingPlanningEntry?.notes ?? ""} placeholder="Détails internes, horaires, consignes..." />
           </label>
 
-          <button className="primary-button" type="submit">
+          <button className="primary-button planning-entry-submit" type="submit">
             {editingPlanningEntry ? "Enregistrer les modifications" : "Ajouter au planning"}
           </button>
 
@@ -9206,7 +9206,7 @@ function ContactsView({
               <textarea name="notes" placeholder="Contexte, préférences, infos utiles" />
             </label>
 
-            <button className="primary-button" type="submit">Ajouter</button>
+            <button className="primary-button planning-entry-submit" type="submit">Ajouter</button>
           </form>
         </section>
       </div>
@@ -9383,7 +9383,7 @@ function ContactsView({
 
               <div className="confirm-actions full">
                 <button className="ghost-button" type="button" onClick={() => setEditingContact(null)}>Annuler</button>
-                <button className="primary-button" type="submit">Enregistrer</button>
+                <button className="primary-button planning-entry-submit" type="submit">Enregistrer</button>
               </div>
             </form>
           </div>
@@ -9651,7 +9651,7 @@ const visibleLeads = leads.filter((lead) => {
           </fieldset>
 
           <div className="lead-form-actions">
-            <button className="primary-button" type="submit">Ajouter le lead</button>
+            <button className="primary-button planning-entry-submit" type="submit">Ajouter le lead</button>
           </div>
         </form>
       </section>
@@ -9975,7 +9975,7 @@ const visibleLeads = leads.filter((lead) => {
                   Annuler
                 </button>
 
-                <button className="primary-button" type="submit">
+                <button className="primary-button planning-entry-submit" type="submit">
                   Enregistrer
                 </button>
               </div>
@@ -10149,7 +10149,7 @@ function PropertiesView({
           <label>Chambres<input name="bedrooms" type="number" min="0" placeholder="6" /></label>
           <label>Surface m²<input name="surface" type="number" min="0" placeholder="420" /></label>
 
-          <button className="primary-button" type="submit">Ajouter</button>
+          <button className="primary-button planning-entry-submit" type="submit">Ajouter</button>
         </form>
       </section>
 
@@ -10224,7 +10224,7 @@ function PropertiesView({
 
               <div className="confirm-actions full">
                 <button className="ghost-button" type="button" onClick={() => setEditingProperty(null)}>Annuler</button>
-                <button className="primary-button" type="submit">Enregistrer</button>
+                <button className="primary-button planning-entry-submit" type="submit">Enregistrer</button>
               </div>
             </form>
           </div>
@@ -10383,7 +10383,7 @@ function VehiclesView({
           <label>Année<input name="year" type="number" min="1900" placeholder="2024" /></label>
           <label>Kilométrage<input name="mileage" type="number" min="0" placeholder="12000" /></label>
 
-          <button className="primary-button" type="submit">Ajouter</button>
+          <button className="primary-button planning-entry-submit" type="submit">Ajouter</button>
         </form>
       </section>
 
@@ -10462,7 +10462,7 @@ function VehiclesView({
 
               <div className="confirm-actions full">
                 <button className="ghost-button" type="button" onClick={() => setEditingVehicle(null)}>Annuler</button>
-                <button className="primary-button" type="submit">Enregistrer</button>
+                <button className="primary-button planning-entry-submit" type="submit">Enregistrer</button>
               </div>
             </form>
           </div>
@@ -10619,7 +10619,7 @@ function BoatsView({
           <label>Année<input name="year" type="number" min="1900" placeholder="2021" /></label>
           <label>Longueur m<input name="length" type="number" min="0" placeholder="17" /></label>
 
-          <button className="primary-button" type="submit">Ajouter</button>
+          <button className="primary-button planning-entry-submit" type="submit">Ajouter</button>
         </form>
       </section>
 
@@ -10696,7 +10696,7 @@ function BoatsView({
 
               <div className="confirm-actions full">
                 <button className="ghost-button" type="button" onClick={() => setEditingBoat(null)}>Annuler</button>
-                <button className="primary-button" type="submit">Enregistrer</button>
+                <button className="primary-button planning-entry-submit" type="submit">Enregistrer</button>
               </div>
             </form>
           </div>
@@ -10897,7 +10897,7 @@ function TasksView({
             </select>
           </label>
 
-          <button className="primary-button" type="submit">Ajouter</button>
+          <button className="primary-button planning-entry-submit" type="submit">Ajouter</button>
         </form>
       </section>
 
@@ -10936,7 +10936,7 @@ function TasksView({
                   Annuler
                 </button>
 
-                <button className="primary-button" type="submit">
+                <button className="primary-button planning-entry-submit" type="submit">
                   Enregistrer
                 </button>
               </div>

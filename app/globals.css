@@ -4345,3 +4345,27 @@ select.actor-select-hard-locked {
     grid-template-columns: 1fr !important;
   }
 }
+
+
+/* PLANNING_FORM_INTUITIVE_ORDER_20260618 */
+.planning-entry-form .planning-entry-notes {
+  grid-column: span 2;
+}
+
+.planning-entry-form .planning-entry-submit {
+  width: 100%;
+  min-height: 56px;
+  align-self: end;
+}
+
+@media (max-width: 1100px) {
+  .planning-entry-form .planning-entry-notes {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 760px) {
+  .planning-entry-form .planning-entry-notes {
+    grid-column: span 1;
+  }
+}
