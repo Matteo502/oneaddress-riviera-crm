@@ -2316,7 +2316,7 @@ function SuppliersView({
                   {supplier.notes && <p>{supplier.notes}</p>}
                 </div>
 
-                <div className="item-actions">
+                <div className="item-actions contact-row-actions">
                   {supplier.phone && (
                     <a className="secondary-button" href={`tel:${supplier.phone}`}>
                       Appeler
@@ -2709,7 +2709,7 @@ function BookingsView({
                   </form>
                 </div>
 
-                <div className="item-actions">
+                <div className="item-actions contact-row-actions">
                   <span className="status-pill">{quote.bookingStatus || "À préparer"}</span>
                   <button className="secondary-button" type="button" onClick={() => openQuotePdf(quote)}>
                     Ouvrir devis
@@ -2998,7 +2998,7 @@ function DocumentsView({
                     {crmDocument.notes && <p className="muted-line">{crmDocument.notes}</p>}
                   </div>
 
-                  <div className="item-actions">
+                  <div className="item-actions contact-row-actions">
                     {crmDocument.storagePath && (
                       <button className="secondary-button" type="button" onClick={() => void downloadInternalCRMDocument(crmDocument)}>
                         Télécharger
@@ -4046,7 +4046,7 @@ function VendorInvoicesView({
                   </div>
                 </div>
 
-                <div className="item-actions">
+                <div className="item-actions contact-row-actions">
                   <span className={`status-pill vendor-invoice-status ${invoice.status === "Payé" ? "semantic-success invoice-status-paid" : "semantic-danger invoice-status-danger"}`}>{invoice.status}</span>
                   {(invoice.invoiceDocumentUrl || documents.find((crmDocument) => crmDocument.id === invoice.linkedDocumentId)?.url) && (
                     <a
@@ -8996,8 +8996,8 @@ function ContactsView({
   }
 
   return (
-    <div className="stack">
-      <section className="card">
+    <div className="stack contacts-workspace">
+      <section className="card contacts-toolbar">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Contacts</p>
@@ -9012,7 +9012,7 @@ function ContactsView({
           <StatCard label="Propriétaires" value={String(ownerCount)} caption="Actifs privés" />
         </div>
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 20 }}>
+        <div className="contact-filter-row">
           {filterOptions.map((option) => (
             <button
               key={option}
@@ -9039,14 +9039,14 @@ function ContactsView({
         )}
       </section>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(320px, 0.8fr)", gap: 24, alignItems: "start" }}>
-        <section className="card">
+      <div className="contacts-layout">
+        <section className="card contacts-list-card">
           {visibleContacts.length === 0 ? (
             <p className="muted-line">Aucun contact dans ce filtre.</p>
           ) : (
             <div className="list-stack">
               {visibleContacts.map((contact) => (
-                <article className="item-card" key={contact.id}>
+                <article className="item-card contact-row" key={contact.id}>
                   <div>
                     <p className="eyebrow">
                       {typeLabel(contact)}{isSupplierContact(contact) ? ` · ${getContactSupplierCategory(contact)}` : ""}
@@ -9073,7 +9073,7 @@ function ContactsView({
                     )}
                   </div>
 
-                  <div className="item-actions">
+                  <div className="item-actions contact-row-actions">
                     {contact.phone && <a className="secondary-button" href={`tel:${contact.phone}`}>Appeler</a>}
                     {contact.email && <a className="secondary-button" href={`mailto:${contact.email}`}>Email</a>}
                     <button className="secondary-button" type="button" onClick={() => onCreateLead(getContactActionLabel(contact))}>
@@ -9102,11 +9102,11 @@ function ContactsView({
           )}
         </section>
 
-        <section className="card form-card" style={{ position: "sticky", top: 20 }}>
+        <section className="card form-card contacts-form-card">
           <p className="eyebrow">Nouveau</p>
           <h3>Ajouter un contact</h3>
 
-          <form className="form-grid" onSubmit={onAdd}>
+          <form className="form-grid contact-create-form" onSubmit={onAdd}>
             <label>Civilité
               <select name="civility" defaultValue="">
                 <option value="">—</option>
@@ -9280,7 +9280,7 @@ function ContactsView({
             <p className="eyebrow">Modification</p>
             <h3>Modifier le contact</h3>
 
-            <form className="form-grid" onSubmit={submitEdit}>
+            <form className="form-grid contact-edit-form" onSubmit={submitEdit}>
               <label>Civilité
                 <select name="civility" defaultValue={editingContact.civility ?? ""}>
                   <option value="">—</option>
@@ -9907,7 +9907,7 @@ const visibleLeads = leads.filter((lead) => {
             <p className="eyebrow">Modification</p>
             <h3>Modifier le lead</h3>
 
-            <form className="form-grid" onSubmit={submitEdit}>
+            <form className="form-grid contact-edit-form" onSubmit={submitEdit}>
               <label>Catégorie
                 <select name="category" defaultValue={editingLead.category}>
                   <option value="Villa">Villa</option>
@@ -10134,7 +10134,7 @@ function PropertiesView({
         <p className="eyebrow">Nouveau</p>
         <h3>Ajouter un bien</h3>
 
-        <form className="form-grid" onSubmit={onAdd}>
+        <form className="form-grid contact-create-form" onSubmit={onAdd}>
           <label>Nom<input name="name" placeholder="Villa Belle Époque" /></label>
           <label>Ville<input name="city" placeholder="Cannes" /></label>
           <label>Prix<input name="price" type="number" min="0" placeholder="120000" /></label>
@@ -10203,7 +10203,7 @@ function PropertiesView({
             <p className="eyebrow">Modification</p>
             <h3>Modifier le bien</h3>
 
-            <form className="form-grid" onSubmit={submitEdit}>
+            <form className="form-grid contact-edit-form" onSubmit={submitEdit}>
               <label>Nom<input name="name" defaultValue={editingProperty.name} /></label>
               <label>Ville<input name="city" defaultValue={editingProperty.city} /></label>
               <label>Prix<input name="price" type="number" min="0" defaultValue={editingProperty.price || ""} /></label>
@@ -10366,7 +10366,7 @@ function VehiclesView({
         <p className="eyebrow">Nouveau</p>
         <h3>Ajouter une voiture</h3>
 
-        <form className="form-grid" onSubmit={onAdd}>
+        <form className="form-grid contact-create-form" onSubmit={onAdd}>
           <label>Nom<input name="name" placeholder="Range Rover Autobiography" /></label>
           <label>Marque<input name="brand" placeholder="Land Rover" /></label>
           <label>Modèle<input name="model" placeholder="Range Rover" /></label>
@@ -10439,7 +10439,7 @@ function VehiclesView({
             <p className="eyebrow">Modification</p>
             <h3>Modifier la voiture</h3>
 
-            <form className="form-grid" onSubmit={submitEdit}>
+            <form className="form-grid contact-edit-form" onSubmit={submitEdit}>
               <label>Nom<input name="name" defaultValue={editingVehicle.name} /></label>
               <label>Marque<input name="brand" defaultValue={editingVehicle.brand} /></label>
               <label>Modèle<input name="model" defaultValue={editingVehicle.model} /></label>
@@ -10603,7 +10603,7 @@ function BoatsView({
         <p className="eyebrow">Nouveau</p>
         <h3>Ajouter un bateau</h3>
 
-        <form className="form-grid" onSubmit={onAdd}>
+        <form className="form-grid contact-create-form" onSubmit={onAdd}>
           <label>Nom<input name="name" placeholder="Sunseeker Manhattan 55" /></label>
           <label>Port<input name="port" placeholder="Cannes" /></label>
           <label>Type<input name="type" placeholder="Yacht, day boat..." /></label>
@@ -10674,7 +10674,7 @@ function BoatsView({
             <p className="eyebrow">Modification</p>
             <h3>Modifier le bateau</h3>
 
-            <form className="form-grid" onSubmit={submitEdit}>
+            <form className="form-grid contact-edit-form" onSubmit={submitEdit}>
               <label>Nom<input name="name" defaultValue={editingBoat.name} /></label>
               <label>Port<input name="port" defaultValue={editingBoat.port} /></label>
               <label>Type<input name="type" defaultValue={editingBoat.type} /></label>
@@ -10874,7 +10874,7 @@ function TasksView({
         <p className="eyebrow">Nouvelle</p>
         <h3>Ajouter une tâche</h3>
 
-        <form className="form-grid" onSubmit={onAdd}>
+        <form className="form-grid contact-create-form" onSubmit={onAdd}>
           <label>Titre<input name="title" placeholder="Envoyer proposition" defaultValue={prefilledTitle || ""} /></label>
           <label>Responsable<input name="owner" placeholder="Matteo" /></label>
 
@@ -10908,7 +10908,7 @@ function TasksView({
             <h3>Modifier la tâche</h3>
             <ActionMeta item={editingTask} />
 
-            <form className="form-grid" onSubmit={submitEdit}>
+            <form className="form-grid contact-edit-form" onSubmit={submitEdit}>
               <label>Titre<input name="title" defaultValue={editingTask.title} /></label>
               <label>Responsable<input name="owner" defaultValue={editingTask.owner} /></label>
 
