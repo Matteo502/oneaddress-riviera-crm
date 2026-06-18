@@ -8654,9 +8654,9 @@ function Dashboard({
   const remainingPayments = confirmedBookings.reduce((sum, quote) => sum + getDashboardPaymentRemaining(quote), 0);
 
   return (
-    <div className="stack">
+    <div className="stack dashboard-workspace">
       <section
-        className="card"
+        className="card dashboard-start-card"
         style={{
           padding: 24,
           border: "1px solid rgba(160, 120, 70, 0.28)",
@@ -8680,7 +8680,7 @@ function Dashboard({
           Créez rapidement les données, suivez les demandes et sauvegardez le CRM après chaque lot d’ajouts.
         </p>
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 18 }}>
+        <div className="dashboard-quick-actions">
           <button className="primary-button" type="button" onClick={onStartMessage}>
             Créer depuis un message client
           </button>
@@ -8704,7 +8704,7 @@ function Dashboard({
         </p>
       </section>
 
-      <div className="stats-grid">
+      <div className="stats-grid dashboard-main-stats">
         <StatCard label="Pipeline actif" value={currency.format(stats.pipeline)} caption="Valeur des opportunités non perdues" />
         <StatCard label="CA gagné" value={currency.format(stats.won)} caption="Leads marqués comme gagnés" />
         <StatCard label="Tâches ouvertes" value={String(stats.openTasks)} caption="Actions commerciales à traiter" />
@@ -8719,7 +8719,7 @@ function Dashboard({
           </div>
         </div>
 
-        <div className="stats-grid">
+        <div className="stats-grid dashboard-cockpit-stats">
           <StatCard label="CA confirmé" value={currency.format(confirmedRevenue)} caption="Total des devis gagnés" />
           <StatCard label="Marge estimée" value={currency.format(estimatedMargin)} caption="Prix client - coût prestataire" />
           <StatCard label="Paiements restants" value={currency.format(remainingPayments)} caption="Solde encore à recevoir" />
