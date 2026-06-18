@@ -654,11 +654,11 @@ function getDueStatus(value?: string) {
 function getDueLabel(value?: string) {
   const status = getDueStatus(value);
 
-  if (!value) return "Échéance non renseignée";
+  if (!value) return "Date non renseignée";
   if (status === "overdue") return `En retard · ${formatDateFR(value)}`;
   if (status === "today") return `Aujourd'hui · ${formatDateFR(value)}`;
 
-  return `Échéance ${formatDateFR(value)}`;
+  return `Date ${formatDateFR(value)}`;
 }
 
 function priorityWeight(priority?: string) {
@@ -782,7 +782,7 @@ function exportCRMAsCsv(data: CRMData) {
     },
     {
       title: "LEADS",
-      headers: ["Catégorie", "Contact", "Statut", "Valeur", "Priorité", "Échéance réponse", "Début réservation", "Fin réservation", "Prochaine action", "Notes"],
+      headers: ["Catégorie", "Contact", "Statut", "Valeur", "Priorité", "Date réponse", "Début réservation", "Fin réservation", "Prochaine action", "Notes"],
       rows: data.leads.map((lead) => [
         lead.category,
         lead.contactName,
@@ -841,7 +841,7 @@ function exportCRMAsCsv(data: CRMData) {
     },
     {
       title: "TÂCHES",
-      headers: ["Titre", "Responsable", "Statut", "Échéance", "Lead lié"],
+      headers: ["Titre", "Responsable", "Statut", "Date", "Lead lié"],
       rows: data.tasks.map((task) => [
         task.title,
         task.owner,
@@ -4027,7 +4027,7 @@ function VendorInvoicesView({
                   <h3>{invoice.contactName}</h3>
                   <p>{invoice.title}</p>
                   <p className="muted-line">
-                    Facture : {invoice.invoiceDate || "À compléter"} · Échéance : {invoice.dueDate || "À compléter"}
+                    Facture : {invoice.invoiceDate || "À compléter"} · Date : {invoice.dueDate || "À compléter"}
                   </p>
 
                   <div className="stats-grid vendor-invoice-stats">
@@ -4149,7 +4149,7 @@ function VendorInvoicesView({
             <input name="invoiceDate" type="date" defaultValue={editingInvoice?.invoiceDate || ""} />
           </label>
 
-          <label>Échéance paiement
+          <label>Date paiement
             <input name="dueDate" type="date" defaultValue={editingInvoice?.dueDate || ""} />
           </label>
 
@@ -4818,7 +4818,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
         if (days === 0) {
           items.push({
             id: `task-today-${task.id}`,
-            title: "Échéance aujourd’hui",
+            title: "Date aujourd’hui",
             detail: task.title,
             tab: "tasks",
             tone: "warning",
@@ -4830,7 +4830,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
         if (days <= 2) {
           items.push({
             id: `task-soon-${task.id}`,
-            title: "Échéance proche",
+            title: "Date proche",
             detail: `${task.title} · dans ${days} jour${days > 1 ? "s" : ""}`,
             tab: "tasks",
             tone: "info",
@@ -5409,7 +5409,7 @@ const toneRank: Record<ActionNotification["tone"], number> = {
 
     const examples: Record<string, string> = {
       "1": "Nom | Type | Niveau client | Langue préférée | Relation | Email | Téléphone | Ville | Adresse postale | Budget | Source | Préférences | Notes importantes | Notes",
-      "2": "Catégorie | Contact | Actif proposé | Début réservation | Fin réservation | Valeur | Statut | Priorité | Échéance réponse | Prochaine action | Notes internes",
+      "2": "Catégorie | Contact | Actif proposé | Début réservation | Fin réservation | Valeur | Statut | Priorité | Date réponse | Prochaine action | Notes internes",
       "3": "Nom | Type | Ville | Prix | Statut | Propriétaire | Notes",
       "4": "Nom | Marque | Modèle | Ville | Prix/jour | Statut | Propriétaire | Notes",
       "5": "Nom | Port | Type | Prix/jour | Statut | Propriétaire | Notes"
@@ -5770,7 +5770,7 @@ const toneRank: Record<ActionNotification["tone"], number> = {
 
   function openQuickContactLeadPrompt() {
     const choice = window.prompt(
-      "Ajouter rapidement :\n\n1 = Contact complet\n2 = Lead complet\n\nContact : Nom | Type | Niveau client | Langue préférée | Relation | Email | Téléphone | Ville | Adresse postale | Budget | Source | Préférences | Notes importantes | Notes\n\nLead : Catégorie | Contact | Actif proposé | Début réservation | Fin réservation | Valeur | Statut | Priorité | Échéance réponse | Prochaine action | Notes internes",
+      "Ajouter rapidement :\n\n1 = Contact complet\n2 = Lead complet\n\nContact : Nom | Type | Niveau client | Langue préférée | Relation | Email | Téléphone | Ville | Adresse postale | Budget | Source | Préférences | Notes importantes | Notes\n\nLead : Catégorie | Contact | Actif proposé | Début réservation | Fin réservation | Valeur | Statut | Priorité | Date réponse | Prochaine action | Notes internes",
       "1"
     );
 
@@ -5786,7 +5786,7 @@ const toneRank: Record<ActionNotification["tone"], number> = {
 
     const raw = window.prompt(
       type === "2"
-        ? "Lead complet : Catégorie | Contact | Actif proposé | Début réservation | Fin réservation | Valeur | Statut | Priorité | Échéance réponse | Prochaine action | Notes internes"
+        ? "Lead complet : Catégorie | Contact | Actif proposé | Début réservation | Fin réservation | Valeur | Statut | Priorité | Date réponse | Prochaine action | Notes internes"
         : "Contact complet : Nom | Type | Niveau client | Langue préférée | Relation | Email | Téléphone | Ville | Adresse postale | Budget | Source | Préférences | Notes importantes | Notes",
       type === "2" ? leadExample : contactExample
     );
@@ -9637,7 +9637,7 @@ const visibleLeads = leads.filter((lead) => {
               </select>
             </label>
 
-            <label>Échéance réponse
+            <label>Date réponse
               <input name="dueDate" type="date" />
             </label>
 
@@ -9823,7 +9823,7 @@ const visibleLeads = leads.filter((lead) => {
               </div>
 
               <div>
-                <span>Échéance réponse</span>
+                <span>Date réponse</span>
                 <strong>{selectedLead.dueDate ? formatDateFR(selectedLead.dueDate) : "Non renseignée"}</strong>
               </div>
 
@@ -9859,7 +9859,7 @@ const visibleLeads = leads.filter((lead) => {
                       <span>
                         {task.owner || "Responsable non renseigné"}
                         {" · "}
-                        {task.dueDate ? `Échéance ${formatDateFR(task.dueDate)}` : "Sans échéance"}
+                        {task.dueDate ? `Date ${formatDateFR(task.dueDate)}` : "Sans échéance"}
                       </span>
                     </div>
                     <Badge>{task.status}</Badge>
@@ -9958,7 +9958,7 @@ const visibleLeads = leads.filter((lead) => {
                 </select>
               </label>
 
-              <label>Échéance<input name="dueDate" type="date" defaultValue={editingLead.dueDate} /></label>
+              <label>Date<input name="dueDate" type="date" defaultValue={editingLead.dueDate} /></label>
               <label>Début réservation<input name="rentalStartDate" type="date" defaultValue={editingLead.rentalStartDate} /></label>
               <label>Fin réservation<input name="rentalEndDate" type="date" defaultValue={editingLead.rentalEndDate} /></label>
 
@@ -10884,7 +10884,7 @@ function TasksView({
             </select>
           </label>
 
-          <label>Échéance<input name="dueDate" type="date" /></label>
+          <label>Date<input name="dueDate" type="date" /></label>
 
           <label className="full">Lead lié
             <select name="linkedTo" defaultValue={preselectedLeadId || ""}>
@@ -10918,7 +10918,7 @@ function TasksView({
                 </select>
               </label>
 
-              <label>Échéance<input name="dueDate" type="date" defaultValue={editingTask.dueDate} /></label>
+              <label>Date<input name="dueDate" type="date" defaultValue={editingTask.dueDate} /></label>
 
               <label className="full">Lead lié
                 <select name="linkedTo" defaultValue={editingTask.linkedTo}>
