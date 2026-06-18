@@ -8034,7 +8034,7 @@ function PlanningView({
         </div>
 
         <form
-          className="form-grid compact"
+          className="form-grid compact planning-entry-form"
           key={editingPlanningEntry?.id ?? "new-planning-entry"}
           onSubmit={(event) => {
             if (!editingPlanningEntry) {
@@ -8066,7 +8066,7 @@ function PlanningView({
               name="contactName"
               list="planning-contact-options"
               defaultValue={editingPlanningEntry?.contactName ?? ""}
-              placeholder="Tapez un nom, une société, email ou téléphone"
+              placeholder="Nom, société ou email"
               autoComplete="off"
             />
             <datalist id="planning-contact-options">
@@ -8074,7 +8074,6 @@ function PlanningView({
                 <option key={contact.id} value={contact.value}>{contact.label}</option>
               ))}
             </datalist>
-            <span className="field-hint">Tous les contacts sont proposés. Vous pouvez aussi saisir un nom libre.</span>
           </label>
 
           <label>Actif lié
