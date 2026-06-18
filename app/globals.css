@@ -4704,3 +4704,159 @@ main,
     grid-template-columns: 1fr;
   }
 }
+
+
+/* CRM_PLANNING_UI_STEP_3_20260618 */
+/* Planning : saisie plus rapide, cartes plus lisibles, calendrier plus net. */
+
+.planning-entry-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+
+.planning-entry-form label {
+  min-width: 0;
+  gap: 7px;
+}
+
+.planning-entry-form input,
+.planning-entry-form select {
+  min-height: 48px;
+}
+
+.planning-entry-form textarea {
+  min-height: 88px;
+}
+
+.planning-entry-form .planning-entry-notes {
+  grid-column: span 2;
+}
+
+.planning-entry-form .planning-entry-submit,
+.planning-entry-form button[type="submit"] {
+  min-height: 52px;
+  align-self: end;
+}
+
+.planning-card,
+.planning-list-card,
+.planning-entry-card {
+  border: 1px solid rgba(212, 177, 106, 0.22);
+  border-radius: 18px;
+}
+
+.planning-card h3,
+.planning-entry-card h3 {
+  line-height: 1.15;
+  margin-bottom: 6px;
+}
+
+.planning-card .muted-line,
+.planning-entry-card .muted-line {
+  line-height: 1.35;
+  margin: 4px 0;
+}
+
+.planning-card .item-actions,
+.planning-entry-card .item-actions {
+  gap: 8px;
+}
+
+.planning-card .item-actions button,
+.planning-entry-card .item-actions button {
+  min-height: 40px;
+  padding: 9px 12px;
+  font-size: 0.72rem;
+}
+
+.planning-calendar,
+.calendar-grid,
+.month-grid {
+  min-width: 0;
+}
+
+.calendar-day,
+.planning-calendar-day,
+.month-day {
+  min-height: 118px;
+  padding: 10px;
+}
+
+.calendar-day header,
+.planning-calendar-day header,
+.month-day header {
+  margin-bottom: 8px;
+}
+
+.calendar-event,
+.planning-calendar-event,
+.month-event {
+  display: block;
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 10px;
+  line-height: 1.25;
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar-event + .calendar-event,
+.planning-calendar-event + .planning-calendar-event,
+.month-event + .month-event {
+  margin-top: 6px;
+}
+
+/* Le rouge doit signaler un vrai blocage, pas décorer toute la page. */
+.calendar-event.is-blocking,
+.planning-calendar-event.is-blocking,
+.month-event.is-blocking {
+  font-weight: 700;
+}
+
+/* Interventions : lisibles mais moins agressives que les blocages. */
+.calendar-event.is-maintenance,
+.planning-calendar-event.is-maintenance,
+.month-event.is-maintenance {
+  opacity: 0.92;
+}
+
+/* Les listes longues doivent rester scannables. */
+.planning-list,
+.planning-events-list {
+  display: grid;
+  gap: 10px;
+}
+
+.planning-list .item-card,
+.planning-events-list .item-card {
+  padding: 16px 18px;
+}
+
+@media (max-width: 1200px) {
+  .planning-entry-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .planning-entry-form .planning-entry-notes {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 760px) {
+  .planning-entry-form {
+    grid-template-columns: 1fr;
+  }
+
+  .planning-entry-form .planning-entry-notes {
+    grid-column: span 1;
+  }
+
+  .calendar-day,
+  .planning-calendar-day,
+  .month-day {
+    min-height: 96px;
+  }
+}
