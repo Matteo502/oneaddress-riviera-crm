@@ -482,8 +482,16 @@ function getHouseTimeHours(entry: Pick<HouseTimeEntry, "startTime" | "endTime" |
   if (![startHour, startMinute, endHour, endMinute].every(Number.isFinite)) return 0;
 
   const startTotal = startHour * 60 + startMinute;
-  const endTotal = endHour * 60 + endMinute;
-  const rawMinutes = endTotal - startTotal - Number(entry.breakMinutes || 0);
+  let endTotal = endHour * 60 + endMinute;
+
+  // Si l'heure de fin est inférieure à l'heure de début, on considère que la fin est le lendemain.
+  // Exemple : 09:30 -> 00:00 = 14,5 h, pas 0 h.
+  if (endTotal < startTotal) {
+    endTotal += 24 * 60;
+  }
+
+  const breakMinutes = Math.max(parseEuroAmount(entry.breakMinutes), 0);
+  const rawMinutes = endTotal - startTotal - breakMinutes;
 
   return Math.max(rawMinutes / 60, 0);
 }
@@ -3336,7 +3344,7 @@ function HouseTrackingView({
   const totalBalance = totalDue - totalPaid;
 
   const selectedWorker = workers.find((worker) => worker.id === hourDraft.workerId);
-  const currentRate = Number(hourDraft.hourlyRate || selectedWorker?.hourlyRate || 0);
+  const currentRate = parseEuroAmount(hourDraft.hourlyRate || selectedWorker?.hourlyRate || 0);
   const previewEntry = {
     startTime: hourDraft.startTime,
     endTime: hourDraft.endTime,
@@ -3501,7 +3509,7 @@ function HouseTrackingView({
       startTime: hourDraft.startTime,
       endTime: hourDraft.endTime,
       breakMinutes: Number(hourDraft.breakMinutes || 0),
-      hourlyRate: currentRate,
+      hourlyRate: parseEuroAmount(currentRate),
       note: hourDraft.note.trim(),
       createdAt: new Date().toISOString()
     });
