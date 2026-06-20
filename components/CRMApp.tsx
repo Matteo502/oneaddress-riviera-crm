@@ -3971,6 +3971,18 @@ function VendorInvoicesView({
     return invoice?.category || getContactProfessionForInvoice(resolvedContactId) || "Prestataire";
   }
 
+  // CRM_VENDOR_INVOICE_HISTORICAL_CONTACT_FIX_20260620
+  function getHistoricalVendorInvoiceContactName(invoice?: VendorInvoice | null) {
+    const resolvedContact = findContactForVendorInvoice(invoice);
+    return resolvedContact
+      ? getVendorInvoiceContactLabel(resolvedContact)
+      : String(invoice?.contactName || "").trim();
+  }
+
+  function shouldShowHistoricalVendorInvoiceContact(invoice?: VendorInvoice | null) {
+    return Boolean(invoice && !getResolvedVendorInvoiceContactId(invoice) && getHistoricalVendorInvoiceContactName(invoice));
+  }
+
   function startEditInvoice(invoice: VendorInvoice) {
     const resolvedContact = findContactForVendorInvoice(invoice);
     const resolvedContactId = invoice.contactId || resolvedContact?.id || "";
@@ -4043,7 +4055,7 @@ function VendorInvoicesView({
     const invoice: VendorInvoice = {
       id: editingInvoice?.id || makeId("invoice"),
       contactId,
-      contactName: contact ? getVendorInvoiceContactLabel(contact) : (editingInvoice?.contactName || "").trim(),
+      contactName: contact ? getVendorInvoiceContactLabel(contact) : getHistoricalVendorInvoiceContactName(editingInvoice),
       category: manualCategory || getContactProfessionForInvoice(contactId) || editingInvoice?.category || "Prestataire",
       title: String(form.get("title") ?? "").trim() || "Facture prestataire",
       invoiceDate: String(form.get("invoiceDate") ?? ""),
@@ -4193,8 +4205,11 @@ function VendorInvoicesView({
 
         <form key={editingInvoice?.id || "new-vendor-invoice"} className="form-grid" onSubmit={submitInvoice}>
           <label>Contact référent
-            <select name="contactId" defaultValue={getResolvedVendorInvoiceContactId(editingInvoice)} required onChange={(event) => fillInvoiceCategoryFromContact(event.currentTarget)}>
-              <option value="">Choisir un contact</option>
+            <select name="contactId" defaultValue={getResolvedVendorInvoiceContactId(editingInvoice)} onChange={(event) => fillInvoiceCategoryFromContact(event.currentTarget)}>
+              <option value="">{shouldShowHistoricalVendorInvoiceContact(editingInvoice) ? getHistoricalVendorInvoiceContactName(editingInvoice) : "Choisir un contact"}</option>
+              {shouldShowHistoricalVendorInvoiceContact(editingInvoice) ? (
+                <option value="" disabled>{getHistoricalVendorInvoiceContactName(editingInvoice)} · non lié au CRM</option>
+              ) : null}
               {selectableContacts.map((contact) => (
                 <option key={contact.id} value={contact.id}>
                   {getVendorInvoiceContactLabel(contact)}{getContactProfessionForInvoice(contact.id) ? ` · ${getContactProfessionForInvoice(contact.id)}` : ` · ${String((contact as any).kind || "Contact")}`}
@@ -4228,7 +4243,7 @@ function VendorInvoicesView({
           </label>
 
           <label>Montant payé
-            <input name="paidAmount" type="text" inputMode="decimal" min="0" step="1" defaultValue={editingInvoice?.paidAmount || ""} placeholder="Ex : 0" />
+            <input name="paidAmount" type="text" inputMode="decimal" min="0" step="1" defaultValue={editingInvoice?.paidAmount ?? ""} placeholder="Ex : 0" />
           </label>
 
           <label>Moyen de paiement
