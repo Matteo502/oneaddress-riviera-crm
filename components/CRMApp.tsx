@@ -3911,7 +3911,81 @@ function VendorInvoicesView({
     return kind === "Prestataire" || kind === "Partenaire" || kind === "Propriétaire";
   });
 
-  const selectableContacts = supplierContacts.length > 0 ? supplierContacts : contacts;
+  const selectableContacts = (supplierContacts.length > 0 ? supplierContacts : contacts).filter((contact) =>
+    getVendorInvoiceContactLabel(contact) !== "Contact sans nom"
+  );
+
+  const vendorInvoiceCategoryOptions = Array.from(new Set([
+    "Prestataire",
+    ...supplierCategories,
+    ...contacts.map((contact) => String(contact.supplierCategory || "").trim()),
+    editingInvoice?.category || "",
+    "Autre"
+  ].filter((category): category is string => Boolean(category))));
+
+  // CRM_VENDOR_INVOICE_CONTACT_FIX_20260620
+  function normalizeInvoiceLookupKey(value?: string | number | null) {
+    return String(value ?? "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ");
+  }
+
+  function getVendorInvoiceContactLabel(contact: Contact) {
+    return [contact.civility, contact.firstName, contact.name]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || contact.companyName || contact.email || contact.phone || "Contact sans nom";
+  }
+
+  function findContactForVendorInvoice(invoice?: VendorInvoice | null) {
+    if (!invoice) return null;
+
+    const byId = contacts.find((contact) => contact.id === invoice.contactId);
+    if (byId) return byId;
+
+    const wanted = normalizeInvoiceLookupKey(invoice.contactName);
+    if (!wanted) return null;
+
+    return contacts.find((contact) => {
+      const labels = [
+        contact.name,
+        getVendorInvoiceContactLabel(contact),
+        contact.companyName,
+        contact.email,
+        contact.phone
+      ].map((value) => normalizeInvoiceLookupKey(value));
+
+      return labels.includes(wanted);
+    }) || null;
+  }
+
+  function getResolvedVendorInvoiceContactId(invoice?: VendorInvoice | null) {
+    return invoice?.contactId || findContactForVendorInvoice(invoice)?.id || "";
+  }
+
+  function getResolvedVendorInvoiceCategory(invoice?: VendorInvoice | null) {
+    const resolvedContactId = getResolvedVendorInvoiceContactId(invoice);
+    return invoice?.category || getContactProfessionForInvoice(resolvedContactId) || "Prestataire";
+  }
+
+  function startEditInvoice(invoice: VendorInvoice) {
+    const resolvedContact = findContactForVendorInvoice(invoice);
+    const resolvedContactId = invoice.contactId || resolvedContact?.id || "";
+
+    setEditingInvoice({
+      ...invoice,
+      contactId: resolvedContactId,
+      contactName: invoice.contactName || (resolvedContact ? getVendorInvoiceContactLabel(resolvedContact) : ""),
+      category: invoice.category || getContactProfessionForInvoice(resolvedContactId) || "Prestataire"
+    });
+
+    window.setTimeout(() => {
+      document.querySelector(".vendor-invoices-form-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  }
 
   function getContactProfessionForInvoice(contactId: string) {
     const contact = contacts.find((item) => item.id === contactId);
@@ -3964,12 +4038,13 @@ function VendorInvoicesView({
     const amount = safeNumber(form.get("amount"));
     const paidAmount = safeNumber(form.get("paidAmount"));
     const dueDate = String(form.get("dueDate") ?? "");
+    const manualCategory = String(form.get("category") ?? "").trim();
 
     const invoice: VendorInvoice = {
       id: editingInvoice?.id || makeId("invoice"),
       contactId,
-      contactName: contact?.name || String(form.get("contactName") ?? "").trim(),
-      category: getContactProfessionForInvoice(contactId) || String(form.get("category") ?? "Prestataire").trim() || "Prestataire",
+      contactName: contact ? getVendorInvoiceContactLabel(contact) : (editingInvoice?.contactName || "").trim(),
+      category: manualCategory || getContactProfessionForInvoice(contactId) || editingInvoice?.category || "Prestataire",
       title: String(form.get("title") ?? "").trim() || "Facture prestataire",
       invoiceDate: String(form.get("invoiceDate") ?? ""),
       dueDate,
@@ -4066,12 +4141,7 @@ function VendorInvoicesView({
                       Voir facture
                     </a>
                   )}
-                  <button className="secondary-button" type="button" onClick={() => {
-                      setEditingInvoice(invoice);
-                      window.setTimeout(() => {
-                        document.querySelector(".vendor-invoices-form-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                      }, 80);
-                    }}>
+                  <button className="secondary-button" type="button" onClick={() => startEditInvoice(invoice)}>
                     Modifier
                   </button>
                   <button
@@ -4123,29 +4193,21 @@ function VendorInvoicesView({
 
         <form key={editingInvoice?.id || "new-vendor-invoice"} className="form-grid" onSubmit={submitInvoice}>
           <label>Contact référent
-            <select name="contactId" defaultValue={editingInvoice?.contactId || ""} required onChange={(event) => fillInvoiceCategoryFromContact(event.currentTarget)}>
+            <select name="contactId" defaultValue={getResolvedVendorInvoiceContactId(editingInvoice)} required onChange={(event) => fillInvoiceCategoryFromContact(event.currentTarget)}>
               <option value="">Choisir un contact</option>
               {selectableContacts.map((contact) => (
                 <option key={contact.id} value={contact.id}>
-                  {contact.name} · {String((contact as any).kind || "Contact")}
+                  {getVendorInvoiceContactLabel(contact)}{getContactProfessionForInvoice(contact.id) ? ` · ${getContactProfessionForInvoice(contact.id)}` : ` · ${String((contact as any).kind || "Contact")}`}
                 </option>
               ))}
             </select>
           </label>
 
           <label>Catégorie
-            <select name="category" defaultValue={editingInvoice?.category || "Prestataire"}>
-              <option>Prestataire</option>
-              <option>Paysagiste</option>
-              <option>Jardinier</option>
-              <option>Pisciniste</option>
-              <option>Femme de ménage</option>
-              <option>Nounou</option>
-              <option>Garage / mécanicien</option>
-              <option>Lavage voiture</option>
-              <option>Artisan rénovation</option>
-              <option>Gestion nuisibles</option>
-              <option>Autre</option>
+            <select name="category" defaultValue={getResolvedVendorInvoiceCategory(editingInvoice)}>
+              {vendorInvoiceCategoryOptions.map((category) => (
+                <option key={category} value={category}>{category}</option>
+              ))}
             </select>
           </label>
 
