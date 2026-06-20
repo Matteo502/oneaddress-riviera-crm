@@ -3911,9 +3911,9 @@ function VendorInvoicesView({
     return kind === "Prestataire" || kind === "Partenaire" || kind === "Propriétaire";
   });
 
-  const selectableContacts = (supplierContacts.length > 0 ? supplierContacts : contacts).filter((contact) =>
-    getVendorInvoiceContactLabel(contact) !== "Contact sans nom"
-  );
+  const selectableContacts = contacts
+    .filter((contact) => getVendorInvoiceContactLabel(contact) !== "Contact sans nom")
+    .sort((a, b) => getVendorInvoiceContactLabel(a).localeCompare(getVendorInvoiceContactLabel(b), "fr"));
 
   // CRM_VENDOR_INVOICE_CONTACT_FIX_20260620
   function normalizeInvoiceLookupKey(value?: string | number | null) {
@@ -3941,19 +3941,36 @@ function VendorInvoicesView({
     const wanted = normalizeInvoiceLookupKey(invoice.contactName);
     if (!wanted) return null;
 
+    const wantedWords = wanted.split(" ").filter((word) => word.length > 1);
+
     return contacts.find((contact) => {
       const labels = [
         contact.name,
         getVendorInvoiceContactLabel(contact),
         contact.companyName,
         contact.email,
-        contact.phone
-      ].map((value) => normalizeInvoiceLookupKey(value));
+        contact.phone,
+        [contact.firstName, contact.name].filter(Boolean).join(" "),
+        [contact.companyName, contact.name].filter(Boolean).join(" ")
+      ]
+        .map((value) => normalizeInvoiceLookupKey(value))
+        .filter(Boolean);
 
-      return labels.includes(wanted);
+      if (labels.includes(wanted)) return true;
+
+      // Exemple : facture "Gardens Jardinier" et contact "Gardens Jardinier"
+      // ou ancienne donnée légèrement différente.
+      if (labels.some((label) => label.includes(wanted) || wanted.includes(label))) return true;
+
+      const identity = normalizeInvoiceLookupKey(
+        [contact.firstName, contact.name, contact.companyName].filter(Boolean).join(" ")
+      );
+
+      return wantedWords.length >= 2 && wantedWords.every((word) => identity.includes(word));
     }) || null;
   }
 
+  // CRM_VENDOR_INVOICE_AUTO_LINK_EXISTING_CONTACT_20260620
   function getResolvedVendorInvoiceContactId(invoice?: VendorInvoice | null) {
     return invoice?.contactId || findContactForVendorInvoice(invoice)?.id || "";
   }
@@ -3977,13 +3994,15 @@ function VendorInvoicesView({
 
   function startEditInvoice(invoice: VendorInvoice) {
     const resolvedContact = findContactForVendorInvoice(invoice);
-    const resolvedContactId = invoice.contactId || resolvedContact?.id || "";
+    const resolvedContactId = resolvedContact?.id || "";
 
     setEditingInvoice({
       ...invoice,
       contactId: resolvedContactId,
-      contactName: invoice.contactName || (resolvedContact ? getVendorInvoiceContactLabel(resolvedContact) : ""),
-      category: invoice.category || getContactProfessionForInvoice(resolvedContactId) || "Prestataire"
+      contactName: resolvedContact ? getVendorInvoiceContactLabel(resolvedContact) : String(invoice.contactName || "").trim(),
+      category: resolvedContactId
+        ? getContactProfessionForInvoice(resolvedContactId) || invoice.category || "Prestataire"
+        : invoice.category || "Prestataire"
     });
 
     window.setTimeout(() => {
