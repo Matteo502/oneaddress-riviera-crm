@@ -3915,14 +3915,6 @@ function VendorInvoicesView({
     getVendorInvoiceContactLabel(contact) !== "Contact sans nom"
   );
 
-  const vendorInvoiceCategoryOptions = Array.from(new Set([
-    "Prestataire",
-    ...supplierCategories,
-    ...contacts.map((contact) => String(contact.supplierCategory || "").trim()),
-    editingInvoice?.category || "",
-    "Autre"
-  ].filter((category): category is string => Boolean(category))));
-
   // CRM_VENDOR_INVOICE_CONTACT_FIX_20260620
   function normalizeInvoiceLookupKey(value?: string | number | null) {
     return String(value ?? "")
@@ -3999,6 +3991,9 @@ function VendorInvoicesView({
     }, 80);
   }
 
+  // CRM_VENDOR_INVOICE_AUTO_CATEGORY_20260620
+  // La catégorie d'une facture prestataire vient du contact CRM lié.
+  // Ne pas remettre un champ manuel "Catégorie" dans le formulaire : double saisie = erreurs.
   function getContactProfessionForInvoice(contactId: string) {
     const contact = contacts.find((item) => item.id === contactId);
 
@@ -4050,13 +4045,13 @@ function VendorInvoicesView({
     const amount = safeNumber(form.get("amount"));
     const paidAmount = safeNumber(form.get("paidAmount"));
     const dueDate = String(form.get("dueDate") ?? "");
-    const manualCategory = String(form.get("category") ?? "").trim();
+    const automaticCategory = getContactProfessionForInvoice(contactId) || editingInvoice?.category || "Prestataire";
 
     const invoice: VendorInvoice = {
       id: editingInvoice?.id || makeId("invoice"),
       contactId,
       contactName: contact ? getVendorInvoiceContactLabel(contact) : getHistoricalVendorInvoiceContactName(editingInvoice),
-      category: manualCategory || getContactProfessionForInvoice(contactId) || editingInvoice?.category || "Prestataire",
+      category: automaticCategory,
       title: String(form.get("title") ?? "").trim() || "Facture prestataire",
       invoiceDate: String(form.get("invoiceDate") ?? ""),
       dueDate,
@@ -4205,7 +4200,7 @@ function VendorInvoicesView({
 
         <form key={editingInvoice?.id || "new-vendor-invoice"} className="form-grid" onSubmit={submitInvoice}>
           <label>Contact référent
-            <select name="contactId" defaultValue={getResolvedVendorInvoiceContactId(editingInvoice)} onChange={(event) => fillInvoiceCategoryFromContact(event.currentTarget)}>
+            <select name="contactId" defaultValue={getResolvedVendorInvoiceContactId(editingInvoice)} onChange={() => undefined}>
               <option value="">{shouldShowHistoricalVendorInvoiceContact(editingInvoice) ? getHistoricalVendorInvoiceContactName(editingInvoice) : "Choisir un contact"}</option>
               {shouldShowHistoricalVendorInvoiceContact(editingInvoice) ? (
                 <option value="" disabled>{getHistoricalVendorInvoiceContactName(editingInvoice)} · non lié au CRM</option>
@@ -4214,14 +4209,6 @@ function VendorInvoicesView({
                 <option key={contact.id} value={contact.id}>
                   {getVendorInvoiceContactLabel(contact)}{getContactProfessionForInvoice(contact.id) ? ` · ${getContactProfessionForInvoice(contact.id)}` : ` · ${String((contact as any).kind || "Contact")}`}
                 </option>
-              ))}
-            </select>
-          </label>
-
-          <label>Catégorie
-            <select name="category" defaultValue={getResolvedVendorInvoiceCategory(editingInvoice)}>
-              {vendorInvoiceCategoryOptions.map((category) => (
-                <option key={category} value={category}>{category}</option>
               ))}
             </select>
           </label>
