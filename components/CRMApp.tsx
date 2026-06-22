@@ -22,6 +22,7 @@ import type {
   Supplier,
   PlanningEntry,
   PlanningEntryType,
+  PlanningEntryStatus,
   VendorInvoice,
   HouseTrackingHouse,
   HouseTrackingWorker,
@@ -6926,6 +6927,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
       id: makeId("planning"),
       title: String(form.get("title") ?? "").trim(),
       type: String(form.get("type") ?? "Intervention prestataire") as PlanningEntryType,
+      status: String(form.get("status") ?? "Prévu") as PlanningEntryStatus,
       contactName: String(form.get("contactName") ?? "").trim(),
       assetType: assetSelection.assetType,
       assetId: assetSelection.assetId,
@@ -6977,6 +6979,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
     const nextEntry = {
       title: String(form.get("title") ?? "").trim(),
       type: String(form.get("type") ?? "Intervention prestataire") as PlanningEntryType,
+      status: String(form.get("status") ?? "Prévu") as PlanningEntryStatus,
       contactName: String(form.get("contactName") ?? "").trim(),
       assetType: assetSelection.assetType,
       assetId: assetSelection.assetId,
@@ -7687,6 +7690,8 @@ const planningEntryTypes: PlanningEntryType[] = [
   "Autre"
 ];
 
+const planningEntryStatuses: PlanningEntryStatus[] = ["Prévu", "À confirmer", "En cours", "Terminé", "Annulé"];
+
 function isValidPlanningDate(value?: string) {
   if (!value) return false;
 
@@ -7751,6 +7756,21 @@ function formatPlanningTimeRange(startTime?: string, endTime?: string) {
   if (end) return `Jusqu’à ${end}`;
 
   return "";
+}
+
+function getPlanningEntryStatus(entry: Pick<PlanningEntry, "status">) {
+  return entry.status || "Prévu";
+}
+
+function getPlanningStatusClass(status?: string) {
+  const normalized = String(status || "Prévu")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "-")
+    .trim();
+
+  return normalized || "prevu";
 }
 
 function formatPlanningDateTimeRange(entry: Pick<PlanningEntry, "startDate" | "endDate" | "startTime" | "endTime">) {
@@ -7829,6 +7849,8 @@ function PlanningView({
   const [endDate, setEndDate] = useState("");
   const [calendarMonth, setCalendarMonth] = useState(() => formatPlanningMonthValue(new Date()));
   const [editingPlanningEntry, setEditingPlanningEntry] = useState<PlanningEntry | null>(null);
+  const [planningViewMode, setPlanningViewMode] = useState<"month" | "week">("month");
+  const [planningWeekStart, setPlanningWeekStart] = useState(() => formatPlanningDateValue(new Date()));
 
   const assets = useMemo<PlanningAsset[]>(() => {
     return [
@@ -8005,6 +8027,7 @@ function PlanningView({
         ...booking,
         source: "lead" as const,
         planningLabel: "Confirmé",
+        status: "Confirmé",
         startTime: "",
         endTime: "",
         blocksAvailability: true
@@ -8031,6 +8054,7 @@ function PlanningView({
           assetId: entry.assetId || "",
           assetLabel: asset?.label || entry.title,
           title: entry.title,
+          status: entry.status || "Prévu",
           assetCategory: asset?.category || entry.type,
           contactName: entry.contactName || entry.type,
           startDate: entry.startDate,
@@ -8135,6 +8159,29 @@ function PlanningView({
     );
   }
 
+  const planningWeekDays = useMemo(() => {
+    const baseDate = isValidPlanningDate(planningWeekStart) ? new Date(`${planningWeekStart}T00:00:00`) : new Date();
+    const mondayOffset = (baseDate.getDay() + 6) % 7;
+    const monday = addPlanningDays(baseDate, -mondayOffset);
+
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = addPlanningDays(monday, index);
+      const iso = formatPlanningDateValue(date);
+
+      return {
+        iso,
+        dayLabel: new Intl.DateTimeFormat("fr-FR", { weekday: "short" }).format(date),
+        dateLabel: formatDateFR(iso),
+        events: getEventsForCalendarDay(iso)
+      };
+    });
+  }, [planningWeekStart, calendarEvents]);
+
+  function movePlanningWeek(offset: number) {
+    const baseDate = isValidPlanningDate(planningWeekStart) ? new Date(`${planningWeekStart}T00:00:00`) : new Date();
+    setPlanningWeekStart(formatPlanningDateValue(addPlanningDays(baseDate, offset * 7)));
+  }
+
   const todayIso = formatPlanningDateValue(new Date());
   const tomorrowIso = formatPlanningDateValue(addPlanningDays(new Date(), 1));
   const nextSevenDaysIso = formatPlanningDateValue(addPlanningDays(new Date(), 7));
@@ -8181,7 +8228,7 @@ function PlanningView({
         </div>
 
         <div className="planning-agenda-actions">
-          <Badge>{event.blocksAvailability ? "Bloquant" : event.source === "planning" ? "Intervention" : "Option"}</Badge>
+          <Badge>{event.source === "planning" ? String(event.status || "Prévu") : event.blocksAvailability ? "Bloquant" : "Option"}</Badge>
           {matchingPlanningEntry ? (
             <button className="asset-edit-button" type="button" onClick={() => startPlanningEntryEdit(matchingPlanningEntry)}>Modifier</button>
           ) : null}
@@ -8244,7 +8291,7 @@ function PlanningView({
           </label>
 
           <button
-            className="ghost-button"
+            className="ghost-button planning-filter-reset"
             type="button"
             onClick={() => {
               setCategoryFilter("Tous");
@@ -8252,7 +8299,7 @@ function PlanningView({
               setEndDate("");
             }}
           >
-            Reset
+            Réinitialiser les filtres
           </button>
         </form>
       </section>
@@ -8330,6 +8377,14 @@ function PlanningView({
             <select name="type" defaultValue={editingPlanningEntry?.type ?? "Intervention prestataire"}>
               {planningEntryTypes.map((type) => (
                 <option key={type}>{type}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>Statut
+            <select name="status" defaultValue={editingPlanningEntry?.status ?? "Prévu"}>
+              {planningEntryStatuses.map((status) => (
+                <option key={status}>{status}</option>
               ))}
             </select>
           </label>
@@ -8412,21 +8467,24 @@ function PlanningView({
                 const asset = assets.find((item) => item.type === entry.assetType && item.id === entry.assetId);
 
                 return (
-                  <article className="mini-row" key={entry.id} data-notification-target={`planning-${entry.id}`}>
+                  <article className={`mini-row planning-entry-compact-row status-${getPlanningStatusClass(entry.status)}`} key={entry.id} data-notification-target={`planning-${entry.id}`}>
                     <div>
                       <strong>{entry.title}</strong>
-                      <span>{entry.type} · {formatPlanningDateTimeRange(entry)}</span>
-                      <span>{entry.contactName || "Aucun contact lié"}{asset ? ` · ${asset.label}` : ""}</span>
-                      {entry.notes && <span>{entry.notes}</span>}
+                      <span className="planning-entry-main-line">
+                        {formatPlanningDateTimeRange(entry)} · {entry.contactName || "Aucun contact lié"}{asset ? ` · ${asset.label}` : ""}
+                      </span>
+                      <span className="planning-entry-secondary-line">{entry.type}{entry.notes ? ` · ${entry.notes}` : ""}</span>
                       <ActionMeta item={entry} />
                     </div>
                     <div className="item-actions planning-entry-actions">
+                      <Badge>{getPlanningEntryStatus(entry)}</Badge>
                       <Badge>{entry.blocksAvailability ? "Bloquant" : "Non bloquant"}</Badge>
                       <button className="asset-edit-button" type="button" onClick={() => startPlanningEntryEdit(entry)}>Modifier</button>
                       <button
-                        className="icon-button danger"
+                        className="planning-delete-button"
                         type="button"
-                        aria-label="Supprimer"
+                        aria-label="Supprimer cette intervention"
+                        title="Supprimer cette intervention"
                         onClick={() => {
                           if (editingPlanningEntry?.id === entry.id) {
                             setEditingPlanningEntry(null);
@@ -8434,7 +8492,7 @@ function PlanningView({
 
                           onDeletePlanningEntry(entry.id);
                         }}
-                      >×</button>
+                      >Supprimer</button>
                     </div>
                   </article>
                 );
@@ -8487,14 +8545,28 @@ function PlanningView({
           </div>
         </div>
 
-        <form className="form-grid compact">
-          <label>Mois
-            <input type="month" value={calendarMonth} onChange={(event) => setCalendarMonth(event.target.value)} />
+        <form className="form-grid compact planning-view-controls">
+          <label>Vue
+            <select value={planningViewMode} onChange={(event) => setPlanningViewMode(event.target.value as "month" | "week")}>
+              <option value="month">Mois</option>
+              <option value="week">Semaine</option>
+            </select>
           </label>
+
+          {planningViewMode === "month" ? (
+            <label>Mois
+              <input type="month" value={calendarMonth} onChange={(event) => setCalendarMonth(event.target.value)} />
+            </label>
+          ) : (
+            <label>Semaine du
+              <input type="date" value={planningWeekStart} onChange={(event) => setPlanningWeekStart(event.target.value)} />
+            </label>
+          )}
         </form>
 
-        <div className="table-wrap">
-          <table>
+        {planningViewMode === "month" ? (
+          <div className="table-wrap">
+            <table>
             <thead>
               <tr>
                 {calendarWeekDays.map((day) => (
@@ -8535,7 +8607,7 @@ function PlanningView({
 
                                 return matchingPlanningEntry ? (
                                   <button
-                                    className={`planning-event-pill planning-event-button ${event.blocksAvailability ? "blocked" : "entry"}`}
+                                    className={`planning-event-pill planning-event-button ${event.blocksAvailability ? "blocked" : "entry"} ${event.source === "planning" ? `status-${getPlanningStatusClass(event.status)}` : ""}`}
                                     key={`${event.source}-${event.id}`}
                                     type="button"
                                     onClick={() => startPlanningEntryEdit(matchingPlanningEntry)}
@@ -8568,7 +8640,62 @@ function PlanningView({
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        ) : (
+          <div className="planning-week-view">
+            <div className="planning-week-toolbar">
+              <button className="ghost-button" type="button" onClick={() => movePlanningWeek(-1)}>Semaine précédente</button>
+              <strong>{formatDateFR(planningWeekDays[0]?.iso)} → {formatDateFR(planningWeekDays[6]?.iso)}</strong>
+              <button className="ghost-button" type="button" onClick={() => movePlanningWeek(1)}>Semaine suivante</button>
+            </div>
+
+            <div className="planning-week-grid">
+              {planningWeekDays.map((day) => (
+                <article className="planning-week-day" key={day.iso}>
+                  <div className="planning-week-day-heading">
+                    <span>{day.dayLabel}</span>
+                    <strong>{day.dateLabel}</strong>
+                  </div>
+
+                  <div className="planning-week-events">
+                    {day.events.length === 0 ? (
+                      <span className="planning-week-empty">Libre</span>
+                    ) : (
+                      day.events.map((event) => {
+                        const matchingPlanningEntry = event.source === "planning"
+                          ? planningEntries.find((entry) => entry.id === event.id)
+                          : null;
+                        const eventLabel = [
+                          event.startTime ? `${event.startTime}${event.endTime ? `–${event.endTime}` : ""}` : "Journée",
+                          event.source === "planning" ? event.contactName : event.assetLabel,
+                          event.source === "planning" ? event.title : event.contactName
+                        ].filter(Boolean).join(" · ");
+
+                        return matchingPlanningEntry ? (
+                          <button
+                            className={`planning-week-event ${event.blocksAvailability ? "blocked" : "entry"}`}
+                            key={`${event.source}-${event.id}-${day.iso}`}
+                            type="button"
+                            onClick={() => startPlanningEntryEdit(matchingPlanningEntry)}
+                          >
+                            {eventLabel}
+                          </button>
+                        ) : (
+                          <span
+                            className={`planning-week-event ${event.blocksAvailability ? "blocked" : "option"}`}
+                            key={`${event.source}-${event.id}-${day.iso}`}
+                          >
+                            {eventLabel}
+                          </span>
+                        );
+                      })
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="card">

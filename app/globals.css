@@ -5486,3 +5486,182 @@ main,
   outline: 2px solid rgba(212, 177, 106, 0.55);
   outline-offset: 2px;
 }
+
+
+/* CRM_PLANNING_BATCH_STEPS_4_8_20260622 */
+/* Planning : liste compacte, suppression protégée visuellement, statuts, vue semaine, filtres plus clairs. */
+
+.planning-filter-reset {
+  opacity: 0.72;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+}
+
+.planning-view-controls {
+  margin-bottom: 18px;
+}
+
+.planning-entry-compact-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 14px 16px;
+}
+
+.planning-entry-compact-row strong {
+  line-height: 1.14;
+}
+
+.planning-entry-main-line,
+.planning-entry-secondary-line {
+  display: block;
+  line-height: 1.32;
+  margin-top: 4px;
+}
+
+.planning-entry-secondary-line {
+  opacity: 0.74;
+}
+
+.planning-entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.planning-delete-button {
+  min-height: 36px;
+  border: 0;
+  background: transparent;
+  color: rgba(150, 50, 55, 0.78);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0.56;
+}
+
+.planning-delete-button:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.status-termine {
+  opacity: 0.62;
+}
+
+.status-annule {
+  opacity: 0.5;
+}
+
+.status-a-confirmer .planning-entry-main-line,
+.status-a-confirmer .planning-entry-secondary-line {
+  color: rgba(150, 50, 55, 0.95);
+}
+
+.planning-week-view {
+  display: grid;
+  gap: 16px;
+}
+
+.planning-week-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.planning-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1px solid rgba(212, 177, 106, 0.22);
+}
+
+.planning-week-day {
+  min-width: 0;
+  min-height: 220px;
+  padding: 12px;
+  border-right: 1px solid rgba(212, 177, 106, 0.18);
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.planning-week-day:last-child {
+  border-right: 0;
+}
+
+.planning-week-day-heading {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.planning-week-day-heading span {
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-dark, #bb9551);
+}
+
+.planning-week-events {
+  display: grid;
+  gap: 8px;
+}
+
+.planning-week-event {
+  display: block;
+  width: 100%;
+  border: 1px solid rgba(212, 177, 106, 0.32);
+  border-radius: 10px;
+  padding: 8px;
+  background: rgba(212, 177, 106, 0.12);
+  color: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.24;
+  text-align: left;
+  cursor: pointer;
+}
+
+.planning-week-event.blocked {
+  border-color: rgba(150, 50, 55, 0.36);
+  background: rgba(150, 50, 55, 0.14);
+  color: rgba(115, 31, 37, 0.98);
+}
+
+.planning-week-event.option {
+  cursor: default;
+  opacity: 0.88;
+}
+
+.planning-week-empty {
+  display: block;
+  color: rgba(2, 29, 48, 0.42);
+  font-size: 0.76rem;
+}
+
+@media (max-width: 1200px) {
+  .planning-week-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .planning-week-day {
+    border-right: 0;
+    border-bottom: 1px solid rgba(212, 177, 106, 0.18);
+  }
+}
+
+@media (max-width: 760px) {
+  .planning-week-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .planning-entry-compact-row {
+    grid-template-columns: 1fr;
+  }
+
+  .planning-entry-actions {
+    justify-content: flex-start;
+  }
+}

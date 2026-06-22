@@ -12,6 +12,7 @@ export type VehicleStatus = "Disponible" | "En location" | "En maintenance" | "V
 export type BoatStatus = "Disponible" | "En charter" | "En maintenance" | "Vendu";
 export type TaskStatus = "À faire" | "En cours" | "Terminé";
 export type PlanningEntryType = "Réservation" | "Intervention prestataire" | "Maintenance" | "Tâche interne" | "Autre";
+export type PlanningEntryStatus = "Prévu" | "À confirmer" | "En cours" | "Terminé" | "Annulé";
 
 export type ActionAuditFields = {
   createdBy?: string;
@@ -140,6 +141,7 @@ export type PlanningEntry = {
   id: string;
   title: string;
   type: PlanningEntryType;
+  status?: PlanningEntryStatus;
   contactName: string;
   assetType?: "" | "Property" | "Vehicle" | "Boat";
   assetId?: string;
