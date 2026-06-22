@@ -7698,6 +7698,12 @@ function planningDateValue(value: string) {
   return new Date(`${value}T00:00:00`).getTime();
 }
 
+function addPlanningDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
 function planningRangesOverlap(startA: string, endA: string, startB: string, endB: string) {
   if (!isValidPlanningDate(startA) || !isValidPlanningDate(endA) || !isValidPlanningDate(startB) || !isValidPlanningDate(endB)) {
     return false;
@@ -8129,6 +8135,61 @@ function PlanningView({
     );
   }
 
+  const todayIso = formatPlanningDateValue(new Date());
+  const tomorrowIso = formatPlanningDateValue(addPlanningDays(new Date(), 1));
+  const nextSevenDaysIso = formatPlanningDateValue(addPlanningDays(new Date(), 7));
+
+  const todayPlanningAgendaItems = useMemo(() => {
+    return calendarEvents
+      .filter((event) => planningRangesOverlap(todayIso, todayIso, event.startDate, event.endDate))
+      .slice(0, 6);
+  }, [calendarEvents, todayIso]);
+
+  const nextPlanningAgendaItems = useMemo(() => {
+    return calendarEvents
+      .filter((event) => planningRangesOverlap(tomorrowIso, nextSevenDaysIso, event.startDate, event.endDate))
+      .slice(0, 10);
+  }, [calendarEvents, tomorrowIso, nextSevenDaysIso]);
+
+  function getPlanningAgendaPrimary(event: any) {
+    return String(event.contactName || event.assetLabel || event.title || "Intervention").trim();
+  }
+
+  function getPlanningAgendaSecondary(event: any) {
+    return [
+      event.source === "planning" ? event.title : event.assetLabel,
+      event.source === "planning" ? event.assetLabel : event.contactName,
+      event.planningLabel
+    ].filter(Boolean).join(" · ");
+  }
+
+  function renderPlanningAgendaItem(event: any) {
+    const matchingPlanningEntry = event.source === "planning"
+      ? planningEntries.find((entry) => entry.id === event.id)
+      : null;
+
+    return (
+      <article className={`planning-agenda-item ${event.blocksAvailability ? "is-blocking" : "is-option"}`} key={`${event.source}-${event.id}-${event.startDate}`}>
+        <div className="planning-agenda-time">
+          <strong>{formatDateFR(event.startDate)}</strong>
+          <span>{formatPlanningTimeRange(event.startTime, event.endTime) || "Toute la journée"}</span>
+        </div>
+
+        <div className="planning-agenda-main">
+          <strong>{getPlanningAgendaPrimary(event)}</strong>
+          <span>{getPlanningAgendaSecondary(event)}</span>
+        </div>
+
+        <div className="planning-agenda-actions">
+          <Badge>{event.blocksAvailability ? "Bloquant" : event.source === "planning" ? "Intervention" : "Option"}</Badge>
+          {matchingPlanningEntry ? (
+            <button className="asset-edit-button" type="button" onClick={() => startPlanningEntryEdit(matchingPlanningEntry)}>Modifier</button>
+          ) : null}
+        </div>
+      </article>
+    );
+  }
+
   function moveCalendarMonth(offset: number) {
     const [yearText, monthText] = calendarMonth.split("-");
     const year = Number(yearText);
@@ -8194,6 +8255,47 @@ function PlanningView({
             Reset
           </button>
         </form>
+      </section>
+
+      <section className="card planning-agenda-card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Vue opérationnelle</p>
+            <h3>Aujourd’hui / 7 prochains jours</h3>
+          </div>
+        </div>
+
+        <div className="planning-agenda-grid">
+          <div className="planning-agenda-column">
+            <div className="planning-agenda-column-heading">
+              <span>Aujourd’hui</span>
+              <strong>{todayPlanningAgendaItems.length}</strong>
+            </div>
+
+            <div className="planning-agenda-list">
+              {todayPlanningAgendaItems.length === 0 ? (
+                <p className="muted-line">Aucune intervention prévue aujourd’hui.</p>
+              ) : (
+                todayPlanningAgendaItems.map((event) => renderPlanningAgendaItem(event))
+              )}
+            </div>
+          </div>
+
+          <div className="planning-agenda-column">
+            <div className="planning-agenda-column-heading">
+              <span>7 prochains jours</span>
+              <strong>{nextPlanningAgendaItems.length}</strong>
+            </div>
+
+            <div className="planning-agenda-list">
+              {nextPlanningAgendaItems.length === 0 ? (
+                <p className="muted-line">Aucune intervention prévue sur les 7 prochains jours.</p>
+              ) : (
+                nextPlanningAgendaItems.map((event) => renderPlanningAgendaItem(event))
+              )}
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="card" data-planning-entry-form="true">

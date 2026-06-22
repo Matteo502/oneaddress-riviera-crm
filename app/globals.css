@@ -5353,3 +5353,117 @@ main,
   display: inline-block;
   margin-bottom: 8px;
 }
+
+
+/* CRM_PLANNING_AGENDA_STEP2_20260622 */
+.planning-agenda-card {
+  border-left: 4px solid rgba(212, 177, 106, 0.72);
+}
+
+.planning-agenda-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.planning-agenda-column {
+  min-width: 0;
+  border: 1px solid rgba(212, 177, 106, 0.22);
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.planning-agenda-column-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(212, 177, 106, 0.22);
+}
+
+.planning-agenda-column-heading span {
+  color: var(--gold-dark);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.planning-agenda-column-heading strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(2, 29, 48, 0.92);
+  color: white;
+  font-size: 0.86rem;
+}
+
+.planning-agenda-list {
+  display: grid;
+  gap: 10px;
+}
+
+.planning-agenda-item {
+  display: grid;
+  grid-template-columns: minmax(132px, 0.42fr) minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 13px 14px;
+  border: 1px solid rgba(2, 29, 48, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.planning-agenda-item.is-blocking {
+  border-color: rgba(150, 50, 55, 0.24);
+  background: rgba(150, 50, 55, 0.07);
+}
+
+.planning-agenda-time strong,
+.planning-agenda-main strong {
+  display: block;
+  line-height: 1.16;
+}
+
+.planning-agenda-time span,
+.planning-agenda-main span {
+  display: block;
+  margin-top: 4px;
+  line-height: 1.28;
+  opacity: 0.74;
+}
+
+.planning-agenda-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.planning-agenda-actions button {
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: 0.7rem;
+}
+
+@media (max-width: 1180px) {
+  .planning-agenda-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .planning-agenda-item {
+    grid-template-columns: 1fr;
+  }
+
+  .planning-agenda-actions {
+    justify-items: stretch;
+  }
+}
