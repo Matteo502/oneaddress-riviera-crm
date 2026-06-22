@@ -338,6 +338,7 @@ function normalizeVendorInvoice(value: unknown): VendorInvoice | null {
     paidAmount: Number.isFinite(paidAmount) ? paidAmount : 0,
     linkedDocumentId: String(raw.linkedDocumentId || ""),
     invoiceDocumentUrl: String(raw.invoiceDocumentUrl || raw.documentUrl || raw.url || ""),
+    invoiceDocumentStoragePath: String(raw.invoiceDocumentStoragePath || raw.invoiceStoragePath || ""),
     invoiceDocumentName: String(raw.invoiceDocumentName || raw.documentName || ""),
     status: getVendorInvoiceStatusFromValue(status),
     paymentMethod: String(raw.paymentMethod || ""),
@@ -3933,6 +3934,7 @@ function VendorInvoicesView({
 }) {
   const [statusFilter, setStatusFilter] = useState<VendorInvoice["status"] | "Tous">("Tous");
   const [editingInvoice, setEditingInvoice] = useState<VendorInvoice | null>(null);
+  const [uploadingInvoiceDocument, setUploadingInvoiceDocument] = useState(false);
 
   const supplierContacts = contacts.filter((contact) => {
     const kind = String((contact as any).kind || "");
@@ -4075,6 +4077,76 @@ function VendorInvoicesView({
     categorySelect.value = profession;
   }
 
+  // CRM_VENDOR_INVOICE_DIRECT_UPLOAD_20260622
+  function sanitizeVendorInvoiceFileName(fileName: string) {
+    return fileName
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9._-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "") || "facture";
+  }
+
+  async function uploadVendorInvoiceDocument(file: File, invoiceId: string) {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !userData.user) {
+      throw new Error("Utilisateur Supabase non connecté.");
+    }
+
+    const safeName = sanitizeVendorInvoiceFileName(file.name);
+    const storagePath = `${SHARED_WORKSPACE_ID}/vendor-invoices/${invoiceId}/${Date.now()}-${safeName}`;
+
+    const { error } = await supabase.storage
+      .from(CRM_DOCUMENTS_BUCKET)
+      .upload(storagePath, file, {
+        cacheControl: "3600",
+        upsert: true
+      });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return {
+      invoiceDocumentStoragePath: storagePath,
+      invoiceDocumentName: file.name
+    };
+  }
+
+  async function downloadVendorInvoiceDocument(invoice: VendorInvoice) {
+    const linkedDocument = documents.find((crmDocument) => crmDocument.id === invoice.linkedDocumentId);
+    const storagePath = invoice.invoiceDocumentStoragePath || linkedDocument?.storagePath || "";
+    const externalUrl = invoice.invoiceDocumentUrl || linkedDocument?.url || "";
+    const fileName = invoice.invoiceDocumentName || linkedDocument?.fileName || linkedDocument?.title || invoice.title || "facture";
+
+    if (storagePath) {
+      const { data: fileData, error } = await supabase.storage
+        .from(CRM_DOCUMENTS_BUCKET)
+        .download(storagePath);
+
+      if (error || !fileData) {
+        window.alert(`Téléchargement impossible : ${error?.message || "fichier introuvable"}`);
+        return;
+      }
+
+      const url = URL.createObjectURL(fileData);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    if (externalUrl) {
+      window.open(externalUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    window.alert("Aucune facture importée sur cette ligne.");
+  }
+
   const visibleInvoices = statusFilter === "Tous"
     ? invoices
     : invoices.filter((invoice) => invoice.status === statusFilter);
@@ -4083,19 +4155,37 @@ function VendorInvoicesView({
     .filter((invoice) => invoice.status !== "Payé" && invoice.status !== "Annulé")
     .reduce((sum, invoice) => sum + getVendorInvoiceRemaining(invoice), 0);
 
-  function submitInvoice(event: React.FormEvent<HTMLFormElement>) {
+  async function submitInvoice(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const contactId = String(form.get("contactId") ?? "");
     const contact = contacts.find((item) => item.id === contactId);
     const amount = safeNumber(form.get("amount"));
     const paidAmount = safeNumber(form.get("paidAmount"));
     const dueDate = String(form.get("dueDate") ?? "");
     const automaticCategory = getContactProfessionForInvoice(contactId) || editingInvoice?.category || "Prestataire";
+    const invoiceId = editingInvoice?.id || makeId("invoice");
+    const invoiceFile = form.get("invoiceFile");
+
+    let uploadedInvoiceDocument: Partial<VendorInvoice> = {};
+
+    if (invoiceFile instanceof File && invoiceFile.size > 0) {
+      try {
+        setUploadingInvoiceDocument(true);
+        uploadedInvoiceDocument = await uploadVendorInvoiceDocument(invoiceFile, invoiceId);
+      } catch (error) {
+        window.alert(`Facture non importée : ${error instanceof Error ? error.message : "erreur inconnue"}`);
+        setUploadingInvoiceDocument(false);
+        return;
+      } finally {
+        setUploadingInvoiceDocument(false);
+      }
+    }
 
     const invoice: VendorInvoice = {
-      id: editingInvoice?.id || makeId("invoice"),
+      id: invoiceId,
       contactId,
       contactName: contact ? getVendorInvoiceContactLabel(contact) : getHistoricalVendorInvoiceContactName(editingInvoice),
       category: automaticCategory,
@@ -4106,7 +4196,8 @@ function VendorInvoicesView({
       paidAmount,
       linkedDocumentId: editingInvoice?.linkedDocumentId || "",
       invoiceDocumentUrl: editingInvoice?.invoiceDocumentUrl || "",
-      invoiceDocumentName: editingInvoice?.invoiceDocumentName || "",
+      invoiceDocumentStoragePath: uploadedInvoiceDocument.invoiceDocumentStoragePath || editingInvoice?.invoiceDocumentStoragePath || "",
+      invoiceDocumentName: uploadedInvoiceDocument.invoiceDocumentName || editingInvoice?.invoiceDocumentName || "",
       status: getVendorInvoiceStatus(amount, paidAmount, dueDate),
       paymentMethod: String(form.get("paymentMethod") ?? "").trim(),
       notes: String(form.get("notes") ?? "").trim(),
@@ -4123,7 +4214,7 @@ function VendorInvoicesView({
       onAdd(invoice);
     }
 
-    event.currentTarget.reset();
+    formElement.reset();
   }
 
   return (
@@ -4185,15 +4276,14 @@ function VendorInvoicesView({
 
                 <div className="item-actions contact-row-actions">
                   <span className={`status-pill vendor-invoice-status ${invoice.status === "Payé" ? "semantic-success invoice-status-paid" : "semantic-danger invoice-status-danger"}`}>{invoice.status}</span>
-                  {(invoice.invoiceDocumentUrl || documents.find((crmDocument) => crmDocument.id === invoice.linkedDocumentId)?.url) && (
-                    <a
+                  {(invoice.invoiceDocumentStoragePath || invoice.invoiceDocumentUrl || documents.find((crmDocument) => crmDocument.id === invoice.linkedDocumentId)?.storagePath || documents.find((crmDocument) => crmDocument.id === invoice.linkedDocumentId)?.url) && (
+                    <button
                       className="secondary-button vendor-invoice-document-button"
-                      href={invoice.invoiceDocumentUrl || documents.find((crmDocument) => crmDocument.id === invoice.linkedDocumentId)?.url || "#"}
-                      target="_blank"
-                      rel="noreferrer"
+                      type="button"
+                      onClick={() => void downloadVendorInvoiceDocument(invoice)}
                     >
-                      Voir facture
-                    </a>
+                      Télécharger facture
+                    </button>
                   )}
                   <button className="secondary-button" type="button" onClick={() => startEditInvoice(invoice)}>
                     Modifier
@@ -4209,31 +4299,6 @@ function VendorInvoicesView({
                   >
                     Supprimer
                   </button>
-
-                  <label className="invoice-document-link-select">
-                    <span>Document lié</span>
-                    <select
-                      value={invoice.linkedDocumentId || ""}
-                      onChange={(event) => {
-                        const documentId = event.currentTarget.value;
-                        const selectedDocument = documents.find((crmDocument) => crmDocument.id === documentId);
-
-                        onUpdate({
-                          ...invoice,
-                          linkedDocumentId: documentId,
-                          invoiceDocumentUrl: selectedDocument?.url || invoice.invoiceDocumentUrl || "",
-                          invoiceDocumentName: selectedDocument?.title || invoice.invoiceDocumentName || ""
-                        });
-                      }}
-                    >
-                      <option value="">Aucun document</option>
-                      {documents.map((crmDocument) => (
-                        <option key={crmDocument.id} value={crmDocument.id}>
-                          {crmDocument.title}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
                 </div>
               </article>
             ))}
@@ -4284,12 +4349,19 @@ function VendorInvoicesView({
             <input name="paymentMethod" defaultValue={editingInvoice?.paymentMethod || ""} placeholder="Virement, espèces, CB..." />
           </label>
 
+          <label className="vendor-invoice-file-field">Importer la facture
+            <input name="invoiceFile" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.doc,.docx,.xls,.xlsx" />
+            <span className="field-help">
+              {editingInvoice?.invoiceDocumentName ? `Fichier actuel : ${editingInvoice.invoiceDocumentName}` : "PDF, image ou document depuis l’ordinateur"}
+            </span>
+          </label>
+
           <label className="planning-entry-notes">Notes
             <textarea name="notes" defaultValue={editingInvoice?.notes || ""} placeholder="Détails, facture reçue, IBAN, remarque..." />
           </label>
 
-          <button className="primary-button planning-entry-submit" type="submit">
-            {editingInvoice ? "Enregistrer" : "Ajouter facture"}
+          <button className="primary-button planning-entry-submit" type="submit" disabled={uploadingInvoiceDocument}>
+            {uploadingInvoiceDocument ? "Import en cours..." : editingInvoice ? "Enregistrer" : "Ajouter facture"}
           </button>
 
           {editingInvoice && (
