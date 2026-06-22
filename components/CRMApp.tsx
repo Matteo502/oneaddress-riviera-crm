@@ -560,6 +560,30 @@ function stampUpdated<T extends object>(item: T, actor: string): T {
   };
 }
 
+
+// CRM_PLANNING_CALENDAR_READABLE_STEP1_20260622
+function getPlanningEntryTimeLabel(entry: any) {
+  const start = String(entry?.startTime || entry?.arrivalTime || "").trim();
+  const end = String(entry?.endTime || entry?.departureTime || "").trim();
+
+  if (start && end) return `${start}–${end}`;
+  if (start) return start;
+  if (end) return `jusqu’à ${end}`;
+  return "";
+}
+
+function getPlanningEntryCalendarTitle(entry: any) {
+  const time = getPlanningEntryTimeLabel(entry);
+  const contact = String(entry?.contactName || entry?.linkedContact || entry?.workerName || entry?.providerName || "").trim();
+  const title = String(entry?.title || entry?.name || "").trim();
+  const asset = String(entry?.assetName || entry?.linkedAsset || entry?.houseName || "").trim();
+
+  const main = contact || title || "Intervention";
+  const detail = title && contact && title !== contact ? title : asset;
+
+  return [time, main, detail].filter(Boolean).join(" · ");
+}
+
 function formatDateTimeFR(value?: string) {
   if (!value) return "";
 
@@ -8287,7 +8311,7 @@ function PlanningView({
                 return (
                   <article className="mini-row" key={entry.id} data-notification-target={`planning-${entry.id}`}>
                     <div>
-                      <strong>{entry.title}</strong>
+                      <strong>{getPlanningEntryCalendarTitle(entry)}</strong>
                       <span>{entry.type} · {formatPlanningDateTimeRange(entry)}</span>
                       <span>{entry.contactName || "Aucun contact lié"}{asset ? ` · ${asset.label}` : ""}</span>
                       {entry.notes && <span>{entry.notes}</span>}

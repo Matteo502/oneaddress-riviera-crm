@@ -5210,3 +5210,114 @@ main,
     grid-template-columns: 1fr;
   }
 }
+
+
+/* CRM_PLANNING_CALENDAR_READABLE_STEP1_20260622 */
+/* Planning mensuel : moins de bruit, lecture plus rapide. */
+
+.calendar-day,
+.planning-calendar-day,
+.month-day {
+  position: relative;
+  min-height: 118px;
+  padding: 12px 12px 10px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.calendar-day:empty,
+.planning-calendar-day:empty,
+.month-day:empty {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.calendar-day p,
+.planning-calendar-day p,
+.month-day p {
+  margin: 0;
+}
+
+.calendar-day p:empty,
+.planning-calendar-day p:empty,
+.month-day p:empty {
+  display: none;
+}
+
+.calendar-event,
+.planning-calendar-event,
+.month-event {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  padding: 7px 8px;
+  border-radius: 10px;
+  line-height: 1.22;
+  font-size: 0.72rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.calendar-event,
+.planning-calendar-event,
+.month-event {
+  white-space: normal;
+}
+
+.calendar-event strong,
+.planning-calendar-event strong,
+.month-event strong {
+  display: block;
+  line-height: 1.15;
+}
+
+.calendar-event small,
+.planning-calendar-event small,
+.month-event small {
+  display: block;
+  margin-top: 3px;
+  line-height: 1.2;
+  opacity: 0.78;
+}
+
+.calendar-event + .calendar-event,
+.planning-calendar-event + .planning-calendar-event,
+.month-event + .month-event {
+  margin-top: 6px;
+}
+
+/* Une case vide doit respirer. On arrête d'écrire “Disponible” partout. */
+.calendar-day .empty-day-label,
+.planning-calendar-day .empty-day-label,
+.month-day .empty-day-label {
+  display: none;
+}
+
+/* Les blocages restent visibles, les interventions simples restent plus légères. */
+.calendar-event.is-blocking,
+.planning-calendar-event.is-blocking,
+.month-event.is-blocking {
+  border-color: rgba(150, 50, 55, 0.42);
+}
+
+.calendar-event:not(.is-blocking),
+.planning-calendar-event:not(.is-blocking),
+.month-event:not(.is-blocking) {
+  opacity: 0.92;
+}
+
+@media (max-width: 900px) {
+  .calendar-day,
+  .planning-calendar-day,
+  .month-day {
+    min-height: 96px;
+    padding: 9px;
+  }
+
+  .calendar-event,
+  .planning-calendar-event,
+  .month-event {
+    font-size: 0.68rem;
+    padding: 6px 7px;
+  }
+}
