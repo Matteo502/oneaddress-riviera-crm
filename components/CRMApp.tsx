@@ -7758,8 +7758,29 @@ function formatPlanningTimeRange(startTime?: string, endTime?: string) {
   return "";
 }
 
-function getPlanningEntryStatus(entry: Pick<PlanningEntry, "status">) {
-  return entry.status || "Prévu";
+function getPlanningEntryStatus(entry: Pick<PlanningEntry, "status" | "startDate" | "endDate">): PlanningEntryStatus {
+  const storedStatus = entry.status || "Prévu";
+
+  // Statut automatique opérationnel :
+  // - Annulé reste Annulé.
+  // - Le jour de l'intervention, le statut affiché devient En cours.
+  // - Le lendemain de la fin d'intervention, le statut affiché devient Terminé.
+  // On ne modifie pas brutalement la donnée en base : c'est un statut calculé pour éviter les écritures automatiques risquées.
+  if (storedStatus === "Annulé") return "Annulé";
+
+  const effectiveEndDate = entry.endDate || entry.startDate;
+  if (!isValidPlanningDate(entry.startDate) || !isValidPlanningDate(effectiveEndDate)) {
+    return storedStatus;
+  }
+
+  const todayValue = planningDateValue(formatPlanningDateValue(new Date()));
+  const startValue = planningDateValue(entry.startDate);
+  const endValue = planningDateValue(effectiveEndDate);
+
+  if (todayValue > endValue) return "Terminé";
+  if (todayValue >= startValue && todayValue <= endValue) return "En cours";
+
+  return storedStatus;
 }
 
 function getPlanningStatusClass(status?: string) {
@@ -8018,12 +8039,30 @@ function PlanningView({
   }
 
   const categories = ["Tous", ...Array.from(new Set(assets.map((asset) => asset.category))).sort()];
+
+  function planningItemMatchesCategory(item: { assetCategory?: string; assetType?: string; assetId?: string }) {
+    if (categoryFilter === "Tous") return true;
+    if (item.assetCategory === categoryFilter) return true;
+
+    const linkedAsset = assets.find((asset) => asset.type === item.assetType && asset.id === item.assetId);
+    return linkedAsset?.category === categoryFilter;
+  }
+
+  const visiblePlanningEntries = planningEntries.filter((entry) => planningItemMatchesCategory({
+    assetType: entry.assetType,
+    assetId: entry.assetId,
+    assetCategory: assets.find((asset) => asset.type === entry.assetType && asset.id === entry.assetId)?.category
+  }));
+
+  const visiblePendingBookings = pendingBookings.filter((booking) => planningItemMatchesCategory(booking));
+  const visibleConfirmedBookings = confirmedBookings.filter((booking) => planningItemMatchesCategory(booking));
+
   const calendarWeeks = useMemo(() => getPlanningCalendarWeeks(calendarMonth), [calendarMonth]);
   const calendarWeekDays = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
   const calendarEvents = useMemo(() => {
     const leadEvents = [
-      ...confirmedBookings.map((booking) => ({
+      ...visibleConfirmedBookings.map((booking) => ({
         ...booking,
         source: "lead" as const,
         planningLabel: "Confirmé",
@@ -8032,7 +8071,7 @@ function PlanningView({
         endTime: "",
         blocksAvailability: true
       })),
-      ...pendingBookings.map((booking) => ({
+      ...visiblePendingBookings.map((booking) => ({
         ...booking,
         source: "lead" as const,
         planningLabel: booking.status,
@@ -8054,7 +8093,7 @@ function PlanningView({
           assetId: entry.assetId || "",
           assetLabel: asset?.label || entry.title,
           title: entry.title,
-          status: entry.status || "Prévu",
+          status: getPlanningEntryStatus(entry),
           assetCategory: asset?.category || entry.type,
           contactName: entry.contactName || entry.type,
           startDate: entry.startDate,
@@ -8069,12 +8108,13 @@ function PlanningView({
       });
 
     return [...leadEvents, ...planningEntryEvents]
+      .filter((event) => planningItemMatchesCategory(event))
       .sort((a, b) => {
         const dateDiff = planningDateValue(a.startDate) - planningDateValue(b.startDate);
         if (dateDiff !== 0) return dateDiff;
         return String(a.startTime || "").localeCompare(String(b.startTime || ""));
       });
-  }, [confirmedBookings, pendingBookings, planningEntries, assets]);
+  }, [confirmedBookings, pendingBookings, planningEntries, assets, categoryFilter]);
 
   const planningConflicts = useMemo(() => {
     const usableLeads = leads
@@ -8382,7 +8422,7 @@ function PlanningView({
           </label>
 
           <label>Statut
-            <select name="status" defaultValue={editingPlanningEntry?.status ?? "Prévu"}>
+            <select name="status" defaultValue={editingPlanningEntry ? getPlanningEntryStatus(editingPlanningEntry) : "Prévu"}>
               {planningEntryStatuses.map((status) => (
                 <option key={status}>{status}</option>
               ))}
@@ -8457,17 +8497,17 @@ function PlanningView({
         </div>
 
         <div className="list-stack">
-          {planningEntries.length === 0 ? (
+          {visiblePlanningEntries.length === 0 ? (
             <p className="muted-line">Aucune intervention interne. Ajoutez ici les prestataires, maintenances et passages qui ne doivent pas devenir des leads.</p>
           ) : (
-            planningEntries
+            visiblePlanningEntries
               .slice()
               .sort((a, b) => planningDateValue(a.startDate || "9999-12-31") - planningDateValue(b.startDate || "9999-12-31"))
               .map((entry) => {
                 const asset = assets.find((item) => item.type === entry.assetType && item.id === entry.assetId);
 
                 return (
-                  <article className={`mini-row planning-entry-compact-row status-${getPlanningStatusClass(entry.status)}`} key={entry.id} data-notification-target={`planning-${entry.id}`}>
+                  <article className={`mini-row planning-entry-compact-row status-${getPlanningStatusClass(getPlanningEntryStatus(entry))}`} key={entry.id} data-notification-target={`planning-${entry.id}`}>
                     <div>
                       <strong>{entry.title}</strong>
                       <span className="planning-entry-main-line">
@@ -8759,15 +8799,15 @@ function PlanningView({
         <div className="section-heading">
           <div>
             <p className="eyebrow">Options / demandes en cours</p>
-            <h3>{pendingBookings.length} demande{pendingBookings.length > 1 ? "s" : ""}</h3>
+            <h3>{visiblePendingBookings.length} demande{visiblePendingBookings.length > 1 ? "s" : ""}</h3>
           </div>
         </div>
 
         <div className="list-stack">
-          {pendingBookings.length === 0 ? (
+          {visiblePendingBookings.length === 0 ? (
             <p className="muted-line">Aucune option en cours. Ajoutez un lead avec dates, actif lié et statut Contacté / Devis / Négociation pour le voir ici.</p>
           ) : (
-            pendingBookings.map((booking) => (
+            visiblePendingBookings.map((booking) => (
               <article className="mini-row" key={booking.id}>
                 <div>
                   <strong>{booking.assetLabel}</strong>
@@ -8786,15 +8826,15 @@ function PlanningView({
         <div className="section-heading">
           <div>
             <p className="eyebrow">Locations confirmées</p>
-            <h3>{confirmedBookings.length} réservation{confirmedBookings.length > 1 ? "s" : ""}</h3>
+            <h3>{visibleConfirmedBookings.length} réservation{visibleConfirmedBookings.length > 1 ? "s" : ""}</h3>
           </div>
         </div>
 
         <div className="list-stack">
-          {confirmedBookings.length === 0 ? (
+          {visibleConfirmedBookings.length === 0 ? (
             <p className="muted-line">Aucune location confirmée pour le moment. Quand un lead est gagné avec dates et actif lié, il apparaîtra ici.</p>
           ) : (
-            confirmedBookings.map((booking) => (
+            visibleConfirmedBookings.map((booking) => (
               <article className="mini-row" key={booking.id}>
                 <div>
                   <strong>{booking.assetLabel}</strong>
