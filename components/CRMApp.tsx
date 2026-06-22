@@ -40,6 +40,30 @@ const vehicleStatuses: VehicleStatus[] = ["Disponible", "En location", "En maint
 const boatStatuses: BoatStatus[] = ["Disponible", "En charter", "En maintenance", "Vendu"];
 const taskStatuses: TaskStatus[] = ["À faire", "En cours", "Terminé"];
 
+
+// CRM_PLANNING_CALENDAR_CLEAN_FIX_20260622
+function getPlanningEntryTimeLabel(entry: any) {
+  const start = String(entry?.startTime || entry?.arrivalTime || "").trim();
+  const end = String(entry?.endTime || entry?.departureTime || "").trim();
+
+  if (start && end) return `${start}–${end}`;
+  if (start) return start;
+  if (end) return `jusqu’à ${end}`;
+  return "";
+}
+
+function getPlanningEntryCalendarTitle(entry: any) {
+  const time = getPlanningEntryTimeLabel(entry);
+  const contact = String(entry?.contactName || entry?.linkedContact || entry?.workerName || entry?.providerName || "").trim();
+  const title = String(entry?.title || entry?.name || "").trim();
+  const asset = String(entry?.assetName || entry?.linkedAsset || entry?.houseName || "").trim();
+
+  const main = contact || title || "Intervention";
+  const detail = title && contact && title !== contact ? title : asset;
+
+  return [time, main, detail].filter(Boolean).join(" · ");
+}
+
 function isCompletedTaskStatus(status: unknown) {
   return String(status || "")
     .toLowerCase()
@@ -8311,7 +8335,7 @@ function PlanningView({
                 return (
                   <article className="mini-row" key={entry.id} data-notification-target={`planning-${entry.id}`}>
                     <div>
-                      <strong>{getPlanningEntryCalendarTitle(entry)}</strong>
+                      <strong>{entry.title}</strong>
                       <span>{entry.type} · {formatPlanningDateTimeRange(entry)}</span>
                       <span>{entry.contactName || "Aucun contact lié"}{asset ? ` · ${asset.label}` : ""}</span>
                       {entry.notes && <span>{entry.notes}</span>}
@@ -8420,7 +8444,7 @@ function PlanningView({
                             <strong>{day.day}</strong>
 
                             {events.length === 0 ? (
-                              <span className="muted-line">Disponible</span>
+                              
                             ) : (
                               events.slice(0, 4).map((event) => (
                                 <span
@@ -10142,7 +10166,7 @@ function PropertiesView({
       name: String(form.get("name") ?? "").trim(),
       city: String(form.get("city") ?? "").trim(),
       price: safeNumber(form.get("price")),
-      status: String(form.get("status") ?? "Disponible") as PropertyStatus,
+      status: String(form.get("status") ?? "") as PropertyStatus,
       owner: String(form.get("owner") ?? "").trim(),
       bedrooms: safeNumber(form.get("bedrooms")),
       surface: safeNumber(form.get("surface")),
@@ -10390,7 +10414,7 @@ function VehiclesView({
       model: String(form.get("model") ?? "").trim(),
       city: String(form.get("city") ?? "").trim(),
       price: safeNumber(form.get("price")),
-      status: String(form.get("status") ?? "Disponible") as VehicleStatus,
+      status: String(form.get("status") ?? "") as VehicleStatus,
       owner: String(form.get("owner") ?? "").trim(),
       year: safeNumber(form.get("year")),
       mileage: safeNumber(form.get("mileage")),
@@ -10627,7 +10651,7 @@ function BoatsView({
       port: String(form.get("port") ?? "").trim(),
       type: String(form.get("type") ?? "").trim(),
       price: safeNumber(form.get("price")),
-      status: String(form.get("status") ?? "Disponible") as BoatStatus,
+      status: String(form.get("status") ?? "") as BoatStatus,
       owner: String(form.get("owner") ?? "").trim(),
       year: safeNumber(form.get("year")),
       length: safeNumber(form.get("length")),

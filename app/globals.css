@@ -5321,3 +5321,46 @@ main,
     padding: 6px 7px;
   }
 }
+
+
+/* CRM_PLANNING_CALENDAR_CLEAN_FIX_20260622 */
+.calendar-day,
+.planning-calendar-day,
+.month-day {
+  min-height: 116px;
+  padding: 12px;
+}
+
+.calendar-day p:empty,
+.planning-calendar-day p:empty,
+.month-day p:empty,
+.calendar-day span:empty,
+.planning-calendar-day span:empty,
+.month-day span:empty {
+  display: none !important;
+}
+
+.calendar-event,
+.planning-calendar-event,
+.month-event {
+  max-width: 100%;
+  padding: 7px 8px;
+  border-radius: 10px;
+  line-height: 1.22;
+  font-size: 0.72rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+}
+
+.calendar-event + .calendar-event,
+.planning-calendar-event + .planning-calendar-event,
+.month-event + .month-event {
+  margin-top: 6px;
+}
+
+.planning-events-list .item-card h3,
+.planning-list .item-card h3 {
+  line-height: 1.16;
+}
