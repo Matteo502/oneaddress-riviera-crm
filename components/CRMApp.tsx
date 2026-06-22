@@ -23,6 +23,7 @@ import type {
   PlanningEntry,
   PlanningEntryType,
   PlanningEntryStatus,
+  PlanningPriority,
   PlanningCategory,
   VendorInvoice,
   HouseTrackingHouse,
@@ -6934,6 +6935,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
       type: String(form.get("type") ?? "Intervention prestataire") as PlanningEntryType,
       planningCategory,
       status: String(form.get("status") ?? "Prévu") as PlanningEntryStatus,
+      priority: String(form.get("priority") ?? "Normal") as PlanningPriority,
       contactName: String(form.get("contactName") ?? "").trim(),
       assetType: assetSelection.assetType,
       assetId: assetSelection.assetId,
@@ -6974,6 +6976,17 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
     notify("Entrée planning supprimée.");
   }
 
+  function patchPlanningEntry(id: string, patch: Partial<PlanningEntry>) {
+    setData((current) => ({
+      ...current,
+      planningEntries: (((current as any).planningEntries ?? []) as PlanningEntry[]).map((entry) =>
+        entry.id === id ? stampUpdated({ ...entry, ...patch }, activeActor) as PlanningEntry : entry
+      )
+    }));
+
+    notify("Planning mis à jour.");
+  }
+
   function updatePlanningEntry(id: string, event: React.FormEvent<HTMLFormElement>): boolean {
     event.preventDefault();
 
@@ -6990,6 +7003,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
       type: String(form.get("type") ?? "Intervention prestataire") as PlanningEntryType,
       planningCategory,
       status: String(form.get("status") ?? "Prévu") as PlanningEntryStatus,
+      priority: String(form.get("priority") ?? "Normal") as PlanningPriority,
       contactName: String(form.get("contactName") ?? "").trim(),
       assetType: assetSelection.assetType,
       assetId: assetSelection.assetId,
@@ -7606,6 +7620,7 @@ function createQuoteDraftFromLead(lead: Lead) {
             onAddPlanningEntry={addPlanningEntry}
             onUpdatePlanningEntry={updatePlanningEntry}
             onDeletePlanningEntry={deletePlanningEntry}
+            onPatchPlanningEntry={patchPlanningEntry}
           />
         )}
 
@@ -7701,6 +7716,7 @@ const planningEntryTypes: PlanningEntryType[] = [
 ];
 
 const planningEntryStatuses: PlanningEntryStatus[] = ["Prévu", "À confirmer", "En cours", "Terminé", "Annulé"];
+const planningEntryPriorities: PlanningPriority[] = ["Normal", "Important", "Critique"];
 
 // CRM_PLANNING_SEPARATE_SCOPES_20260622
 const planningCategoryOptions: PlanningCategory[] = ["Villa", "Bateau", "Voiture", "Conciergerie"];
@@ -7930,7 +7946,8 @@ function PlanningView({
   planningEntries,
   onAddPlanningEntry,
   onUpdatePlanningEntry,
-  onDeletePlanningEntry
+  onDeletePlanningEntry,
+  onPatchPlanningEntry
 }: {
   leads: Lead[];
   properties: Property[];
@@ -7941,8 +7958,10 @@ function PlanningView({
   onAddPlanningEntry: (event: React.FormEvent<HTMLFormElement>) => void;
   onUpdatePlanningEntry: (id: string, event: React.FormEvent<HTMLFormElement>) => boolean;
   onDeletePlanningEntry: (id: string) => void;
+  onPatchPlanningEntry: (id: string, patch: Partial<PlanningEntry>) => void;
 }) {
   const [categoryFilter, setCategoryFilter] = useState("Tous");
+  const [assetFilter, setAssetFilter] = useState("Tous");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [calendarMonth, setCalendarMonth] = useState(() => formatPlanningMonthValue(new Date()));
@@ -8005,6 +8024,7 @@ function PlanningView({
       planningCategory: getAssetPlanningCategory(asset)
     }));
   }, [assets]);
+
 
   function getPlanningContactDisplayName(contact: Contact) {
     return [contact.civility, contact.firstName, contact.name].filter(Boolean).join(" ").trim()
@@ -8110,9 +8130,21 @@ function PlanningView({
     ? activePlanningCategory
     : "Villa";
 
+  const assetFilterOptions = useMemo(() => {
+    return assetOptions.filter((asset) => categoryFilter === "Tous" || asset.planningCategory === activePlanningCategory);
+  }, [assetOptions, categoryFilter, activePlanningCategory]);
+
+  function planningItemMatchesAsset(item: { assetType?: string; assetId?: string }) {
+    if (assetFilter === "Tous") return true;
+    const selected = parseAssetKey(assetFilter);
+    return item.assetType === selected.assetType && item.assetId === selected.assetId;
+  }
+
   const visibleAssets = assets.filter((asset) => {
-    if (categoryFilter === "Tous") return true;
-    return getAssetPlanningCategory(asset) === activePlanningCategory;
+    if (categoryFilter !== "Tous" && getAssetPlanningCategory(asset) !== activePlanningCategory) return false;
+    if (assetFilter === "Tous") return true;
+    const selected = parseAssetKey(assetFilter);
+    return asset.type === selected.assetType && asset.id === selected.assetId;
   });
 
   const selectedStartDate = startDate;
@@ -8162,8 +8194,12 @@ function PlanningView({
   }
 
   const visiblePlanningEntries = planningEntries.filter((entry) =>
-    categoryFilter === "Tous" || getPlanningEntryCategory(entry) === activePlanningCategory
+    (categoryFilter === "Tous" || getPlanningEntryCategory(entry) === activePlanningCategory) && planningItemMatchesAsset(entry)
   );
+
+  const todayIso = formatPlanningDateValue(new Date());
+  const tomorrowIso = formatPlanningDateValue(addPlanningDays(new Date(), 1));
+  const nextSevenDaysIso = formatPlanningDateValue(addPlanningDays(new Date(), 7));
 
   // CRM_PLANNING_COLLAPSED_PRIORITY_LIST_20260622
   // La liste opérationnelle affiche d'abord ce qui arrive / ce qui est en cours.
@@ -8197,8 +8233,116 @@ function PlanningView({
   const hasHiddenUpcomingPlanningEntries = activePlanningEntries.length > primaryPlanningEntries.length;
   const hasHiddenCompletedPlanningEntries = completedPlanningEntries.length > 0 && !showCompletedPlanningEntries;
 
-  const visiblePendingBookings = pendingBookings.filter((booking) => planningItemMatchesCategory(booking));
-  const visibleConfirmedBookings = confirmedBookings.filter((booking) => planningItemMatchesCategory(booking));
+  function getPlanningPriorityScore(entry: PlanningEntry) {
+    const priority = entry.priority || "Normal";
+    if (priority === "Critique") return 3;
+    if (priority === "Important") return 2;
+    if (entry.blocksAvailability) return 1;
+    return 0;
+  }
+
+  function getPlanningEntryMissingFields(entry: PlanningEntry) {
+    const missing: string[] = [];
+    if (!String(entry.contactName || "").trim()) missing.push("contact");
+    if (!entry.assetId) missing.push("actif");
+    if (!String(entry.startTime || "").trim()) missing.push("heure");
+    return missing;
+  }
+
+  const importantPlanningEntries = [...activePlanningEntries]
+    .filter((entry) => {
+      const daysUntil = Math.ceil((planningDateValue(entry.startDate || todayIso) - planningDateValue(todayIso)) / 86400000);
+      return getPlanningPriorityScore(entry) > 0 || daysUntil <= 3 || getPlanningEntryMissingFields(entry).length > 0;
+    })
+    .sort((a, b) => {
+      const priorityDiff = getPlanningPriorityScore(b) - getPlanningPriorityScore(a);
+      if (priorityDiff !== 0) return priorityDiff;
+      const dateDiff = planningDateValue(a.startDate || "9999-12-31") - planningDateValue(b.startDate || "9999-12-31");
+      if (dateDiff !== 0) return dateDiff;
+      return String(a.startTime || "").localeCompare(String(b.startTime || ""));
+    })
+    .slice(0, 5);
+
+  const incompletePlanningEntries = activePlanningEntries
+    .map((entry) => ({ entry, missing: getPlanningEntryMissingFields(entry) }))
+    .filter((item) => item.missing.length > 0)
+    .slice(0, 6);
+
+  function patchPlanningEntryFromView(entry: PlanningEntry, patch: Partial<PlanningEntry>) {
+    onPatchPlanningEntry(entry.id, patch);
+    if (editingPlanningEntry?.id === entry.id) {
+      setEditingPlanningEntry({ ...editingPlanningEntry, ...patch });
+    }
+  }
+
+  function markPlanningEntryDone(entry: PlanningEntry) {
+    patchPlanningEntryFromView(entry, { status: "Terminé" });
+  }
+
+  function cancelPlanningEntryOperationally(entry: PlanningEntry) {
+    const confirmed = window.confirm("Annuler cette intervention ? Elle restera dans l'historique.");
+    if (!confirmed) return;
+    patchPlanningEntryFromView(entry, { status: "Annulé" });
+  }
+
+  function postponePlanningEntry(entry: PlanningEntry) {
+    const nextStartDate = window.prompt("Nouvelle date de début (AAAA-MM-JJ)", entry.startDate || formatPlanningDateValue(new Date()));
+    if (!nextStartDate) return;
+    if (!isValidPlanningDate(nextStartDate)) {
+      window.alert("Date invalide. Utilisez le format AAAA-MM-JJ.");
+      return;
+    }
+
+    const oldStart = entry.startDate;
+    const oldEnd = entry.endDate || entry.startDate;
+    const durationDays = isValidPlanningDate(oldStart) && isValidPlanningDate(oldEnd)
+      ? Math.max(0, Math.round((planningDateValue(oldEnd) - planningDateValue(oldStart)) / 86400000))
+      : 0;
+    const nextEndDate = formatPlanningDateValue(addPlanningDays(new Date(`${nextStartDate}T00:00:00`), durationDays));
+    const reportNote = `Reporté du ${formatDateFR(oldStart)} au ${formatDateFR(nextStartDate)}`;
+    const nextNotes = [entry.notes, reportNote].filter(Boolean).join(" · ");
+
+    patchPlanningEntryFromView(entry, {
+      startDate: nextStartDate,
+      endDate: nextEndDate,
+      status: "Prévu",
+      notes: nextNotes
+    });
+  }
+
+  function renderPlanningQuickActions(entry: PlanningEntry) {
+    const status = getPlanningEntryStatus(entry);
+    const isClosed = status === "Terminé" || status === "Annulé";
+
+    return (
+      <div className="planning-quick-actions">
+        {!isClosed ? (
+          <>
+            <button className="asset-edit-button" type="button" onClick={() => markPlanningEntryDone(entry)}>Terminer</button>
+            <button className="asset-edit-button" type="button" onClick={() => postponePlanningEntry(entry)}>Reporter</button>
+            <button className="ghost-button muted-action-button" type="button" onClick={() => cancelPlanningEntryOperationally(entry)}>Annuler</button>
+          </>
+        ) : null}
+        <button className="asset-edit-button" type="button" onClick={() => startPlanningEntryEdit(entry)}>Modifier</button>
+        <details className="planning-entry-more">
+          <summary aria-label="Plus d'actions">•••</summary>
+          <button
+            className="planning-delete-button"
+            type="button"
+            onClick={() => {
+              if (editingPlanningEntry?.id === entry.id) {
+                setEditingPlanningEntry(null);
+              }
+              onDeletePlanningEntry(entry.id);
+            }}
+          >Supprimer définitivement</button>
+        </details>
+      </div>
+    );
+  }
+
+  const visiblePendingBookings = pendingBookings.filter((booking) => planningItemMatchesCategory(booking) && planningItemMatchesAsset(booking));
+  const visibleConfirmedBookings = confirmedBookings.filter((booking) => planningItemMatchesCategory(booking) && planningItemMatchesAsset(booking));
 
   const calendarWeeks = useMemo(() => getPlanningCalendarWeeks(calendarMonth), [calendarMonth]);
   const calendarWeekDays = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
@@ -8366,10 +8510,6 @@ function PlanningView({
     setPlanningWeekStart(formatPlanningDateValue(addPlanningDays(baseDate, offset * 7)));
   }
 
-  const todayIso = formatPlanningDateValue(new Date());
-  const tomorrowIso = formatPlanningDateValue(addPlanningDays(new Date(), 1));
-  const nextSevenDaysIso = formatPlanningDateValue(addPlanningDays(new Date(), 7));
-
   const todayPlanningAgendaItems = useMemo(() => {
     return calendarEvents
       .filter((event) => planningRangesOverlap(todayIso, todayIso, event.startDate, event.endDate))
@@ -8465,9 +8605,21 @@ function PlanningView({
 
         <form className="form-grid compact">
           <label>Planning
-            <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+            <select value={categoryFilter} onChange={(event) => {
+              setCategoryFilter(event.target.value);
+              setAssetFilter("Tous");
+            }}>
               {categories.map((category) => (
                 <option key={category}>{category}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>Actif précis
+            <select value={assetFilter} onChange={(event) => setAssetFilter(event.target.value)}>
+              <option value="Tous">Tous les actifs</option>
+              {assetFilterOptions.map((asset) => (
+                <option key={asset.key} value={asset.key}>{asset.label}</option>
               ))}
             </select>
           </label>
@@ -8485,6 +8637,7 @@ function PlanningView({
             type="button"
             onClick={() => {
               setCategoryFilter("Tous");
+              setAssetFilter("Tous");
               setStartDate("");
               setEndDate("");
             }}
@@ -8538,6 +8691,62 @@ function PlanningView({
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="card planning-priority-cockpit-card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Priorité planning</p>
+            <h3>Prochaines interventions importantes</h3>
+          </div>
+        </div>
+
+        <div className="planning-priority-cockpit-list">
+          {importantPlanningEntries.length === 0 ? (
+            <p className="muted-line">Aucune intervention prioritaire à traiter dans ce planning.</p>
+          ) : (
+            importantPlanningEntries.map((entry) => {
+              const asset = assets.find((item) => item.type === entry.assetType && item.id === entry.assetId);
+              const missing = getPlanningEntryMissingFields(entry);
+
+              return (
+                <article className={`mini-row planning-priority-cockpit-row status-${getPlanningStatusClass(getPlanningEntryStatus(entry))}`} key={`priority-${entry.id}`}>
+                  <div>
+                    <strong>{entry.title}</strong>
+                    <span>{formatPlanningDateTimeRange(entry)} · {entry.contactName || "Aucun contact lié"}{asset ? ` · ${asset.label}` : ""}</span>
+                    <span>{entry.priority || "Normal"}{missing.length ? ` · À compléter : ${missing.join(", ")}` : ""}</span>
+                  </div>
+                  {renderPlanningQuickActions(entry)}
+                </article>
+              );
+            })
+          )}
+        </div>
+      </section>
+
+      <section className="card planning-completion-alerts-card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Qualité données</p>
+            <h3>{incompletePlanningEntries.length} intervention{incompletePlanningEntries.length > 1 ? "s" : ""} à compléter</h3>
+          </div>
+        </div>
+
+        {incompletePlanningEntries.length === 0 ? (
+          <p className="muted-line">Aucune alerte : les prochaines interventions ont contact, actif et heure renseignés.</p>
+        ) : (
+          <div className="list-stack planning-alert-list">
+            {incompletePlanningEntries.map(({ entry, missing }) => (
+              <article className="mini-row planning-alert-row" key={`missing-${entry.id}`}>
+                <div>
+                  <strong>{entry.title}</strong>
+                  <span>{formatDateFR(entry.startDate)} · manque : {missing.join(", ")}</span>
+                </div>
+                <button className="asset-edit-button" type="button" onClick={() => startPlanningEntryEdit(entry)}>Compléter</button>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="card" data-planning-entry-form="true">
@@ -8702,20 +8911,8 @@ function PlanningView({
                     <div className="item-actions planning-entry-actions">
                       <Badge>{getPlanningEntryStatus(entry)}</Badge>
                       <Badge>{entry.blocksAvailability ? "Bloquant" : "Non bloquant"}</Badge>
-                      <button className="asset-edit-button" type="button" onClick={() => startPlanningEntryEdit(entry)}>Modifier</button>
-                      <button
-                        className="planning-delete-button"
-                        type="button"
-                        aria-label="Supprimer cette intervention"
-                        title="Supprimer cette intervention"
-                        onClick={() => {
-                          if (editingPlanningEntry?.id === entry.id) {
-                            setEditingPlanningEntry(null);
-                          }
-
-                          onDeletePlanningEntry(entry.id);
-                        }}
-                      >Supprimer</button>
+                      {entry.priority && entry.priority !== "Normal" ? <Badge>{entry.priority}</Badge> : null}
+                      {renderPlanningQuickActions(entry)}
                     </div>
                   </article>
                 );
@@ -9242,6 +9439,15 @@ function Dashboard({
   const estimatedMargin = confirmedBookings.reduce((sum, quote) => sum + getDashboardMargin(quote), 0);
   const remainingPayments = confirmedBookings.reduce((sum, quote) => sum + getDashboardPaymentRemaining(quote), 0);
 
+  const dashboardTodayIso = formatPlanningDateValue(new Date());
+  const dashboardPlanningToday = ((((data as any).planningEntries ?? []) as PlanningEntry[]))
+    .filter((entry) => {
+      const status = getPlanningEntryStatus(entry);
+      return status !== "Terminé" && status !== "Annulé" && planningRangesOverlap(dashboardTodayIso, dashboardTodayIso, entry.startDate, entry.endDate || entry.startDate);
+    })
+    .sort((a, b) => String(a.startTime || "").localeCompare(String(b.startTime || "")))
+    .slice(0, 5);
+
   return (
     <div className="stack dashboard-workspace">
       <section
@@ -9316,6 +9522,27 @@ function Dashboard({
         </div>
 
         <div className="three-columns" style={{ marginTop: 18 }}>
+          <div className="mini-panel dashboard-today-planning-panel">
+            <p className="eyebrow">Aujourd’hui</p>
+            <h4>Planning du jour</h4>
+
+            <div className="list-stack">
+              {dashboardPlanningToday.length === 0 ? (
+                <p className="muted-line">Aucune intervention active aujourd’hui.</p>
+              ) : (
+                dashboardPlanningToday.map((entry) => (
+                  <article className="mini-row" key={`dashboard-planning-${entry.id}`}>
+                    <div>
+                      <strong>{entry.startTime || "Heure à compléter"} · {entry.title}</strong>
+                      <span>{entry.contactName || "Aucun contact lié"} · {entry.priority || "Normal"}</span>
+                    </div>
+                    <Badge>{getPlanningEntryStatus(entry)}</Badge>
+                  </article>
+                ))
+              )}
+            </div>
+          </div>
+
           <div className="mini-panel">
             <p className="eyebrow">Devis</p>
             <h4>À relancer</h4>

@@ -13,6 +13,7 @@ export type BoatStatus = "Disponible" | "En charter" | "En maintenance" | "Vendu
 export type TaskStatus = "À faire" | "En cours" | "Terminé";
 export type PlanningEntryType = "Réservation" | "Intervention prestataire" | "Maintenance" | "Tâche interne" | "Autre";
 export type PlanningEntryStatus = "Prévu" | "À confirmer" | "En cours" | "Terminé" | "Annulé";
+export type PlanningPriority = "Normal" | "Important" | "Critique";
 export type PlanningCategory = "Villa" | "Bateau" | "Voiture" | "Conciergerie";
 
 export type ActionAuditFields = {
@@ -144,6 +145,7 @@ export type PlanningEntry = {
   type: PlanningEntryType;
   planningCategory?: PlanningCategory;
   status?: PlanningEntryStatus;
+  priority?: PlanningPriority;
   contactName: string;
   assetType?: "" | "Property" | "Vehicle" | "Boat";
   assetId?: string;
