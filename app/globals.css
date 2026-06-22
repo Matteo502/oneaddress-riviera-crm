@@ -5665,3 +5665,137 @@ main,
     justify-content: flex-start;
   }
 }
+
+
+/* CRM_PLANNING_STATUS_COLORS_20260622 */
+/* Statuts planning : vert = terminé, jaune = en cours / à confirmer, rouge = à venir. */
+
+.legend-dot.status-finished {
+  background: #2f7d4a !important;
+}
+
+.legend-dot.status-active {
+  background: #d6a63d !important;
+}
+
+.legend-dot.status-upcoming {
+  background: #9d3b3b !important;
+}
+
+/* Ligne compacte des interventions */
+.planning-entry-compact-row.status-termine {
+  opacity: 1 !important;
+  border-color: rgba(47, 125, 74, 0.30) !important;
+  background: rgba(47, 125, 74, 0.075) !important;
+}
+
+.planning-entry-compact-row.status-en-cours,
+.planning-entry-compact-row.status-a-confirmer {
+  border-color: rgba(214, 166, 61, 0.36) !important;
+  background: rgba(214, 166, 61, 0.105) !important;
+}
+
+.planning-entry-compact-row.status-prevu {
+  border-color: rgba(157, 59, 59, 0.28) !important;
+  background: rgba(157, 59, 59, 0.075) !important;
+}
+
+.planning-entry-compact-row.status-annule {
+  opacity: 0.55 !important;
+  border-color: rgba(7, 31, 39, 0.14) !important;
+  background: rgba(7, 31, 39, 0.045) !important;
+}
+
+.planning-entry-compact-row.status-termine .badge {
+  border-color: rgba(47, 125, 74, 0.38) !important;
+  background: rgba(47, 125, 74, 0.14) !important;
+  color: #245f38 !important;
+}
+
+.planning-entry-compact-row.status-en-cours .badge,
+.planning-entry-compact-row.status-a-confirmer .badge {
+  border-color: rgba(214, 166, 61, 0.42) !important;
+  background: rgba(214, 166, 61, 0.16) !important;
+  color: #7b5a13 !important;
+}
+
+.planning-entry-compact-row.status-prevu .badge {
+  border-color: rgba(157, 59, 59, 0.34) !important;
+  background: rgba(157, 59, 59, 0.13) !important;
+  color: #7a2929 !important;
+}
+
+/* Calendrier : le statut décide de la couleur, pas seulement le blocage. */
+.planning-day-status-termine {
+  background: rgba(47, 125, 74, 0.08) !important;
+  box-shadow: inset 0 0 0 1px rgba(47, 125, 74, 0.24) !important;
+}
+
+.planning-day-status-termine strong {
+  background: #2f7d4a !important;
+  color: #fffaf0 !important;
+}
+
+.planning-day-status-en-cours,
+.planning-day-status-a-confirmer {
+  background: rgba(214, 166, 61, 0.11) !important;
+  box-shadow: inset 0 0 0 1px rgba(214, 166, 61, 0.32) !important;
+}
+
+.planning-day-status-en-cours strong,
+.planning-day-status-a-confirmer strong {
+  background: #d6a63d !important;
+  color: #2a1f0a !important;
+}
+
+.planning-day-status-prevu {
+  background: rgba(157, 59, 59, 0.10) !important;
+  box-shadow: inset 0 0 0 1px rgba(157, 59, 59, 0.26) !important;
+}
+
+.planning-day-status-prevu strong {
+  background: #9d3b3b !important;
+  color: #fffaf0 !important;
+}
+
+.planning-day-status-annule {
+  background: rgba(7, 31, 39, 0.045) !important;
+  box-shadow: inset 0 0 0 1px rgba(7, 31, 39, 0.12) !important;
+}
+
+/* Événements calendrier + semaine + agenda */
+.planning-event-pill.status-termine,
+.planning-week-event.status-termine,
+.planning-agenda-item.status-termine {
+  border-color: rgba(47, 125, 74, 0.36) !important;
+  background: rgba(47, 125, 74, 0.14) !important;
+  color: #245f38 !important;
+}
+
+.planning-event-pill.status-en-cours,
+.planning-event-pill.status-a-confirmer,
+.planning-week-event.status-en-cours,
+.planning-week-event.status-a-confirmer,
+.planning-agenda-item.status-en-cours,
+.planning-agenda-item.status-a-confirmer {
+  border-color: rgba(214, 166, 61, 0.42) !important;
+  background: rgba(214, 166, 61, 0.17) !important;
+  color: #765512 !important;
+}
+
+.planning-event-pill.status-prevu,
+.planning-week-event.status-prevu,
+.planning-agenda-item.status-prevu {
+  border-color: rgba(157, 59, 59, 0.34) !important;
+  background: rgba(157, 59, 59, 0.14) !important;
+  color: #7a2929 !important;
+}
+
+.planning-event-pill.status-annule,
+.planning-week-event.status-annule,
+.planning-agenda-item.status-annule {
+  opacity: 0.55 !important;
+  border-color: rgba(7, 31, 39, 0.14) !important;
+  background: rgba(7, 31, 39, 0.055) !important;
+  color: rgba(7, 31, 39, 0.58) !important;
+}

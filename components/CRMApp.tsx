@@ -7794,6 +7794,47 @@ function getPlanningStatusClass(status?: string) {
   return normalized || "prevu";
 }
 
+// CRM_PLANNING_STATUS_COLORS_20260622
+function getPlanningEventOperationalStatus(event: any): PlanningEntryStatus {
+  const rawStatus = String(event?.status || "Prévu");
+  const normalizedStatus = getPlanningStatusClass(rawStatus);
+
+  if (normalizedStatus === "annule") return "Annulé";
+
+  const startDate = String(event?.startDate || "");
+  const endDate = String(event?.endDate || event?.startDate || "");
+
+  if (isValidPlanningDate(startDate) && isValidPlanningDate(endDate)) {
+    const todayValue = planningDateValue(formatPlanningDateValue(new Date()));
+    const startValue = planningDateValue(startDate);
+    const endValue = planningDateValue(endDate);
+
+    if (todayValue > endValue) return "Terminé";
+    if (todayValue >= startValue && todayValue <= endValue) return "En cours";
+  }
+
+  if (normalizedStatus === "termine") return "Terminé";
+  if (normalizedStatus === "en-cours") return "En cours";
+  if (normalizedStatus === "a-confirmer") return "À confirmer";
+
+  // Une option / demande non confirmée à venir doit rester jaune : action à suivre.
+  if (event?.source === "lead" && !event?.blocksAvailability) return "À confirmer";
+
+  return "Prévu";
+}
+
+function getPlanningDayStatusClass(events: any[]) {
+  const statuses = events.map((event) => getPlanningEventOperationalStatus(event));
+
+  if (statuses.includes("En cours")) return "planning-day-status-en-cours";
+  if (statuses.includes("À confirmer")) return "planning-day-status-a-confirmer";
+  if (statuses.includes("Prévu")) return "planning-day-status-prevu";
+  if (statuses.length > 0 && statuses.every((status) => status === "Terminé")) return "planning-day-status-termine";
+  if (statuses.length > 0 && statuses.every((status) => status === "Annulé")) return "planning-day-status-annule";
+
+  return "";
+}
+
 function formatPlanningDateTimeRange(entry: Pick<PlanningEntry, "startDate" | "endDate" | "startTime" | "endTime">) {
   const startDateLabel = formatDateFR(entry.startDate);
   const endDateLabel = entry.endDate && entry.endDate !== entry.startDate ? formatDateFR(entry.endDate) : "";
@@ -8256,7 +8297,7 @@ function PlanningView({
       : null;
 
     return (
-      <article className={`planning-agenda-item ${event.blocksAvailability ? "is-blocking" : "is-option"}`} key={`${event.source}-${event.id}-${event.startDate}`}>
+      <article className={`planning-agenda-item ${event.blocksAvailability ? "is-blocking" : "is-option"} status-${getPlanningStatusClass(getPlanningEventOperationalStatus(event))}`} key={`${event.source}-${event.id}-${event.startDate}`}>
         <div className="planning-agenda-time">
           <strong>{formatDateFR(event.startDate)}</strong>
           <span>{formatPlanningTimeRange(event.startTime, event.endTime) || "Toute la journée"}</span>
@@ -8268,7 +8309,7 @@ function PlanningView({
         </div>
 
         <div className="planning-agenda-actions">
-          <Badge>{event.source === "planning" ? String(event.status || "Prévu") : event.blocksAvailability ? "Bloquant" : "Option"}</Badge>
+          <Badge>{getPlanningEventOperationalStatus(event)}</Badge>
           {matchingPlanningEntry ? (
             <button className="asset-edit-button" type="button" onClick={() => startPlanningEntryEdit(matchingPlanningEntry)}>Modifier</button>
           ) : null}
@@ -8492,8 +8533,9 @@ function PlanningView({
         </form>
 
         <div className="planning-legend">
-          <span><i className="legend-dot blocked" /> Rouge = planning rempli / disponibilité bloquée</span>
-          <span><i className="legend-dot entry" /> Doré = intervention non bloquante</span>
+          <span><i className="legend-dot status-finished" /> Vert = terminé</span>
+          <span><i className="legend-dot status-active" /> Jaune = en cours / à confirmer</span>
+          <span><i className="legend-dot status-upcoming" /> Rouge = à venir</span>
         </div>
 
         <div className="list-stack">
@@ -8622,9 +8664,11 @@ function PlanningView({
                     const events = day ? getEventsForCalendarDay(day.iso) : [];
 
                     const hasBlockingEvent = events.some((event) => event.blocksAvailability);
+                    const dayStatusClass = getPlanningDayStatusClass(events);
                     const dayClassName = [
                       "planning-day",
                       events.length > 0 ? "planning-day-filled" : "",
+                      dayStatusClass,
                       hasBlockingEvent ? "planning-day-blocked" : ""
                     ].filter(Boolean).join(" ");
 
@@ -8647,7 +8691,7 @@ function PlanningView({
 
                                 return matchingPlanningEntry ? (
                                   <button
-                                    className={`planning-event-pill planning-event-button ${event.blocksAvailability ? "blocked" : "entry"} ${event.source === "planning" ? `status-${getPlanningStatusClass(event.status)}` : ""}`}
+                                    className={`planning-event-pill planning-event-button ${event.blocksAvailability ? "blocked" : "entry"} status-${getPlanningStatusClass(getPlanningEventOperationalStatus(event))}`}
                                     key={`${event.source}-${event.id}`}
                                     type="button"
                                     onClick={() => startPlanningEntryEdit(matchingPlanningEntry)}
@@ -8657,7 +8701,7 @@ function PlanningView({
                                   </button>
                                 ) : (
                                   <span
-                                    className={`planning-event-pill ${event.blocksAvailability ? "blocked" : "option"}`}
+                                    className={`planning-event-pill ${event.blocksAvailability ? "blocked" : "option"} status-${getPlanningStatusClass(getPlanningEventOperationalStatus(event))}`}
                                     key={`${event.source}-${event.id}`}
                                   >
                                     {eventLabel}
@@ -8713,7 +8757,7 @@ function PlanningView({
 
                         return matchingPlanningEntry ? (
                           <button
-                            className={`planning-week-event ${event.blocksAvailability ? "blocked" : "entry"}`}
+                            className={`planning-week-event ${event.blocksAvailability ? "blocked" : "entry"} status-${getPlanningStatusClass(getPlanningEventOperationalStatus(event))}`}
                             key={`${event.source}-${event.id}-${day.iso}`}
                             type="button"
                             onClick={() => startPlanningEntryEdit(matchingPlanningEntry)}
@@ -8722,7 +8766,7 @@ function PlanningView({
                           </button>
                         ) : (
                           <span
-                            className={`planning-week-event ${event.blocksAvailability ? "blocked" : "option"}`}
+                            className={`planning-week-event ${event.blocksAvailability ? "blocked" : "option"} status-${getPlanningStatusClass(getPlanningEventOperationalStatus(event))}`}
                             key={`${event.source}-${event.id}-${day.iso}`}
                           >
                             {eventLabel}
