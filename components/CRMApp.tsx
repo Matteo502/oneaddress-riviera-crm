@@ -8523,18 +8523,35 @@ function PlanningView({
                             <strong>{day.day}</strong>
 
                             {events.length > 0 && (
-                              events.slice(0, 4).map((event) => (
-                                <span
-                                  className={`planning-event-pill ${event.blocksAvailability ? "blocked" : event.source === "planning" ? "entry" : "option"}`}
-                                  key={`${event.source}-${event.id}`}
-                                >
-                                  {[
-                                    event.startTime ? `${event.startTime}${event.endTime ? `–${event.endTime}` : ""}` : "",
-                                    event.source === "planning" ? event.contactName : event.assetLabel,
-                                    event.source === "planning" ? event.title : event.contactName
-                                  ].filter(Boolean).join(" · ")}
-                                </span>
-                              ))
+                              events.slice(0, 4).map((event) => {
+                                const matchingPlanningEntry = event.source === "planning"
+                                  ? planningEntries.find((entry) => entry.id === event.id)
+                                  : null;
+                                const eventLabel = [
+                                  event.startTime ? `${event.startTime}${event.endTime ? `–${event.endTime}` : ""}` : "",
+                                  event.source === "planning" ? event.contactName : event.assetLabel,
+                                  event.source === "planning" ? event.title : event.contactName
+                                ].filter(Boolean).join(" · ");
+
+                                return matchingPlanningEntry ? (
+                                  <button
+                                    className={`planning-event-pill planning-event-button ${event.blocksAvailability ? "blocked" : "entry"}`}
+                                    key={`${event.source}-${event.id}`}
+                                    type="button"
+                                    onClick={() => startPlanningEntryEdit(matchingPlanningEntry)}
+                                    title="Modifier cette intervention"
+                                  >
+                                    {eventLabel}
+                                  </button>
+                                ) : (
+                                  <span
+                                    className={`planning-event-pill ${event.blocksAvailability ? "blocked" : "option"}`}
+                                    key={`${event.source}-${event.id}`}
+                                  >
+                                    {eventLabel}
+                                  </span>
+                                );
+                              })
                             )}
 
                             {events.length > 4 && (

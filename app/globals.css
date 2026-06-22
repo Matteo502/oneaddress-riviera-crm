@@ -5467,3 +5467,22 @@ main,
     justify-items: stretch;
   }
 }
+
+/* CRM_PLANNING_CALENDAR_CLICK_EDIT_STEP3_20260622 */
+.planning-event-button {
+  border: 1px solid rgba(201, 161, 86, 0.38) !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  appearance: none !important;
+  font-family: inherit !important;
+}
+
+.planning-event-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(2, 29, 48, 0.08);
+}
+
+.planning-event-button:focus-visible {
+  outline: 2px solid rgba(212, 177, 106, 0.55);
+  outline-offset: 2px;
+}
