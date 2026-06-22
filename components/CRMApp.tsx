@@ -23,6 +23,7 @@ import type {
   PlanningEntry,
   PlanningEntryType,
   PlanningEntryStatus,
+  PlanningCategory,
   VendorInvoice,
   HouseTrackingHouse,
   HouseTrackingWorker,
@@ -885,9 +886,10 @@ function exportCRMAsCsv(data: CRMData) {
     },
     {
       title: "PLANNING",
-      headers: ["Titre", "Type", "Contact", "Actif", "Date début", "Heure arrivée", "Date fin", "Heure départ", "Bloque disponibilité", "Notes"],
+      headers: ["Titre", "Planning", "Type", "Contact", "Actif", "Date début", "Heure arrivée", "Date fin", "Heure départ", "Bloque disponibilité", "Notes"],
       rows: ((data as any).planningEntries ?? []).map((entry: PlanningEntry) => [
         entry.title,
+        entry.planningCategory || "Villa",
         entry.type,
         entry.contactName,
         entry.assetId || "",
@@ -6920,6 +6922,9 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
 
     const form = new FormData(event.currentTarget);
     const assetSelection = parseAssetKey(form.get("assetKey"));
+    const planningCategory = normalizePlanningCategory(String(form.get("planningCategory") ?? ""))
+      || getPlanningCategoryFromAssetType(assetSelection.assetType)
+      || "Villa";
     const start = String(form.get("startDate") ?? "");
     const end = String(form.get("endDate") ?? "") || start;
 
@@ -6927,6 +6932,7 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
       id: makeId("planning"),
       title: String(form.get("title") ?? "").trim(),
       type: String(form.get("type") ?? "Intervention prestataire") as PlanningEntryType,
+      planningCategory,
       status: String(form.get("status") ?? "Prévu") as PlanningEntryStatus,
       contactName: String(form.get("contactName") ?? "").trim(),
       assetType: assetSelection.assetType,
@@ -6973,12 +6979,16 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
 
     const form = new FormData(event.currentTarget);
     const assetSelection = parseAssetKey(form.get("assetKey"));
+    const planningCategory = normalizePlanningCategory(String(form.get("planningCategory") ?? ""))
+      || getPlanningCategoryFromAssetType(assetSelection.assetType)
+      || "Villa";
     const start = String(form.get("startDate") ?? "");
     const end = String(form.get("endDate") ?? "") || start;
 
     const nextEntry = {
       title: String(form.get("title") ?? "").trim(),
       type: String(form.get("type") ?? "Intervention prestataire") as PlanningEntryType,
+      planningCategory,
       status: String(form.get("status") ?? "Prévu") as PlanningEntryStatus,
       contactName: String(form.get("contactName") ?? "").trim(),
       assetType: assetSelection.assetType,
@@ -7692,6 +7702,32 @@ const planningEntryTypes: PlanningEntryType[] = [
 
 const planningEntryStatuses: PlanningEntryStatus[] = ["Prévu", "À confirmer", "En cours", "Terminé", "Annulé"];
 
+// CRM_PLANNING_SEPARATE_SCOPES_20260622
+const planningCategoryOptions: PlanningCategory[] = ["Villa", "Bateau", "Voiture", "Conciergerie"];
+
+function normalizePlanningCategory(value?: string | null): PlanningCategory | "" {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+
+  if (["bateau", "boat", "yacht", "charter"].includes(normalized)) return "Bateau";
+  if (["voiture", "car", "vehicle", "vehicule", "chauffeur", "driver"].includes(normalized)) return "Voiture";
+  if (["conciergerie", "concierge", "service", "services"].includes(normalized)) return "Conciergerie";
+  if (["villa", "villas", "property", "properties", "bien", "biens", "maison", "maisons", "appartement"].includes(normalized)) return "Villa";
+
+  return "";
+}
+
+function getPlanningCategoryFromAssetType(assetType?: string | null): PlanningCategory | "" {
+  if (assetType === "Boat") return "Bateau";
+  if (assetType === "Vehicle") return "Voiture";
+  if (assetType === "Property") return "Villa";
+  return "";
+}
+
+
 function isValidPlanningDate(value?: string) {
   if (!value) return false;
 
@@ -7940,10 +7976,31 @@ function PlanningView({
     ];
   }, [properties, vehicles, boats]);
 
+  function getAssetPlanningCategory(asset?: PlanningAsset | null): PlanningCategory | "" {
+    if (!asset) return "";
+    return getPlanningCategoryFromAssetType(asset.type) || normalizePlanningCategory(asset.category) || "Villa";
+  }
+
+  function getPlanningEntryCategory(entry: PlanningEntry): PlanningCategory {
+    const storedCategory = normalizePlanningCategory(entry.planningCategory);
+    if (storedCategory) return storedCategory;
+
+    const linkedAsset = assets.find((asset) => asset.type === entry.assetType && asset.id === entry.assetId);
+    const assetCategory = getAssetPlanningCategory(linkedAsset);
+    if (assetCategory) return assetCategory;
+
+    const typeCategory = getPlanningCategoryFromAssetType(entry.assetType);
+    if (typeCategory) return typeCategory;
+
+    // Anciennes interventions sans actif : elles restent dans le planning Villa pour ne pas disparaître.
+    return "Villa";
+  }
+
   const assetOptions = useMemo(() => {
     return assets.map((asset) => ({
       key: `${asset.type}:${asset.id}`,
-      label: `${asset.label} · ${asset.category}`
+      label: `${asset.label} · ${getAssetPlanningCategory(asset) || asset.category}`,
+      planningCategory: getAssetPlanningCategory(asset)
     }));
   }, [assets]);
 
@@ -7993,7 +8050,7 @@ function PlanningView({
           assetType: lead.assetType,
           assetId: lead.assetId,
           assetLabel: asset?.label ?? String(lead.assetId ?? "Actif non renseigné"),
-          assetCategory: asset?.category ?? lead.category,
+          assetCategory: getAssetPlanningCategory(asset) || normalizePlanningCategory(lead.category) || "Villa",
           contactName: lead.contactName,
           startDate: lead.rentalStartDate,
           startTime: "",
@@ -8029,7 +8086,7 @@ function PlanningView({
           assetType: lead.assetType,
           assetId: lead.assetId,
           assetLabel: asset?.label ?? String(lead.assetId ?? "Actif non renseigné"),
-          assetCategory: asset?.category ?? lead.category,
+          assetCategory: getAssetPlanningCategory(asset) || normalizePlanningCategory(lead.category) || "Villa",
           contactName: lead.contactName,
           startDate: lead.rentalStartDate,
           startTime: "",
@@ -8046,9 +8103,14 @@ function PlanningView({
       });
   }, [leads, assets]);
 
+  const activePlanningCategory = categoryFilter === "Tous" ? "Tous" : normalizePlanningCategory(categoryFilter);
+  const defaultPlanningCategory: PlanningCategory = activePlanningCategory && activePlanningCategory !== "Tous"
+    ? activePlanningCategory
+    : "Villa";
+
   const visibleAssets = assets.filter((asset) => {
     if (categoryFilter === "Tous") return true;
-    return asset.category === categoryFilter;
+    return getAssetPlanningCategory(asset) === activePlanningCategory;
   });
 
   const selectedStartDate = startDate;
@@ -8079,21 +8141,27 @@ function PlanningView({
     return hasOptionOverlap ? "Option" : "Disponible";
   }
 
-  const categories = ["Tous", ...Array.from(new Set(assets.map((asset) => asset.category))).sort()];
+  const categories = ["Tous", ...planningCategoryOptions];
 
-  function planningItemMatchesCategory(item: { assetCategory?: string; assetType?: string; assetId?: string }) {
+  function planningItemMatchesCategory(item: { planningCategory?: string; assetCategory?: string; assetType?: string; assetId?: string }) {
     if (categoryFilter === "Tous") return true;
-    if (item.assetCategory === categoryFilter) return true;
+
+    const itemPlanningCategory = normalizePlanningCategory(item.planningCategory);
+    if (itemPlanningCategory && itemPlanningCategory === activePlanningCategory) return true;
 
     const linkedAsset = assets.find((asset) => asset.type === item.assetType && asset.id === item.assetId);
-    return linkedAsset?.category === categoryFilter;
+    if (getAssetPlanningCategory(linkedAsset) === activePlanningCategory) return true;
+
+    const assetTypeCategory = getPlanningCategoryFromAssetType(item.assetType);
+    if (assetTypeCategory && assetTypeCategory === activePlanningCategory) return true;
+
+    const rawAssetCategory = normalizePlanningCategory(item.assetCategory);
+    return Boolean(rawAssetCategory && rawAssetCategory === activePlanningCategory);
   }
 
-  const visiblePlanningEntries = planningEntries.filter((entry) => planningItemMatchesCategory({
-    assetType: entry.assetType,
-    assetId: entry.assetId,
-    assetCategory: assets.find((asset) => asset.type === entry.assetType && asset.id === entry.assetId)?.category
-  }));
+  const visiblePlanningEntries = planningEntries.filter((entry) =>
+    categoryFilter === "Tous" || getPlanningEntryCategory(entry) === activePlanningCategory
+  );
 
   const visiblePendingBookings = pendingBookings.filter((booking) => planningItemMatchesCategory(booking));
   const visibleConfirmedBookings = confirmedBookings.filter((booking) => planningItemMatchesCategory(booking));
@@ -8135,7 +8203,8 @@ function PlanningView({
           assetLabel: asset?.label || entry.title,
           title: entry.title,
           status: getPlanningEntryStatus(entry),
-          assetCategory: asset?.category || entry.type,
+          planningCategory: getPlanningEntryCategory(entry),
+          assetCategory: getPlanningEntryCategory(entry),
           contactName: entry.contactName || entry.type,
           startDate: entry.startDate,
           startTime: entry.startTime || "",
@@ -8344,6 +8413,12 @@ function PlanningView({
     ? `${editingPlanningEntry.assetType}:${editingPlanningEntry.assetId}`
     : "";
 
+  const editingPlanningCategory = editingPlanningEntry ? getPlanningEntryCategory(editingPlanningEntry) : defaultPlanningCategory;
+
+  const visibleAssetOptions = assetOptions.filter((asset) =>
+    categoryFilter === "Tous" || asset.planningCategory === activePlanningCategory || asset.key === editingPlanningAssetKey
+  );
+
   return (
     <div className="stack">
       <section className="card">
@@ -8355,7 +8430,7 @@ function PlanningView({
         </div>
 
         <form className="form-grid compact">
-          <label>Catégorie
+          <label>Planning
             <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
               {categories.map((category) => (
                 <option key={category}>{category}</option>
@@ -8383,6 +8458,11 @@ function PlanningView({
             Réinitialiser les filtres
           </button>
         </form>
+
+        <div className="planning-scope-notice">
+          <strong>Planning actuel : {categoryFilter === "Tous" ? "Vue globale" : categoryFilter}</strong>
+          <span>{categoryFilter === "Tous" ? "Vue globale : choisissez un planning dans le formulaire si vous ajoutez une intervention." : `Les nouveaux événements seront rangés dans le planning ${categoryFilter}.`}</span>
+        </div>
       </section>
 
       <section className="card planning-agenda-card">
@@ -8436,7 +8516,7 @@ function PlanningView({
 
         <form
           className="form-grid compact planning-entry-form"
-          key={editingPlanningEntry?.id ?? "new-planning-entry"}
+          key={editingPlanningEntry?.id ?? `new-planning-entry-${categoryFilter}`}
           onSubmit={(event) => {
             if (!editingPlanningEntry) {
               onAddPlanningEntry(event);
@@ -8458,6 +8538,14 @@ function PlanningView({
             <select name="type" defaultValue={editingPlanningEntry?.type ?? "Intervention prestataire"}>
               {planningEntryTypes.map((type) => (
                 <option key={type}>{type}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>Planning
+            <select name="planningCategory" defaultValue={editingPlanningCategory}>
+              {planningCategoryOptions.map((category) => (
+                <option key={category}>{category}</option>
               ))}
             </select>
           </label>
@@ -8488,7 +8576,7 @@ function PlanningView({
           <label>Actif lié
             <select name="assetKey" defaultValue={editingPlanningAssetKey}>
               <option value="">Aucun actif lié</option>
-              {assetOptions.map((asset) => (
+              {visibleAssetOptions.map((asset) => (
                 <option key={asset.key} value={asset.key}>{asset.label}</option>
               ))}
             </select>
@@ -8555,7 +8643,7 @@ function PlanningView({
                       <span className="planning-entry-main-line">
                         {formatPlanningDateTimeRange(entry)} · {entry.contactName || "Aucun contact lié"}{asset ? ` · ${asset.label}` : ""}
                       </span>
-                      <span className="planning-entry-secondary-line">{entry.type}{entry.notes ? ` · ${entry.notes}` : ""}</span>
+                      <span className="planning-entry-secondary-line">Planning {getPlanningEntryCategory(entry)} · {entry.type}{entry.notes ? ` · ${entry.notes}` : ""}</span>
                       <ActionMeta item={entry} />
                     </div>
                     <div className="item-actions planning-entry-actions">
