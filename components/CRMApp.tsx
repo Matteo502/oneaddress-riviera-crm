@@ -8024,6 +8024,7 @@ function PlanningView({
           assetType: entry.assetType || "",
           assetId: entry.assetId || "",
           assetLabel: asset?.label || entry.title,
+          title: entry.title,
           assetCategory: asset?.category || entry.type,
           contactName: entry.contactName || entry.type,
           startDate: entry.startDate,
@@ -8311,7 +8312,7 @@ function PlanningView({
                 return (
                   <article className="mini-row" key={entry.id} data-notification-target={`planning-${entry.id}`}>
                     <div>
-                      <strong>{getPlanningEntryCalendarTitle(entry)}</strong>
+                      <strong>{entry.title}</strong>
                       <span>{entry.type} · {formatPlanningDateTimeRange(entry)}</span>
                       <span>{entry.contactName || "Aucun contact lié"}{asset ? ` · ${asset.label}` : ""}</span>
                       {entry.notes && <span>{entry.notes}</span>}
@@ -8419,15 +8420,17 @@ function PlanningView({
                           <div>
                             <strong>{day.day}</strong>
 
-                            {events.length === 0 ? (
-                              <span className="muted-line">Disponible</span>
-                            ) : (
+                            {events.length > 0 && (
                               events.slice(0, 4).map((event) => (
                                 <span
                                   className={`planning-event-pill ${event.blocksAvailability ? "blocked" : event.source === "planning" ? "entry" : "option"}`}
                                   key={`${event.source}-${event.id}`}
                                 >
-                                  {event.startTime ? `${event.startTime} · ` : ""}{event.assetLabel} · {event.contactName} · {event.planningLabel}
+                                  {[
+                                    event.startTime ? `${event.startTime}${event.endTime ? `–${event.endTime}` : ""}` : "",
+                                    event.source === "planning" ? event.contactName : event.assetLabel,
+                                    event.source === "planning" ? event.title : event.contactName
+                                  ].filter(Boolean).join(" · ")}
                                 </span>
                               ))
                             )}

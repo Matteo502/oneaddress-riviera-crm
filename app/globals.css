@@ -5321,3 +5321,35 @@ main,
     padding: 6px 7px;
   }
 }
+
+
+/* CRM_PRECISE_PLANNING_CALENDAR_FIX_20260622 */
+.planning-day {
+  min-height: 116px;
+}
+
+.planning-day:not(.planning-day-filled) {
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.planning-event-pill {
+  display: block;
+  max-width: 100%;
+  padding: 7px 8px;
+  border-radius: 10px;
+  line-height: 1.2;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.planning-event-pill + .planning-event-pill {
+  margin-top: 6px;
+}
+
+.planning-day strong {
+  display: inline-block;
+  margin-bottom: 8px;
+}
