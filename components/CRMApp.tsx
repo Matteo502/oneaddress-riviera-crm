@@ -3935,6 +3935,30 @@ function VendorInvoicesView({
   const [statusFilter, setStatusFilter] = useState<VendorInvoice["status"] | "Tous">("Tous");
   const [editingInvoice, setEditingInvoice] = useState<VendorInvoice | null>(null);
   const [uploadingInvoiceDocument, setUploadingInvoiceDocument] = useState(false);
+  const [previewingInvoiceDocument, setPreviewingInvoiceDocument] = useState(false);
+  const [invoicePreview, setInvoicePreview] = useState<{
+    invoice: VendorInvoice;
+    url: string;
+    fileName: string;
+    mimeType: string;
+    external: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (invoicePreview?.url?.startsWith("blob:")) {
+        URL.revokeObjectURL(invoicePreview.url);
+      }
+    };
+  }, [invoicePreview?.url]);
+
+  function closeVendorInvoicePreview() {
+    if (invoicePreview?.url?.startsWith("blob:")) {
+      URL.revokeObjectURL(invoicePreview.url);
+    }
+
+    setInvoicePreview(null);
+  }
 
   const supplierContacts = contacts.filter((contact) => {
     const kind = String((contact as any).kind || "");
@@ -4114,11 +4138,78 @@ function VendorInvoicesView({
     };
   }
 
-  async function downloadVendorInvoiceDocument(invoice: VendorInvoice) {
+  function getVendorInvoiceDocumentSource(invoice: VendorInvoice) {
     const linkedDocument = documents.find((crmDocument) => crmDocument.id === invoice.linkedDocumentId);
-    const storagePath = invoice.invoiceDocumentStoragePath || linkedDocument?.storagePath || "";
-    const externalUrl = invoice.invoiceDocumentUrl || linkedDocument?.url || "";
-    const fileName = invoice.invoiceDocumentName || linkedDocument?.fileName || linkedDocument?.title || invoice.title || "facture";
+
+    return {
+      storagePath: invoice.invoiceDocumentStoragePath || linkedDocument?.storagePath || "",
+      externalUrl: invoice.invoiceDocumentUrl || linkedDocument?.url || "",
+      fileName: invoice.invoiceDocumentName || linkedDocument?.fileName || linkedDocument?.title || invoice.title || "facture"
+    };
+  }
+
+  function isVendorInvoicePreviewable(fileName: string, mimeType: string) {
+    const extension = fileName.toLowerCase().split(".").pop() || "";
+
+    return (
+      mimeType === "application/pdf" ||
+      mimeType.startsWith("image/") ||
+      ["pdf", "png", "jpg", "jpeg", "webp", "gif", "svg"].includes(extension)
+    );
+  }
+
+  async function openVendorInvoicePreview(invoice: VendorInvoice) {
+    const { storagePath, externalUrl, fileName } = getVendorInvoiceDocumentSource(invoice);
+
+    if (invoicePreview?.url?.startsWith("blob:")) {
+      URL.revokeObjectURL(invoicePreview.url);
+    }
+
+    if (storagePath) {
+      try {
+        setPreviewingInvoiceDocument(true);
+
+        const { data: fileData, error } = await supabase.storage
+          .from(CRM_DOCUMENTS_BUCKET)
+          .download(storagePath);
+
+        if (error || !fileData) {
+          window.alert(`Aperçu impossible : ${error?.message || "fichier introuvable"}`);
+          return;
+        }
+
+        const url = URL.createObjectURL(fileData);
+
+        setInvoicePreview({
+          invoice,
+          url,
+          fileName,
+          mimeType: fileData.type || "",
+          external: false
+        });
+      } finally {
+        setPreviewingInvoiceDocument(false);
+      }
+
+      return;
+    }
+
+    if (externalUrl) {
+      setInvoicePreview({
+        invoice,
+        url: externalUrl,
+        fileName,
+        mimeType: "",
+        external: true
+      });
+      return;
+    }
+
+    window.alert("Aucune facture importée sur cette ligne.");
+  }
+
+  async function downloadVendorInvoiceDocument(invoice: VendorInvoice) {
+    const { storagePath, externalUrl, fileName } = getVendorInvoiceDocumentSource(invoice);
 
     if (storagePath) {
       const { data: fileData, error } = await supabase.storage
@@ -4277,13 +4368,23 @@ function VendorInvoicesView({
                 <div className="item-actions contact-row-actions">
                   <span className={`status-pill vendor-invoice-status ${invoice.status === "Payé" ? "semantic-success invoice-status-paid" : "semantic-danger invoice-status-danger"}`}>{invoice.status}</span>
                   {(invoice.invoiceDocumentStoragePath || invoice.invoiceDocumentUrl || documents.find((crmDocument) => crmDocument.id === invoice.linkedDocumentId)?.storagePath || documents.find((crmDocument) => crmDocument.id === invoice.linkedDocumentId)?.url) && (
-                    <button
-                      className="secondary-button vendor-invoice-document-button"
-                      type="button"
-                      onClick={() => void downloadVendorInvoiceDocument(invoice)}
-                    >
-                      Télécharger facture
-                    </button>
+                    <>
+                      <button
+                        className="secondary-button vendor-invoice-document-button"
+                        type="button"
+                        disabled={previewingInvoiceDocument}
+                        onClick={() => void openVendorInvoicePreview(invoice)}
+                      >
+                        {previewingInvoiceDocument ? "Ouverture..." : "Voir facture"}
+                      </button>
+                      <button
+                        className="secondary-button vendor-invoice-document-button"
+                        type="button"
+                        onClick={() => void downloadVendorInvoiceDocument(invoice)}
+                      >
+                        Télécharger facture
+                      </button>
+                    </>
                   )}
                   <button className="secondary-button" type="button" onClick={() => startEditInvoice(invoice)}>
                     Modifier
@@ -4371,6 +4472,51 @@ function VendorInvoicesView({
           )}
         </form>
       </section>
+
+      {invoicePreview && (
+        <div className="confirm-backdrop vendor-invoice-preview-backdrop" role="dialog" aria-modal="true">
+          <div className="confirm-dialog vendor-invoice-preview-dialog">
+            <div className="section-heading vendor-invoice-preview-heading">
+              <div>
+                <p className="eyebrow">Aperçu facture</p>
+                <h3>{invoicePreview.fileName}</h3>
+                <p className="muted-line">{invoicePreview.invoice.contactName} · {invoicePreview.invoice.title}</p>
+              </div>
+              <button className="secondary-button" type="button" onClick={closeVendorInvoicePreview}>
+                Fermer
+              </button>
+            </div>
+
+            {isVendorInvoicePreviewable(invoicePreview.fileName, invoicePreview.mimeType) ? (
+              invoicePreview.mimeType.startsWith("image/") || /\.(png|jpe?g|webp|gif|svg)$/i.test(invoicePreview.fileName) ? (
+                <div className="vendor-invoice-preview-frame vendor-invoice-preview-image-frame">
+                  <img src={invoicePreview.url} alt={`Facture ${invoicePreview.fileName}`} />
+                </div>
+              ) : (
+                <iframe
+                  className="vendor-invoice-preview-frame"
+                  src={invoicePreview.url}
+                  title={`Facture ${invoicePreview.fileName}`}
+                />
+              )
+            ) : (
+              <div className="vendor-invoice-preview-frame vendor-invoice-preview-unavailable">
+                <h4>Aperçu non disponible pour ce format.</h4>
+                <p>Les PDF et images peuvent être visualisés directement. Pour ce fichier, utilisez le téléchargement.</p>
+              </div>
+            )}
+
+            <div className="form-actions vendor-invoice-preview-actions">
+              <button className="secondary-button" type="button" onClick={() => window.open(invoicePreview.url, "_blank", "noopener,noreferrer")}>
+                Ouvrir dans un onglet
+              </button>
+              <button className="primary-button" type="button" onClick={() => void downloadVendorInvoiceDocument(invoicePreview.invoice)}>
+                Télécharger
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -6020,3 +6020,100 @@ main,
     grid-column: span 1;
   }
 }
+
+/* CRM_VENDOR_INVOICE_PREVIEW_20260622 */
+.vendor-invoice-preview-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 28px !important;
+  background: rgba(2, 29, 48, 0.62) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.vendor-invoice-preview-dialog {
+  width: min(1180px, calc(100vw - 56px)) !important;
+  height: min(860px, calc(100vh - 56px)) !important;
+  max-height: calc(100vh - 56px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  overflow: hidden !important;
+}
+
+.vendor-invoice-preview-heading {
+  flex: 0 0 auto !important;
+  margin-bottom: 0 !important;
+  gap: 18px !important;
+}
+
+.vendor-invoice-preview-frame {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  min-height: 420px !important;
+  border: 1px solid rgba(212, 177, 106, 0.28) !important;
+  border-radius: 16px !important;
+  background: #fff !important;
+}
+
+iframe.vendor-invoice-preview-frame {
+  display: block !important;
+}
+
+.vendor-invoice-preview-image-frame {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: auto !important;
+  padding: 18px !important;
+}
+
+.vendor-invoice-preview-image-frame img {
+  display: block !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+}
+
+.vendor-invoice-preview-unavailable {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  padding: 34px !important;
+}
+
+.vendor-invoice-preview-actions {
+  flex: 0 0 auto !important;
+  justify-content: flex-end !important;
+}
+
+.vendor-invoice-preview-actions button {
+  min-width: 190px !important;
+}
+
+@media (max-width: 760px) {
+  .vendor-invoice-preview-backdrop {
+    padding: 14px !important;
+  }
+
+  .vendor-invoice-preview-dialog {
+    width: calc(100vw - 28px) !important;
+    height: calc(100vh - 28px) !important;
+  }
+
+  .vendor-invoice-preview-heading,
+  .vendor-invoice-preview-actions {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .vendor-invoice-preview-actions button {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+}
