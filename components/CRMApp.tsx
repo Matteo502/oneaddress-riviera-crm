@@ -7949,6 +7949,8 @@ function PlanningView({
   const [editingPlanningEntry, setEditingPlanningEntry] = useState<PlanningEntry | null>(null);
   const [planningViewMode, setPlanningViewMode] = useState<"month" | "week">("month");
   const [planningWeekStart, setPlanningWeekStart] = useState(() => formatPlanningDateValue(new Date()));
+  const [showAllUpcomingPlanningEntries, setShowAllUpcomingPlanningEntries] = useState(false);
+  const [showCompletedPlanningEntries, setShowCompletedPlanningEntries] = useState(false);
 
   const assets = useMemo<PlanningAsset[]>(() => {
     return [
@@ -8162,6 +8164,38 @@ function PlanningView({
   const visiblePlanningEntries = planningEntries.filter((entry) =>
     categoryFilter === "Tous" || getPlanningEntryCategory(entry) === activePlanningCategory
   );
+
+  // CRM_PLANNING_COLLAPSED_PRIORITY_LIST_20260622
+  // La liste opérationnelle affiche d'abord ce qui arrive / ce qui est en cours.
+  // Les interventions terminées ou annulées restent disponibles, mais elles ne doivent pas polluer la vue principale.
+  const sortedVisiblePlanningEntries = [...visiblePlanningEntries].sort((a, b) => {
+    const dateDiff = planningDateValue(a.startDate || "9999-12-31") - planningDateValue(b.startDate || "9999-12-31");
+    if (dateDiff !== 0) return dateDiff;
+    return String(a.startTime || "").localeCompare(String(b.startTime || ""));
+  });
+
+  const activePlanningEntries = sortedVisiblePlanningEntries.filter((entry) => {
+    const status = getPlanningEntryStatus(entry);
+    return status !== "Terminé" && status !== "Annulé";
+  });
+
+  const completedPlanningEntries = sortedVisiblePlanningEntries
+    .filter((entry) => {
+      const status = getPlanningEntryStatus(entry);
+      return status === "Terminé" || status === "Annulé";
+    })
+    .sort((a, b) => planningDateValue(b.startDate || "0000-01-01") - planningDateValue(a.startDate || "0000-01-01"));
+
+  const primaryPlanningEntries = showAllUpcomingPlanningEntries
+    ? activePlanningEntries
+    : activePlanningEntries.slice(0, 7);
+
+  const planningEntriesToDisplay = showCompletedPlanningEntries
+    ? [...primaryPlanningEntries, ...completedPlanningEntries]
+    : primaryPlanningEntries;
+
+  const hasHiddenUpcomingPlanningEntries = activePlanningEntries.length > primaryPlanningEntries.length;
+  const hasHiddenCompletedPlanningEntries = completedPlanningEntries.length > 0 && !showCompletedPlanningEntries;
 
   const visiblePendingBookings = pendingBookings.filter((booking) => planningItemMatchesCategory(booking));
   const visibleConfirmedBookings = confirmedBookings.filter((booking) => planningItemMatchesCategory(booking));
@@ -8626,13 +8660,32 @@ function PlanningView({
           <span><i className="legend-dot status-upcoming" /> Rouge = à venir</span>
         </div>
 
-        <div className="list-stack">
-          {visiblePlanningEntries.length === 0 ? (
-            <p className="muted-line">Aucune intervention interne. Ajoutez ici les prestataires, maintenances et passages qui ne doivent pas devenir des leads.</p>
+        <div className="planning-list-summary">
+          <div>
+            <strong>{activePlanningEntries.length} intervention{activePlanningEntries.length > 1 ? "s" : ""} à venir / en cours</strong>
+            <span>{completedPlanningEntries.length} terminée{completedPlanningEntries.length > 1 ? "s" : ""} ou annulée{completedPlanningEntries.length > 1 ? "s" : ""} masquée{completedPlanningEntries.length > 1 ? "s" : ""} par défaut.</span>
+          </div>
+
+          <div className="planning-list-summary-actions">
+            {activePlanningEntries.length > 7 ? (
+              <button className="ghost-button" type="button" onClick={() => setShowAllUpcomingPlanningEntries((value) => !value)}>
+                {showAllUpcomingPlanningEntries ? "Réduire aux 7 prochaines" : `Afficher toutes les à venir (${activePlanningEntries.length})`}
+              </button>
+            ) : null}
+
+            {completedPlanningEntries.length > 0 ? (
+              <button className="ghost-button muted-action-button" type="button" onClick={() => setShowCompletedPlanningEntries((value) => !value)}>
+                {showCompletedPlanningEntries ? "Masquer les terminées" : `Afficher les terminées (${completedPlanningEntries.length})`}
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="list-stack planning-priority-list">
+          {planningEntriesToDisplay.length === 0 ? (
+            <p className="muted-line">Aucune intervention à venir dans ce planning. Les interventions terminées sont masquées par défaut.</p>
           ) : (
-            visiblePlanningEntries
-              .slice()
-              .sort((a, b) => planningDateValue(a.startDate || "9999-12-31") - planningDateValue(b.startDate || "9999-12-31"))
+            planningEntriesToDisplay
               .map((entry) => {
                 const asset = assets.find((item) => item.type === entry.assetType && item.id === entry.assetId);
 
