@@ -6117,3 +6117,113 @@ iframe.vendor-invoice-preview-frame {
     width: 100% !important;
   }
 }
+
+/* CRM_DOCUMENTS_GOOGLE_DRIVE_MANAGER_20260623 */
+.drive-documents-view .document-breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin: 1rem 0;
+}
+
+.drive-documents-view .document-drop-zone {
+  display: grid;
+  gap: 0.45rem;
+  align-items: center;
+  min-height: 130px;
+  margin: 1rem 0 1.2rem;
+  padding: 1.1rem;
+  border: 1px dashed rgba(187, 149, 81, 0.55);
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.drive-documents-view .document-drop-zone.drag-active {
+  border-color: rgba(2, 29, 48, 0.8);
+  background: rgba(212, 177, 106, 0.13);
+}
+
+.drive-documents-view .document-drop-zone strong {
+  color: var(--navy);
+  font-size: 1rem;
+}
+
+.drive-documents-view .document-drop-zone span,
+.drive-documents-view .document-drive-rules span {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.drive-documents-view .document-upload-button {
+  justify-self: start;
+  cursor: pointer;
+}
+
+.drive-documents-view .document-upload-button input {
+  display: none;
+}
+
+.drive-documents-grid {
+  grid-template-columns: 1fr;
+}
+
+.document-folder-card {
+  background: rgba(255, 255, 255, 0.56);
+  border-style: dashed;
+}
+
+.document-folder-card h3 {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.document-folder-form {
+  margin-bottom: 1rem;
+}
+
+.document-drive-rules {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+  border: 1px solid rgba(212, 177, 106, 0.28);
+  background: rgba(212, 177, 106, 0.08);
+}
+
+.document-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(2, 29, 48, 0.62);
+}
+
+.document-preview-modal {
+  width: min(1120px, 96vw);
+  max-height: 92vh;
+  display: grid;
+  gap: 1rem;
+  padding: 1.2rem;
+  background: var(--cream);
+  border: 1px solid rgba(212, 177, 106, 0.5);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+}
+
+.document-preview-frame {
+  width: 100%;
+  height: min(70vh, 760px);
+  border: 1px solid rgba(187, 149, 81, 0.3);
+  background: #fff;
+}
+
+@media (max-width: 900px) {
+  .document-preview-overlay {
+    padding: 0.8rem;
+  }
+
+  .document-preview-frame {
+    height: 68vh;
+  }
+}

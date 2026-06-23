@@ -185,6 +185,16 @@ type CRMDocument = {
   addedBy: string;
   updatedAt?: string;
   updatedBy?: string;
+  isFolder?: boolean;
+  folderId?: string;
+  parentFolderId?: string;
+  driveFolderId?: string;
+  driveParentFolderId?: string;
+  driveFileId?: string;
+  driveWebViewLink?: string;
+  driveWebContentLink?: string;
+  mimeType?: string;
+  size?: number;
 };
 
 function normalizeCRMDocument(value: unknown): CRMDocument | null {
@@ -193,10 +203,11 @@ function normalizeCRMDocument(value: unknown): CRMDocument | null {
   const raw = value as Record<string, unknown>;
   const category = String(raw.category || "Autre") as CRMDocument["category"];
   const status = String(raw.status || "À jour") as CRMDocument["status"];
+  const isFolder = Boolean(raw.isFolder);
 
   return {
-    id: String(raw.id || makeId("doc")),
-    title: String(raw.title || "Document"),
+    id: String(raw.id || makeId(isFolder ? "folder" : "doc")),
+    title: String(raw.title || (isFolder ? "Dossier" : "Document")),
     category: (
       category === "Logo" ||
       category === "Documents" ||
@@ -224,7 +235,17 @@ function normalizeCRMDocument(value: unknown): CRMDocument | null {
     addedAt: String(raw.addedAt || new Date().toISOString()),
     addedBy: String(raw.addedBy || "À compléter"),
     updatedAt: raw.updatedAt ? String(raw.updatedAt) : "",
-    updatedBy: raw.updatedBy ? String(raw.updatedBy) : ""
+    updatedBy: raw.updatedBy ? String(raw.updatedBy) : "",
+    isFolder,
+    folderId: String(raw.folderId || raw.parentFolderId || ""),
+    parentFolderId: String(raw.parentFolderId || raw.folderId || ""),
+    driveFolderId: String(raw.driveFolderId || ""),
+    driveParentFolderId: String(raw.driveParentFolderId || ""),
+    driveFileId: String(raw.driveFileId || ""),
+    driveWebViewLink: String(raw.driveWebViewLink || raw.webViewLink || ""),
+    driveWebContentLink: String(raw.driveWebContentLink || raw.webContentLink || ""),
+    mimeType: String(raw.mimeType || ""),
+    size: Number(raw.size || 0)
   };
 }
 
@@ -2792,9 +2813,14 @@ function DocumentsView({
 }) {
   const [categoryFilter, setCategoryFilter] = useState<CRMDocument["category"] | "Tous">("Tous");
   const [statusFilter, setStatusFilter] = useState<CRMDocument["status"] | "Tous">("Tous");
+  const [currentFolderId, setCurrentFolderId] = useState("");
+  const [folderName, setFolderName] = useState("");
   const [editingDocument, setEditingDocument] = useState<CRMDocument | null>(null);
+  const [previewDocument, setPreviewDocument] = useState<CRMDocument | null>(null);
   const [connectedEmail, setConnectedEmail] = useState("");
   const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [creatingFolder, setCreatingFolder] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -2832,151 +2858,294 @@ function DocumentsView({
   ];
 
   const statuses: Array<CRMDocument["status"] | "Tous"> = ["Tous", "À jour", "À vérifier", "Expiré"];
+  const folders = documents.filter((crmDocument) => Boolean(crmDocument.isFolder));
+  const files = documents.filter((crmDocument) => !crmDocument.isFolder);
+  const currentFolder = currentFolderId ? folders.find((folder) => folder.id === currentFolderId) || null : null;
+  const currentDriveFolderId = currentFolder?.driveFolderId || "";
 
-  const visibleDocuments = documents.filter((crmDocument) => {
-    const matchesCategory = categoryFilter === "Tous" || crmDocument.category === categoryFilter;
-    const matchesStatus = statusFilter === "Tous" || crmDocument.status === statusFilter;
+  const folderPath = useMemo(() => {
+    const path: CRMDocument[] = [];
+    let cursor = currentFolder;
+    let guard = 0;
 
-    return matchesCategory && matchesStatus;
-  });
+    while (cursor && guard < 20) {
+      path.unshift(cursor);
+      const parentId = cursor.folderId || cursor.parentFolderId || "";
+      cursor = parentId ? folders.find((folder) => folder.id === parentId) || null : null;
+      guard += 1;
+    }
 
-  const documentsToCheck = documents.filter((crmDocument) =>
+    return path;
+  }, [currentFolder, folders]);
+
+  const visibleFolders = folders
+    .filter((folder) => (folder.folderId || folder.parentFolderId || "") === currentFolderId)
+    .sort((a, b) => a.title.localeCompare(b.title, "fr"));
+
+  const visibleDocuments = files
+    .filter((crmDocument) => {
+      const matchesFolder = (crmDocument.folderId || crmDocument.parentFolderId || "") === currentFolderId;
+      const matchesCategory = categoryFilter === "Tous" || crmDocument.category === categoryFilter;
+      const matchesStatus = statusFilter === "Tous" || crmDocument.status === statusFilter;
+
+      return matchesFolder && matchesCategory && matchesStatus;
+    })
+    .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
+
+  const documentsToCheck = files.filter((crmDocument) =>
     crmDocument.status === "Expiré" || crmDocument.status === "À vérifier"
   );
 
-  async function uploadInternalCRMDocument(file: File, documentId: string) {
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !userData.user) {
-      throw new Error("Utilisateur Supabase non connecté.");
-    }
-
-    const safeName = file.name
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-zA-Z0-9._-]+/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "") || "document";
-
-    const storagePath = `${SHARED_WORKSPACE_ID}/${documentId}/${Date.now()}-${safeName}`;
-
-    const { error } = await supabase.storage
-      .from(CRM_DOCUMENTS_BUCKET)
-      .upload(storagePath, file, {
-        cacheControl: "3600",
-        upsert: true
-      });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    return {
-      storagePath,
-      fileName: file.name,
-      uploadedAt: new Date().toISOString()
-    };
+  function getDrivePreviewUrl(crmDocument: CRMDocument) {
+    if (!crmDocument.driveFileId) return "";
+    return `/api/drive/file?fileId=${encodeURIComponent(crmDocument.driveFileId)}`;
   }
 
-  async function downloadInternalCRMDocument(crmDocument: CRMDocument) {
-    if (!crmDocument.storagePath) return;
-
-    const { data: fileData, error } = await supabase.storage
-      .from(CRM_DOCUMENTS_BUCKET)
-      .download(crmDocument.storagePath);
-
-    if (error || !fileData) {
-      window.alert(`Téléchargement impossible : ${error?.message || "fichier introuvable"}`);
-      return;
-    }
-
-    const url = URL.createObjectURL(fileData);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = crmDocument.fileName || crmDocument.title || "document";
-    link.click();
-    URL.revokeObjectURL(url);
+  function getDriveDownloadUrl(crmDocument: CRMDocument) {
+    if (!crmDocument.driveFileId) return "";
+    return `/api/drive/file?fileId=${encodeURIComponent(crmDocument.driveFileId)}&download=1`;
   }
 
-  async function submitDocument(event: React.FormEvent<HTMLFormElement>) {
+  function formatDocumentSize(size?: number) {
+    const value = Number(size || 0);
+    if (!value) return "";
+    if (value < 1024 * 1024) return `${Math.round(value / 1024)} Ko`;
+    return `${(value / (1024 * 1024)).toFixed(1).replace(".", ",")} Mo`;
+  }
+
+  async function createDriveFolder(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!canManageDocuments) {
-      window.alert("Seuls Matteo et Vincent peuvent modifier les documents.");
+      window.alert("Seuls Matteo et Vincent peuvent créer des dossiers.");
       return;
     }
 
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    const now = new Date().toISOString();
-    const documentId = editingDocument?.id || makeId("doc");
-    const file = form.get("file");
+    const name = folderName.trim();
+    if (!name) {
+      window.alert("Ajoutez un nom de dossier.");
+      return;
+    }
 
-    let uploadedFile: Partial<CRMDocument> = {};
+    try {
+      setCreatingFolder(true);
+      const response = await fetch("/api/drive/folders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name, parentDriveFolderId: currentDriveFolderId })
+      });
 
-    if (file instanceof File && file.size > 0) {
-      try {
-        setUploadingDocument(true);
-        uploadedFile = await uploadInternalCRMDocument(file, documentId);
-      } catch (error) {
-        window.alert(`Document non chargé dans Supabase Storage : ${error instanceof Error ? error.message : "erreur inconnue"}`);
-        setUploadingDocument(false);
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok || !payload.folder?.id) {
+        throw new Error(payload.error || "Création du dossier Drive impossible.");
+      }
+
+      const now = new Date().toISOString();
+      const folderDocument: CRMDocument = {
+        id: makeId("folder"),
+        title: name,
+        category: "Documents",
+        status: "À jour",
+        url: payload.folder.webViewLink || "",
+        storagePath: "",
+        fileName: "",
+        uploadedAt: now,
+        location: folderPath.map((folder) => folder.title).concat(name).join(" / "),
+        expiryDate: "",
+        notes: "",
+        addedAt: now,
+        addedBy: activeActor,
+        updatedAt: "",
+        updatedBy: "",
+        isFolder: true,
+        folderId: currentFolderId,
+        parentFolderId: currentFolderId,
+        driveFolderId: payload.folder.id,
+        driveParentFolderId: currentDriveFolderId,
+        driveWebViewLink: payload.folder.webViewLink || "",
+        mimeType: payload.folder.mimeType || "application/vnd.google-apps.folder",
+        size: 0
+      };
+
+      onAdd(folderDocument);
+      setFolderName("");
+    } catch (error) {
+      window.alert(`Dossier non créé : ${error instanceof Error ? error.message : "erreur inconnue"}`);
+    } finally {
+      setCreatingFolder(false);
+    }
+  }
+
+  async function uploadFilesToFolder(fileList: FileList | File[], targetFolderId = currentFolderId, targetDriveFolderId = currentDriveFolderId) {
+    const selectedFiles = Array.from(fileList || []).filter((file) => file.size > 0);
+
+    if (!selectedFiles.length) return;
+
+    if (!canManageDocuments) {
+      window.alert("Seuls Matteo et Vincent peuvent importer des documents.");
+      return;
+    }
+
+    try {
+      setUploadingDocument(true);
+
+      for (const file of selectedFiles) {
+        const uploadForm = new FormData();
+        uploadForm.append("file", file);
+        uploadForm.append("title", file.name);
+        uploadForm.append("parentDriveFolderId", targetDriveFolderId);
+
+        const response = await fetch("/api/drive/upload", {
+          method: "POST",
+          body: uploadForm
+        });
+
+        const payload = await response.json().catch(() => ({}));
+
+        if (!response.ok || !payload.file?.id) {
+          throw new Error(payload.error || `Upload impossible pour ${file.name}`);
+        }
+
+        const now = new Date().toISOString();
+        const crmDocument: CRMDocument = {
+          id: makeId("doc"),
+          title: file.name.replace(/\.[^.]+$/, "") || file.name,
+          category: "Documents",
+          status: "À jour",
+          url: payload.file.webViewLink || "",
+          storagePath: "",
+          fileName: payload.file.name || file.name,
+          uploadedAt: now,
+          location: folderPath.map((folder) => folder.title).join(" / "),
+          expiryDate: "",
+          notes: "",
+          addedAt: now,
+          addedBy: activeActor,
+          updatedAt: "",
+          updatedBy: "",
+          isFolder: false,
+          folderId: targetFolderId,
+          parentFolderId: targetFolderId,
+          driveParentFolderId: targetDriveFolderId,
+          driveFileId: payload.file.id,
+          driveWebViewLink: payload.file.webViewLink || "",
+          driveWebContentLink: payload.file.webContentLink || "",
+          mimeType: payload.file.mimeType || file.type || "",
+          size: Number(payload.file.size || file.size || 0)
+        };
+
+        onAdd(crmDocument);
+      }
+    } catch (error) {
+      window.alert(`Document non importé dans Google Drive : ${error instanceof Error ? error.message : "erreur inconnue"}`);
+    } finally {
+      setUploadingDocument(false);
+      setDragActive(false);
+    }
+  }
+
+  async function deleteDriveBackedDocument(crmDocument: CRMDocument) {
+    if (crmDocument.isFolder) {
+      const hasChildren = documents.some((item) => (item.folderId || item.parentFolderId || "") === crmDocument.id);
+      if (hasChildren) {
+        window.alert("Ce dossier contient encore des éléments. Déplacez ou supprimez son contenu avant de supprimer le dossier.");
         return;
-      } finally {
-        setUploadingDocument(false);
       }
     }
 
-    const crmDocument: CRMDocument = {
-      id: documentId,
-      title: String(form.get("title") || "").trim(),
-      category: String(form.get("category") || "Autre") as CRMDocument["category"],
-      status: String(form.get("status") || "À jour") as CRMDocument["status"],
-      url: String(form.get("url") || "").trim(),
-      storagePath: uploadedFile.storagePath || editingDocument?.storagePath || "",
-      fileName: uploadedFile.fileName || editingDocument?.fileName || "",
-      uploadedAt: uploadedFile.uploadedAt || editingDocument?.uploadedAt || "",
+    const message = crmDocument.isFolder
+      ? "Supprimer ce dossier du CRM et de Google Drive ?"
+      : "Supprimer ce document du CRM et de Google Drive ?";
+
+    if (!window.confirm(message)) return;
+
+    const driveId = crmDocument.isFolder ? crmDocument.driveFolderId : crmDocument.driveFileId;
+
+    if (driveId) {
+      try {
+        const response = await fetch("/api/drive/delete", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ fileId: driveId })
+        });
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.error || "Suppression Drive impossible.");
+        }
+      } catch (error) {
+        const proceed = window.confirm(`Suppression Google Drive non confirmée : ${error instanceof Error ? error.message : "erreur inconnue"}. Supprimer seulement du CRM ?`);
+        if (!proceed) return;
+      }
+    }
+
+    onDelete(crmDocument.id);
+  }
+
+  function submitDocumentMetadata(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingDocument) return;
+
+    const form = new FormData(event.currentTarget);
+    const now = new Date().toISOString();
+
+    onUpdate({
+      ...editingDocument,
+      title: String(form.get("title") || "").trim() || editingDocument.title,
+      category: String(form.get("category") || editingDocument.category) as CRMDocument["category"],
+      status: String(form.get("status") || editingDocument.status) as CRMDocument["status"],
       location: String(form.get("location") || "").trim(),
       expiryDate: String(form.get("expiryDate") || ""),
       notes: String(form.get("notes") || "").trim(),
-      addedAt: editingDocument?.addedAt || now,
-      addedBy: editingDocument?.addedBy || activeActor,
-      updatedAt: editingDocument ? now : "",
-      updatedBy: editingDocument ? activeActor : ""
-    };
+      updatedAt: now,
+      updatedBy: activeActor
+    });
 
-    if (!crmDocument.title) {
-      window.alert("Ajoutez un nom de document.");
-      return;
-    }
-
-    if (!crmDocument.storagePath && !crmDocument.url) {
-      window.alert("Ajoutez un fichier à charger ou un lien externe de secours.");
-      return;
-    }
-
-    if (editingDocument) {
-      onUpdate(crmDocument);
-      setEditingDocument(null);
-    } else {
-      onAdd(crmDocument);
-    }
-
-    formElement.reset();
+    setEditingDocument(null);
   }
 
   return (
-    <div className="two-columns wide-left documents-view">
+    <div className="two-columns wide-left documents-view drive-documents-view">
       <section className="card documents-list-card">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Documents</p>
-            <h3>{visibleDocuments.length} document{visibleDocuments.length > 1 ? "s" : ""}</h3>
+            <h3>{files.length} document{files.length > 1 ? "s" : ""}</h3>
           </div>
           <div>
             <p className="eyebrow">À vérifier</p>
             <h3>{documentsToCheck.length}</h3>
           </div>
+        </div>
+
+        <div className="document-breadcrumbs">
+          <button type="button" className={!currentFolderId ? "primary-button" : "secondary-button"} onClick={() => setCurrentFolderId("")}>CRM Documents</button>
+          {folderPath.map((folder) => (
+            <button key={folder.id} type="button" className="secondary-button" onClick={() => setCurrentFolderId(folder.id)}>
+              {folder.title}
+            </button>
+          ))}
+        </div>
+
+        <div
+          className={`document-drop-zone ${dragActive ? "drag-active" : ""}`}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragActive(true);
+          }}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={(event) => {
+            event.preventDefault();
+            void uploadFilesToFolder(event.dataTransfer.files);
+          }}
+        >
+          <strong>{uploadingDocument ? "Import en cours..." : `Glissez vos documents ici${currentFolder ? ` · ${currentFolder.title}` : ""}`}</strong>
+          <span>Les fichiers partent dans Google Drive. Supabase garde seulement les informations CRM.</span>
+          <label className="secondary-button document-upload-button">
+            Choisir des fichiers
+            <input type="file" multiple onChange={(event) => event.currentTarget.files && void uploadFilesToFolder(event.currentTarget.files)} />
+          </label>
         </div>
 
         <div className="document-filters">
@@ -3005,12 +3174,38 @@ function DocumentsView({
           ))}
         </div>
 
-        {visibleDocuments.length === 0 ? (
-          <p className="muted-line">Aucun document pour ce filtre.</p>
+        {visibleFolders.length === 0 && visibleDocuments.length === 0 ? (
+          <p className="muted-line">Aucun élément dans ce dossier.</p>
         ) : (
-          <div className="documents-grid">
+          <div className="documents-grid drive-documents-grid">
+            {visibleFolders.map((folder) => (
+              <article
+                className="item-card document-card document-folder-card"
+                key={folder.id}
+                id={`document-${folder.id}`}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  void uploadFilesToFolder(event.dataTransfer.files, folder.id, folder.driveFolderId || "");
+                }}
+              >
+                <div>
+                  <p className="eyebrow">Dossier Google Drive</p>
+                  <h3>📁 {folder.title}</h3>
+                  <p className="muted-line">Glissez un fichier sur ce dossier pour l’importer dedans.</p>
+                </div>
+                <div className="item-actions contact-row-actions">
+                  <button className="secondary-button" type="button" onClick={() => setCurrentFolderId(folder.id)}>Ouvrir</button>
+                  {folder.driveWebViewLink && <a className="secondary-button" href={folder.driveWebViewLink} target="_blank" rel="noreferrer">Drive</a>}
+                  {canManageDocuments && <button className="danger-link" type="button" onClick={() => void deleteDriveBackedDocument(folder)}>Supprimer</button>}
+                </div>
+              </article>
+            ))}
+
             {visibleDocuments.map((crmDocument) => {
               const needsCheck = crmDocument.status !== "À jour";
+              const previewUrl = getDrivePreviewUrl(crmDocument);
+              const downloadUrl = getDriveDownloadUrl(crmDocument);
 
               return (
                 <article className={`item-card document-card ${needsCheck ? "document-card-warning" : ""}`} key={crmDocument.id} id={`document-${crmDocument.id}`}>
@@ -3021,30 +3216,30 @@ function DocumentsView({
                       Ajouté le {new Date(crmDocument.addedAt).toLocaleDateString("fr-FR")} par {crmDocument.addedBy}
                     </p>
                     {crmDocument.expiryDate && (
-                      <p className="muted-line">
-                        Date : {new Date(`${crmDocument.expiryDate}T12:00:00`).toLocaleDateString("fr-FR")}
-                      </p>
+                      <p className="muted-line">Date : {new Date(`${crmDocument.expiryDate}T12:00:00`).toLocaleDateString("fr-FR")}</p>
                     )}
                     {crmDocument.fileName && <p className="muted-line">Fichier : {crmDocument.fileName}</p>}
-                    {crmDocument.uploadedAt && (
-                      <p className="muted-line">
-                        Téléchargé le {new Date(crmDocument.uploadedAt).toLocaleDateString("fr-FR")}
-                      </p>
-                    )}
+                    {crmDocument.size ? <p className="muted-line">Taille : {formatDocumentSize(crmDocument.size)}</p> : null}
                     {crmDocument.location && <p>{crmDocument.location}</p>}
                     {crmDocument.notes && <p className="muted-line">{crmDocument.notes}</p>}
                   </div>
 
                   <div className="item-actions contact-row-actions">
-                    {crmDocument.storagePath && (
-                      <button className="secondary-button" type="button" onClick={() => void downloadInternalCRMDocument(crmDocument)}>
-                        Télécharger
+                    {previewUrl && (
+                      <button className="secondary-button" type="button" onClick={() => setPreviewDocument(crmDocument)}>
+                        Voir
                       </button>
                     )}
 
-                    {crmDocument.url && (
-                      <a className="secondary-button" href={crmDocument.url} target="_blank" rel="noreferrer">
-                        Ouvrir lien
+                    {downloadUrl && (
+                      <a className="secondary-button" href={downloadUrl}>
+                        Télécharger
+                      </a>
+                    )}
+
+                    {crmDocument.driveWebViewLink && (
+                      <a className="secondary-button" href={crmDocument.driveWebViewLink} target="_blank" rel="noreferrer">
+                        Drive
                       </a>
                     )}
 
@@ -3063,15 +3258,7 @@ function DocumentsView({
                           Modifier
                         </button>
 
-                        <button
-                          className="danger-link"
-                          type="button"
-                          onClick={() => {
-                            if (window.confirm("Supprimer ce document du CRM ?")) {
-                              onDelete(crmDocument.id);
-                            }
-                          }}
-                        >
+                        <button className="danger-link" type="button" onClick={() => void deleteDriveBackedDocument(crmDocument)}>
                           Supprimer
                         </button>
                       </>
@@ -3085,24 +3272,36 @@ function DocumentsView({
       </section>
 
       <section className="card form-card documents-form-card">
-        <p className="eyebrow">{editingDocument ? "Modification" : "Nouveau"}</p>
-        <h3>{editingDocument ? "Modifier document" : "Ajouter un document"}</h3>
-        <p className="document-storage-note">Les fichiers sont stockés dans Supabase Storage, pas dans le Drive personnel d’une personne.</p>
+        <p className="eyebrow">Gestion Drive</p>
+        <h3>{editingDocument ? "Modifier document" : "Dossiers & import"}</h3>
+        <p className="document-storage-note">Les fichiers sont stockés dans Google Drive. Supabase garde seulement les métadonnées.</p>
 
-        {!canManageDocuments && (
-          <p className="muted-line">
-            Lecture seule. Seuls Matteo et Vincent peuvent modifier les documents.
-          </p>
+        {!canManageDocuments && <p className="muted-line">Lecture seule. Seuls Matteo et Vincent peuvent modifier les documents.</p>}
+
+        {canManageDocuments && !editingDocument && (
+          <>
+            <form className="form-grid document-folder-form" onSubmit={createDriveFolder}>
+              <label>Créer un dossier dans {currentFolder?.title || "CRM Documents"}
+                <input value={folderName} onChange={(event) => setFolderName(event.currentTarget.value)} placeholder="Ex : Villa LADIVA, Assurance 2026..." />
+              </label>
+              <button className="primary-button" type="submit" disabled={creatingFolder}>{creatingFolder ? "Création..." : "Créer dossier"}</button>
+            </form>
+
+            <div className="document-drive-rules">
+              <strong>Règle propre</strong>
+              <span>Créez un dossier, ouvrez-le, puis glissez les fichiers dedans. Ne collez plus de liens Drive manuellement.</span>
+            </div>
+          </>
         )}
 
-        {canManageDocuments && (
-          <form key={editingDocument?.id || "new-document"} className="form-grid" onSubmit={submitDocument}>
+        {canManageDocuments && editingDocument && (
+          <form key={editingDocument.id} className="form-grid" onSubmit={submitDocumentMetadata}>
             <label>Nom du document
-              <input name="title" defaultValue={editingDocument?.title || ""} placeholder="Ex : Assurance villa, logo OAR, contrat..." required />
+              <input name="title" defaultValue={editingDocument.title} placeholder="Ex : Assurance villa, logo OAR, contrat..." />
             </label>
 
             <label>Catégorie
-              <select name="category" defaultValue={editingDocument?.category || "Autre"}>
+              <select name="category" defaultValue={editingDocument.category || "Autre"}>
                 <option>Logo</option>
                 <option>Documents</option>
                 <option>Assurance</option>
@@ -3117,46 +3316,53 @@ function DocumentsView({
             </label>
 
             <label>Statut
-              <select name="status" defaultValue={editingDocument?.status || "À jour"}>
+              <select name="status" defaultValue={editingDocument.status || "À jour"}>
                 <option>À jour</option>
                 <option>À vérifier</option>
                 <option>Expiré</option>
               </select>
             </label>
 
-            <label>Document à charger
-              <input name="file" type="file" />
-              {editingDocument?.fileName && <span className="field-hint">Fichier actuel : {editingDocument.fileName}</span>}
-            </label>
-
-            <label>Lien externe optionnel
-              <input name="url" defaultValue={editingDocument?.url || ""} placeholder="Lien externe uniquement si nécessaire" />
-            </label>
-
             <label>Emplacement / description
-              <input name="location" defaultValue={editingDocument?.location || ""} placeholder="Ex : Drive OAR / Assurances / 2026" />
+              <input name="location" defaultValue={editingDocument.location || ""} placeholder="Ex : Villa LADIVA / Assurance" />
             </label>
 
             <label>Date
-              <input name="expiryDate" type="date" defaultValue={editingDocument?.expiryDate || ""} />
+              <input name="expiryDate" type="date" defaultValue={editingDocument.expiryDate || ""} />
             </label>
 
             <label>Notes
-              <textarea name="notes" defaultValue={editingDocument?.notes || ""} placeholder="Détails, version, remarque..." />
+              <textarea name="notes" defaultValue={editingDocument.notes || ""} placeholder="Détails, version, remarque..." />
             </label>
 
-            <button className="primary-button" type="submit" disabled={uploadingDocument}>
-              {uploadingDocument ? "Chargement..." : editingDocument ? "Enregistrer" : "Ajouter document"}
-            </button>
-
-            {editingDocument && (
-              <button className="secondary-button" type="button" onClick={() => setEditingDocument(null)}>
-                Annuler
-              </button>
-            )}
+            <button className="primary-button" type="submit">Enregistrer</button>
+            <button className="secondary-button" type="button" onClick={() => setEditingDocument(null)}>Annuler</button>
           </form>
         )}
       </section>
+
+      {previewDocument && (
+        <div className="document-preview-overlay" role="dialog" aria-modal="true">
+          <div className="document-preview-modal">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Aperçu document</p>
+                <h3>{previewDocument.title}</h3>
+              </div>
+              <button className="secondary-button" type="button" onClick={() => setPreviewDocument(null)}>Fermer</button>
+            </div>
+            {previewDocument.driveFileId ? (
+              <iframe title={previewDocument.title} src={getDrivePreviewUrl(previewDocument)} className="document-preview-frame" />
+            ) : (
+              <p className="muted-line">Aucun aperçu disponible.</p>
+            )}
+            <div className="item-actions">
+              {previewDocument.driveWebViewLink && <a className="secondary-button" href={previewDocument.driveWebViewLink} target="_blank" rel="noreferrer">Ouvrir dans Drive</a>}
+              {getDriveDownloadUrl(previewDocument) && <a className="primary-button" href={getDriveDownloadUrl(previewDocument)}>Télécharger</a>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -5329,6 +5535,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     const crmDocuments = (((data as any).documents ?? []) as CRMDocument[]);
 
     crmDocuments.forEach((crmDocument) => {
+      if ((crmDocument as any).isFolder) return;
       const isExpired = crmDocument.status === "Expiré";
       const shouldCheck = crmDocument.status === "À vérifier";
 
