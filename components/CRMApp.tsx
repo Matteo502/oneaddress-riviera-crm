@@ -2811,8 +2811,6 @@ function DocumentsView({
   onUpdate: (crmDocument: CRMDocument) => void;
   onDelete: (id: string) => void;
 }) {
-  const [categoryFilter, setCategoryFilter] = useState<CRMDocument["category"] | "Tous">("Tous");
-  const [statusFilter, setStatusFilter] = useState<CRMDocument["status"] | "Tous">("Tous");
   const [currentFolderId, setCurrentFolderId] = useState("");
   const [folderName, setFolderName] = useState("");
   const [editingDocument, setEditingDocument] = useState<CRMDocument | null>(null);
@@ -2843,21 +2841,6 @@ function DocumentsView({
     connectedEmail === "matteobuggianipro@gmail.com" ||
     connectedEmail === "vg@oneaddressriviera.com";
 
-  const categories: Array<CRMDocument["category"] | "Tous"> = [
-    "Tous",
-    "Logo",
-    "Documents",
-    "Assurance",
-    "Contrat",
-    "Administratif",
-    "Identité / Kbis",
-    "Maison",
-    "Véhicule",
-    "Bateau",
-    "Autre"
-  ];
-
-  const statuses: Array<CRMDocument["status"] | "Tous"> = ["Tous", "À jour", "À vérifier", "Expiré"];
   const folders = documents.filter((crmDocument) => Boolean(crmDocument.isFolder));
   const files = documents.filter((crmDocument) => !crmDocument.isFolder);
   const currentFolder = currentFolderId ? folders.find((folder) => folder.id === currentFolderId) || null : null;
@@ -2883,13 +2866,7 @@ function DocumentsView({
     .sort((a, b) => a.title.localeCompare(b.title, "fr"));
 
   const visibleDocuments = files
-    .filter((crmDocument) => {
-      const matchesFolder = (crmDocument.folderId || crmDocument.parentFolderId || "") === currentFolderId;
-      const matchesCategory = categoryFilter === "Tous" || crmDocument.category === categoryFilter;
-      const matchesStatus = statusFilter === "Tous" || crmDocument.status === statusFilter;
-
-      return matchesFolder && matchesCategory && matchesStatus;
-    })
+    .filter((crmDocument) => (crmDocument.folderId || crmDocument.parentFolderId || "") === currentFolderId)
     .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
 
   const documentsToCheck = files.filter((crmDocument) =>
@@ -2984,6 +2961,12 @@ function DocumentsView({
 
     if (!canManageDocuments) {
       window.alert("Seuls Matteo et Vincent peuvent importer des documents.");
+      return;
+    }
+
+    if (!targetDriveFolderId) {
+      window.alert("Ouvrez d'abord un dossier avant d'importer un document. Règle CRM : un document doit toujours être rangé dans un dossier.");
+      setDragActive(false);
       return;
     }
 
@@ -3093,7 +3076,7 @@ function DocumentsView({
     onUpdate({
       ...editingDocument,
       title: String(form.get("title") || "").trim() || editingDocument.title,
-      category: String(form.get("category") || editingDocument.category) as CRMDocument["category"],
+      category: "Documents",
       status: String(form.get("status") || editingDocument.status) as CRMDocument["status"],
       location: String(form.get("location") || "").trim(),
       expiryDate: String(form.get("expiryDate") || ""),
@@ -3110,8 +3093,8 @@ function DocumentsView({
       <section className="card documents-list-card">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Documents</p>
-            <h3>{files.length} document{files.length > 1 ? "s" : ""}</h3>
+            <p className="eyebrow">Drive CRM</p>
+            <h3>{folders.length} dossier{folders.length > 1 ? "s" : ""} · {files.length} document{files.length > 1 ? "s" : ""}</h3>
           </div>
           <div>
             <p className="eyebrow">À vérifier</p>
@@ -3128,6 +3111,14 @@ function DocumentsView({
           ))}
         </div>
 
+        <div className="document-current-folder-note">
+          {currentFolder ? (
+            <span>Dossier ouvert : <strong>{currentFolder.title}</strong></span>
+          ) : (
+            <span>Aucun dossier ouvert. Créez ou ouvrez un dossier avant d’importer.</span>
+          )}
+        </div>
+
         <div
           className={`document-drop-zone ${dragActive ? "drag-active" : ""}`}
           onDragOver={(event) => {
@@ -3140,42 +3131,16 @@ function DocumentsView({
             void uploadFilesToFolder(event.dataTransfer.files);
           }}
         >
-          <strong>{uploadingDocument ? "Import en cours..." : `Glissez vos documents ici${currentFolder ? ` · ${currentFolder.title}` : ""}`}</strong>
-          <span>Les fichiers partent dans Google Drive. Supabase garde seulement les informations CRM.</span>
-          <label className="secondary-button document-upload-button">
+          <strong>{uploadingDocument ? "Import en cours..." : currentFolder ? `Importer dans : ${currentFolder.title}` : "Ouvrez un dossier avant d'importer"}</strong>
+          <span>{currentFolder ? "Glissez vos fichiers ici. Ils seront stockés dans ce dossier Google Drive." : "Sélectionnez ou créez un dossier. Les documents ne doivent plus être importés à la racine."}</span>
+          <label className={`secondary-button document-upload-button ${!currentFolder ? "is-disabled" : ""}`}>
             Choisir des fichiers
-            <input type="file" multiple onChange={(event) => event.currentTarget.files && void uploadFilesToFolder(event.currentTarget.files)} />
+            <input type="file" multiple disabled={!currentFolder} onChange={(event) => event.currentTarget.files && void uploadFilesToFolder(event.currentTarget.files)} />
           </label>
         </div>
 
-        <div className="document-filters">
-          {categories.map((category) => (
-            <button
-              key={category}
-              type="button"
-              className={categoryFilter === category ? "primary-button" : "secondary-button"}
-              onClick={() => setCategoryFilter(category)}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
-
-        <div className="document-filters">
-          {statuses.map((status) => (
-            <button
-              key={status}
-              type="button"
-              className={statusFilter === status ? "primary-button" : "secondary-button"}
-              onClick={() => setStatusFilter(status)}
-            >
-              {status}
-            </button>
-          ))}
-        </div>
-
         {visibleFolders.length === 0 && visibleDocuments.length === 0 ? (
-          <p className="muted-line">Aucun élément dans ce dossier.</p>
+          <p className="muted-line">{currentFolder ? "Aucun document dans ce dossier." : "Aucun dossier à ce niveau."}</p>
         ) : (
           <div className="documents-grid drive-documents-grid">
             {visibleFolders.map((folder) => (
@@ -3190,14 +3155,14 @@ function DocumentsView({
                 }}
               >
                 <div>
-                  <p className="eyebrow">Dossier Google Drive</p>
+                  <p className="eyebrow">Dossier</p>
                   <h3>📁 {folder.title}</h3>
-                  <p className="muted-line">Glissez un fichier sur ce dossier pour l’importer dedans.</p>
+                  <p className="muted-line">Ouvrez-le pour importer ou glissez un fichier directement dessus.</p>
                 </div>
                 <div className="item-actions contact-row-actions">
-                  <button className="secondary-button" type="button" onClick={() => setCurrentFolderId(folder.id)}>Ouvrir</button>
-                  {folder.driveWebViewLink && <a className="secondary-button" href={folder.driveWebViewLink} target="_blank" rel="noreferrer">Drive</a>}
-                  {canManageDocuments && <button className="danger-link" type="button" onClick={() => void deleteDriveBackedDocument(folder)}>Supprimer</button>}
+                  <button className="primary-button compact-button" type="button" onClick={() => setCurrentFolderId(folder.id)}>Ouvrir</button>
+                  {folder.driveWebViewLink && <a className="secondary-button compact-button" href={folder.driveWebViewLink} target="_blank" rel="noreferrer">Drive</a>}
+                  {canManageDocuments && <button className="danger-link compact-danger" type="button" onClick={() => void deleteDriveBackedDocument(folder)}>Supprimer</button>}
                 </div>
               </article>
             ))}
@@ -3210,7 +3175,7 @@ function DocumentsView({
               return (
                 <article className={`item-card document-card ${needsCheck ? "document-card-warning" : ""}`} key={crmDocument.id} id={`document-${crmDocument.id}`}>
                   <div>
-                    <p className="eyebrow">{crmDocument.category} · {crmDocument.status}</p>
+                    <p className="eyebrow">Document · {crmDocument.status}</p>
                     <h3>{crmDocument.title}</h3>
                     <p className="muted-line">
                       Ajouté le {new Date(crmDocument.addedAt).toLocaleDateString("fr-FR")} par {crmDocument.addedBy}
@@ -3273,8 +3238,8 @@ function DocumentsView({
 
       <section className="card form-card documents-form-card">
         <p className="eyebrow">Gestion Drive</p>
-        <h3>{editingDocument ? "Modifier document" : "Dossiers & import"}</h3>
-        <p className="document-storage-note">Les fichiers sont stockés dans Google Drive. Supabase garde seulement les métadonnées.</p>
+        <h3>{editingDocument ? "Modifier document" : "Créer un dossier"}</h3>
+        <p className="document-storage-note">Structure simple : dossiers uniquement. Les anciennes catégories sont supprimées.</p>
 
         {!canManageDocuments && <p className="muted-line">Lecture seule. Seuls Matteo et Vincent peuvent modifier les documents.</p>}
 
@@ -3289,7 +3254,7 @@ function DocumentsView({
 
             <div className="document-drive-rules">
               <strong>Règle propre</strong>
-              <span>Créez un dossier, ouvrez-le, puis glissez les fichiers dedans. Ne collez plus de liens Drive manuellement.</span>
+              <span>Un document doit toujours être rangé dans un dossier. Plus de catégories multiples, plus de filtres inutiles.</span>
             </div>
           </>
         )}
@@ -3298,21 +3263,6 @@ function DocumentsView({
           <form key={editingDocument.id} className="form-grid" onSubmit={submitDocumentMetadata}>
             <label>Nom du document
               <input name="title" defaultValue={editingDocument.title} placeholder="Ex : Assurance villa, logo OAR, contrat..." />
-            </label>
-
-            <label>Catégorie
-              <select name="category" defaultValue={editingDocument.category || "Autre"}>
-                <option>Logo</option>
-                <option>Documents</option>
-                <option>Assurance</option>
-                <option>Contrat</option>
-                <option>Administratif</option>
-                <option>Identité / Kbis</option>
-                <option>Maison</option>
-                <option>Véhicule</option>
-                <option>Bateau</option>
-                <option>Autre</option>
-              </select>
             </label>
 
             <label>Statut
