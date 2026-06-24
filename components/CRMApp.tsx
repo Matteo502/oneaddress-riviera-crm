@@ -3173,7 +3173,7 @@ function DocumentsView({
               const downloadUrl = getDriveDownloadUrl(crmDocument);
 
               return (
-                <article className={`item-card document-card ${needsCheck ? "document-card-warning" : ""}`} key={crmDocument.id} id={`document-${crmDocument.id}`}>
+                <article className={`item-card document-card document-file-card ${needsCheck ? "document-card-warning" : ""}`} key={crmDocument.id} id={`document-${crmDocument.id}`}>
                   <div>
                     <p className="eyebrow">Document · {crmDocument.status}</p>
                     <h3>{crmDocument.title}</h3>
@@ -3189,21 +3189,21 @@ function DocumentsView({
                     {crmDocument.notes && <p className="muted-line">{crmDocument.notes}</p>}
                   </div>
 
-                  <div className="item-actions contact-row-actions">
+                  <div className="item-actions contact-row-actions document-file-actions">
                     {previewUrl && (
-                      <button className="secondary-button" type="button" onClick={() => setPreviewDocument(crmDocument)}>
+                      <button className="secondary-button compact-button" type="button" onClick={() => setPreviewDocument(crmDocument)}>
                         Voir
                       </button>
                     )}
 
                     {downloadUrl && (
-                      <a className="secondary-button" href={downloadUrl}>
+                      <a className="secondary-button compact-button" href={downloadUrl}>
                         Télécharger
                       </a>
                     )}
 
                     {crmDocument.driveWebViewLink && (
-                      <a className="secondary-button" href={crmDocument.driveWebViewLink} target="_blank" rel="noreferrer">
+                      <a className="secondary-button compact-button" href={crmDocument.driveWebViewLink} target="_blank" rel="noreferrer">
                         Drive
                       </a>
                     )}
@@ -3211,7 +3211,7 @@ function DocumentsView({
                     {canManageDocuments && (
                       <>
                         <button
-                          className="secondary-button"
+                          className="secondary-button compact-button"
                           type="button"
                           onClick={() => {
                             setEditingDocument(crmDocument);
@@ -3223,7 +3223,7 @@ function DocumentsView({
                           Modifier
                         </button>
 
-                        <button className="danger-link" type="button" onClick={() => void deleteDriveBackedDocument(crmDocument)}>
+                        <button className="danger-link compact-danger" type="button" onClick={() => void deleteDriveBackedDocument(crmDocument)}>
                           Supprimer
                         </button>
                       </>
