@@ -6756,3 +6756,389 @@ iframe.vendor-invoice-preview-frame {
     width: 100% !important;
   }
 }
+
+/* === CRM GLOBAL READABILITY REDESIGN v20260626 START ===
+   Objectif: rendre tout le CRM plus lisible, plus compact, plus cohérent.
+   Patch CSS-first: ne touche pas aux données, OAuth, Drive, Supabase, calculs, routes API.
+*/
+
+.crm-readable-redesign {
+  --crm-bg-clean: #f7f2ea;
+  --crm-surface: rgba(255, 250, 242, 0.96);
+  --crm-surface-strong: #fffaf2;
+  --crm-ink: #10251f;
+  --crm-muted: #68736d;
+  --crm-border: rgba(185, 147, 85, 0.23);
+  --crm-border-strong: rgba(185, 147, 85, 0.34);
+  --crm-navy: #031d2f;
+  --crm-gold: #b99355;
+  --crm-green: #2e7557;
+  --crm-yellow: #b58a2a;
+  --crm-red: #9b3d3d;
+  --crm-radius: 18px;
+  --crm-shadow: 0 18px 55px rgba(13, 31, 27, 0.10);
+  grid-template-columns: 268px minmax(0, 1fr) !important;
+  background: var(--crm-bg-clean);
+}
+
+.crm-readable-redesign, .crm-readable-redesign * { text-rendering: geometricPrecision; }
+
+.crm-readable-redesign .sidebar {
+  width: 268px !important;
+  padding: 24px 22px !important;
+  gap: 22px !important;
+  background: linear-gradient(180deg, #061f34 0%, #031729 100%) !important;
+  box-shadow: 14px 0 45px rgba(3, 23, 41, 0.18) !important;
+}
+.crm-readable-redesign .crm-sidebar-logo { max-width: 200px !important; height: auto !important; }
+.crm-readable-redesign .nav-list { gap: 7px !important; }
+.crm-readable-redesign .nav-button {
+  min-height: 42px !important;
+  padding: 0 14px !important;
+  border-radius: 8px !important;
+  font-size: 0.78rem !important;
+  letter-spacing: 0.22em !important;
+  display: grid !important;
+  grid-template-columns: 22px 1fr !important;
+  align-items: center !important;
+  text-align: left !important;
+}
+.crm-readable-redesign .nav-button span { width: 18px !important; opacity: 0.82 !important; }
+.crm-readable-redesign .nav-button.active { background: rgba(255,255,255,0.075) !important; border-color: rgba(212,177,106,0.42) !important; }
+.crm-readable-redesign .sidebar-card { margin-top: auto !important; padding: 16px !important; border-radius: 12px !important; }
+.crm-readable-redesign .sidebar-card span { font-size: 0.78rem !important; line-height: 1.45 !important; }
+
+.crm-readable-redesign .content-panel {
+  padding: 26px 32px 42px !important;
+  gap: 22px !important;
+  max-width: 1440px !important;
+  width: 100% !important;
+}
+.crm-readable-redesign .topbar {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 20 !important;
+  min-height: unset !important;
+  padding: 18px 20px !important;
+  border: 1px solid var(--crm-border) !important;
+  border-radius: var(--crm-radius) !important;
+  background: rgba(255, 250, 242, 0.94) !important;
+  backdrop-filter: blur(16px) !important;
+  box-shadow: 0 12px 35px rgba(13,31,27,0.08) !important;
+  display: grid !important;
+  grid-template-columns: minmax(230px, 0.8fr) minmax(0, 1.7fr) !important;
+  align-items: start !important;
+  gap: 18px !important;
+}
+.crm-readable-redesign .topbar h2 { font-size: clamp(1.55rem, 2.5vw, 2.45rem) !important; line-height: 1.02 !important; letter-spacing: -0.055em !important; }
+.crm-readable-redesign .topbar-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  max-height: 118px !important;
+  overflow: auto !important;
+  padding-bottom: 2px !important;
+}
+.crm-readable-redesign .search-input { flex: 1 1 260px !important; min-width: 240px !important; max-width: 420px !important; }
+.crm-readable-redesign .actor-select-label {
+  min-height: 38px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 0 10px !important;
+  border: 1px solid var(--crm-border) !important;
+  border-radius: 10px !important;
+  background: rgba(255,255,255,0.42) !important;
+  white-space: nowrap !important;
+}
+.crm-readable-redesign .actor-select-label span,
+.crm-readable-redesign .muted-line,
+.crm-readable-redesign small { color: var(--crm-muted) !important; font-size: 0.84rem !important; line-height: 1.35 !important; }
+.crm-readable-redesign .eyebrow { margin-bottom: 5px !important; font-size: 0.68rem !important; letter-spacing: 0.22em !important; color: var(--crm-gold) !important; }
+.crm-readable-redesign h2, .crm-readable-redesign h3 { color: var(--crm-ink) !important; }
+.crm-readable-redesign h3 { font-size: 1.28rem !important; line-height: 1.12 !important; }
+
+.crm-readable-redesign .shared-db-status-panel,
+.crm-readable-redesign .crm-notification-panel,
+.crm-readable-redesign .card,
+.crm-readable-redesign .form-card,
+.crm-readable-redesign .stat-card,
+.crm-readable-redesign .property-card,
+.crm-readable-redesign .lead-filter-card,
+.crm-readable-redesign .asset-filter-card,
+.crm-readable-redesign .vendor-invoices-list-card,
+.crm-readable-redesign .vendor-invoices-form-card,
+.crm-readable-redesign .documents-list-card,
+.crm-readable-redesign .documents-form-card,
+.crm-readable-redesign .mini-panel,
+.crm-readable-redesign .quote-card {
+  border: 1px solid var(--crm-border) !important;
+  border-radius: var(--crm-radius) !important;
+  background: var(--crm-surface) !important;
+  box-shadow: var(--crm-shadow) !important;
+}
+.crm-readable-redesign .shared-db-status-panel {
+  padding: 14px 18px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 14px !important;
+}
+.crm-readable-redesign .shared-db-status-panel strong { display: block !important; font-size: 0.98rem !important; margin-bottom: 2px !important; }
+.crm-readable-redesign .card,
+.crm-readable-redesign .form-card,
+.crm-readable-redesign .stat-card,
+.crm-readable-redesign .property-card,
+.crm-readable-redesign .lead-filter-card,
+.crm-readable-redesign .asset-filter-card,
+.crm-readable-redesign .vendor-invoices-list-card,
+.crm-readable-redesign .vendor-invoices-form-card,
+.crm-readable-redesign .documents-list-card,
+.crm-readable-redesign .documents-form-card,
+.crm-readable-redesign .quote-card { padding: 20px !important; }
+.crm-readable-redesign .section-heading { display: flex !important; align-items: flex-start !important; justify-content: space-between !important; gap: 14px !important; margin-bottom: 16px !important; }
+.crm-readable-redesign .section-heading h3, .crm-readable-redesign .section-heading h2 { margin: 0 !important; }
+
+.crm-readable-redesign .stats-grid,
+.crm-readable-redesign .dashboard-main-stats,
+.crm-readable-redesign .dashboard-cockpit-stats { display: grid !important; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)) !important; gap: 12px !important; }
+.crm-readable-redesign .stat-card { min-height: unset !important; padding: 16px !important; }
+.crm-readable-redesign .stat-card strong { font-size: 1.85rem !important; line-height: 1 !important; }
+.crm-readable-redesign .stat-card span, .crm-readable-redesign .stat-card p { font-size: 0.82rem !important; line-height: 1.35 !important; }
+
+.crm-readable-redesign .two-columns,
+.crm-readable-redesign .three-columns,
+.crm-readable-redesign .split-layout,
+.crm-readable-redesign .contacts-layout,
+.crm-readable-redesign .documents-grid,
+.crm-readable-redesign .drive-documents-grid,
+.crm-readable-redesign .house-tracking-grid,
+.crm-readable-redesign .vendor-invoices-view,
+.crm-readable-redesign .dashboard-workspace,
+.crm-readable-redesign .planning-agenda-grid,
+.crm-readable-redesign .planning-week-grid { gap: 18px !important; }
+.crm-readable-redesign .two-columns,
+.crm-readable-redesign .contacts-layout,
+.crm-readable-redesign .documents-grid,
+.crm-readable-redesign .drive-documents-grid,
+.crm-readable-redesign .vendor-invoices-view,
+.crm-readable-redesign .house-tracking-grid { grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.85fr) !important; align-items: start !important; }
+.crm-readable-redesign .wide-left { grid-column: auto !important; }
+.crm-readable-redesign .list-stack { gap: 10px !important; }
+
+.crm-readable-redesign .lead-card,
+.crm-readable-redesign .contact-row,
+.crm-readable-redesign .item-card,
+.crm-readable-redesign .quote-card,
+.crm-readable-redesign .property-card,
+.crm-readable-redesign .vendor-invoice-card,
+.crm-readable-redesign .document-folder-card,
+.crm-readable-redesign .document-card,
+.crm-readable-redesign .planning-entry-submit,
+.crm-readable-redesign .planning-agenda-card,
+.crm-readable-redesign .task-column .lead-card {
+  position: relative !important;
+  padding: 15px 16px !important;
+  border: 1px solid var(--crm-border) !important;
+  border-radius: 14px !important;
+  background: rgba(255,250,242,0.88) !important;
+  box-shadow: none !important;
+}
+.crm-readable-redesign .lead-card:hover,
+.crm-readable-redesign .contact-row:hover,
+.crm-readable-redesign .item-card:hover,
+.crm-readable-redesign .quote-card:hover,
+.crm-readable-redesign .property-card:hover,
+.crm-readable-redesign .vendor-invoice-card:hover,
+.crm-readable-redesign .document-folder-card:hover,
+.crm-readable-redesign .document-card:hover,
+.crm-readable-redesign .planning-entry-submit:hover { border-color: var(--crm-border-strong) !important; background: var(--crm-surface-strong) !important; }
+.crm-readable-redesign .lead-card strong,
+.crm-readable-redesign .contact-row strong,
+.crm-readable-redesign .item-card strong,
+.crm-readable-redesign .quote-card strong,
+.crm-readable-redesign .property-card strong,
+.crm-readable-redesign .vendor-invoice-card strong,
+.crm-readable-redesign .document-card strong,
+.crm-readable-redesign .planning-entry-submit strong { font-size: 1rem !important; line-height: 1.22 !important; }
+.crm-readable-redesign .lead-card p,
+.crm-readable-redesign .lead-card span,
+.crm-readable-redesign .lead-card small,
+.crm-readable-redesign .contact-row p,
+.crm-readable-redesign .contact-row span,
+.crm-readable-redesign .contact-row small,
+.crm-readable-redesign .item-card p,
+.crm-readable-redesign .item-card span,
+.crm-readable-redesign .item-card small,
+.crm-readable-redesign .quote-card p,
+.crm-readable-redesign .quote-card span,
+.crm-readable-redesign .property-card p,
+.crm-readable-redesign .property-card span,
+.crm-readable-redesign .vendor-invoice-card p,
+.crm-readable-redesign .vendor-invoice-card span,
+.crm-readable-redesign .document-card p,
+.crm-readable-redesign .document-card span,
+.crm-readable-redesign .planning-entry-submit p,
+.crm-readable-redesign .planning-entry-submit span { font-size: 0.86rem !important; line-height: 1.36 !important; }
+
+.crm-readable-redesign .lead-card-actions,
+.crm-readable-redesign .contact-row-actions,
+.crm-readable-redesign .item-actions,
+.crm-readable-redesign .asset-card-actions,
+.crm-readable-redesign .task-actions,
+.crm-readable-redesign .quote-actions,
+.crm-readable-redesign .document-file-actions,
+.crm-readable-redesign .planning-agenda-actions { display: flex !important; flex-wrap: wrap !important; gap: 7px !important; justify-content: flex-end !important; }
+
+.crm-readable-redesign .primary-button,
+.crm-readable-redesign .secondary-button,
+.crm-readable-redesign .ghost-button,
+.crm-readable-redesign .danger-button,
+.crm-readable-redesign .compact-button,
+.crm-readable-redesign .asset-detail-button,
+.crm-readable-redesign .asset-edit-button,
+.crm-readable-redesign .lead-edit-button,
+.crm-readable-redesign .lead-detail-button,
+.crm-readable-redesign .task-edit-button,
+.crm-readable-redesign .vendor-invoice-document-button,
+.crm-readable-redesign .planning-entry-submit button,
+.crm-readable-redesign .document-card button,
+.crm-readable-redesign .document-folder-card button {
+  min-height: 38px !important;
+  padding: 0 13px !important;
+  border-radius: 9px !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.18em !important;
+  line-height: 1.15 !important;
+  white-space: nowrap !important;
+}
+.crm-readable-redesign .primary-button { background: var(--crm-navy) !important; color: #fffaf2 !important; }
+.crm-readable-redesign .secondary-button,
+.crm-readable-redesign .ghost-button,
+.crm-readable-redesign .compact-button { background: rgba(255,255,255,0.34) !important; color: var(--crm-navy) !important; border-color: var(--crm-border-strong) !important; }
+.crm-readable-redesign .danger-button,
+.crm-readable-redesign .danger-link,
+.crm-readable-redesign .compact-danger,
+.crm-readable-redesign button[class*="delete"],
+.crm-readable-redesign button[class*="Delete"] { color: var(--crm-red) !important; border-color: rgba(155,61,61,0.24) !important; background: rgba(155,61,61,0.055) !important; }
+
+.crm-readable-redesign input,
+.crm-readable-redesign select,
+.crm-readable-redesign textarea { border-radius: 10px !important; border: 1px solid var(--crm-border) !important; background: rgba(255,255,255,0.36) !important; color: var(--crm-ink) !important; }
+.crm-readable-redesign input,
+.crm-readable-redesign select { min-height: 42px !important; padding: 0 12px !important; }
+.crm-readable-redesign textarea { min-height: 82px !important; padding: 12px !important; resize: vertical !important; }
+.crm-readable-redesign .form-grid { display: grid !important; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)) !important; gap: 12px 14px !important; }
+.crm-readable-redesign .form-grid.compact,
+.crm-readable-redesign .contact-create-form,
+.crm-readable-redesign .contact-edit-form,
+.crm-readable-redesign .lead-smart-form,
+.crm-readable-redesign .asset-filter-grid,
+.crm-readable-redesign .lead-filter-grid { gap: 10px 12px !important; }
+.crm-readable-redesign .form-grid label,
+.crm-readable-redesign label { gap: 6px !important; color: var(--crm-gold) !important; font-size: 0.68rem !important; letter-spacing: 0.18em !important; text-transform: uppercase !important; }
+.crm-readable-redesign .full { grid-column: 1 / -1 !important; }
+
+.crm-readable-redesign .badge,
+.crm-readable-redesign .status-pill,
+.crm-readable-redesign .planning-entry-badges-clean span,
+.crm-readable-redesign .vendor-invoice-card .eyebrow,
+.crm-readable-redesign .item-card .eyebrow,
+.crm-readable-redesign .lead-card .eyebrow {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 24px !important;
+  padding: 4px 8px !important;
+  border-radius: 999px !important;
+  border: 1px solid var(--crm-border) !important;
+  background: rgba(255,255,255,0.4) !important;
+  font-size: 0.66rem !important;
+  letter-spacing: 0.15em !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+.crm-readable-redesign .status-finished,
+.crm-readable-redesign .semantic-success,
+.crm-readable-redesign [class*="paid"],
+.crm-readable-redesign [class*="success"] { color: var(--crm-green) !important; border-color: rgba(46,117,87,0.28) !important; background: rgba(46,117,87,0.075) !important; }
+.crm-readable-redesign .status-active,
+.crm-readable-redesign .semantic-warning,
+.crm-readable-redesign [class*="warning"] { color: var(--crm-yellow) !important; border-color: rgba(181,138,42,0.3) !important; background: rgba(181,138,42,0.08) !important; }
+.crm-readable-redesign .status-upcoming,
+.crm-readable-redesign .semantic-danger,
+.crm-readable-redesign [class*="danger"],
+.crm-readable-redesign [class*="overdue"] { color: var(--crm-red) !important; border-color: rgba(155,61,61,0.26) !important; background: rgba(155,61,61,0.065) !important; }
+
+.crm-readable-redesign .empty-state { padding: 22px !important; border: 1px dashed var(--crm-border-strong) !important; border-radius: 14px !important; background: rgba(255,250,242,0.56) !important; color: var(--crm-muted) !important; }
+.crm-readable-redesign .table-wrap,
+.crm-readable-redesign .table-wrapper { border-radius: 14px !important; overflow: auto !important; border: 1px solid var(--crm-border) !important; background: var(--crm-surface) !important; }
+.crm-readable-redesign table { width: 100% !important; border-collapse: collapse !important; font-size: 0.86rem !important; }
+.crm-readable-redesign th,
+.crm-readable-redesign td { padding: 10px 12px !important; border-bottom: 1px solid rgba(185,147,85,0.16) !important; vertical-align: top !important; }
+.crm-readable-redesign th { color: var(--crm-gold) !important; font-size: 0.68rem !important; letter-spacing: 0.16em !important; text-transform: uppercase !important; }
+
+.crm-readable-redesign .document-drop-zone { min-height: 116px !important; padding: 18px !important; border-radius: 14px !important; }
+.crm-readable-redesign .document-folder-card { display: grid !important; grid-template-columns: minmax(0,1fr) auto !important; gap: 12px !important; align-items: center !important; }
+.crm-readable-redesign .document-card { display: grid !important; grid-template-columns: minmax(0, 1fr) auto !important; gap: 12px !important; align-items: center !important; min-height: 68px !important; }
+.crm-readable-redesign .document-card h3,
+.crm-readable-redesign .document-card strong,
+.crm-readable-redesign .document-card p { overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; max-width: 100% !important; }
+
+.crm-readable-redesign .planning-entry-submit { display: grid !important; grid-template-columns: minmax(0, 1fr) auto !important; align-items: center !important; gap: 14px !important; min-height: 82px !important; }
+.crm-readable-redesign .planning-entry-info-clean,
+.crm-readable-redesign .planning-entry-main-line,
+.crm-readable-redesign .planning-entry-secondary-line { min-width: 0 !important; }
+.crm-readable-redesign .planning-entry-main-line,
+.crm-readable-redesign .planning-entry-secondary-line { display: flex !important; flex-wrap: wrap !important; gap: 7px !important; align-items: center !important; }
+.crm-readable-redesign .planning-entry-side-clean { display: flex !important; align-items: center !important; gap: 8px !important; flex-wrap: wrap !important; justify-content: flex-end !important; }
+.crm-readable-redesign .planning-list-summary { padding: 14px 18px !important; border-radius: 14px !important; }
+.crm-readable-redesign .planning-list-summary-actions .secondary-button,
+.crm-readable-redesign .planning-list-summary-actions button { min-height: 34px !important; font-size: 0.66rem !important; }
+
+.crm-readable-redesign .pipeline-grid,
+.crm-readable-redesign .task-pipeline-grid { gap: 14px !important; }
+.crm-readable-redesign .pipeline-column,
+.crm-readable-redesign .task-column { padding: 14px !important; border-radius: 14px !important; border: 1px solid var(--crm-border) !important; background: rgba(255,250,242,0.62) !important; }
+.crm-readable-redesign .pipeline-title { margin-bottom: 10px !important; }
+.crm-readable-redesign .edit-dialog,
+.crm-readable-redesign .contact-detail-dialog,
+.crm-readable-redesign .lead-detail-dialog,
+.crm-readable-redesign .asset-detail-dialog,
+.crm-readable-redesign .document-preview-modal,
+.crm-readable-redesign .vendor-invoice-preview-dialog { border-radius: 20px !important; border: 1px solid var(--crm-border-strong) !important; box-shadow: 0 30px 90px rgba(3, 23, 41, 0.22) !important; }
+.crm-readable-redesign .confirm-dialog { border-radius: 18px !important; border: 1px solid var(--crm-border-strong) !important; }
+.crm-readable-redesign .toast { border-radius: 12px !important; box-shadow: 0 20px 60px rgba(3, 23, 41, 0.22) !important; }
+
+@media (max-width: 1180px) {
+  .crm-readable-redesign { grid-template-columns: 1fr !important; }
+  .crm-readable-redesign .sidebar { position: static !important; width: 100% !important; height: auto !important; padding: 16px !important; }
+  .crm-readable-redesign .nav-list { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important; }
+  .crm-readable-redesign .content-panel { padding: 18px !important; }
+  .crm-readable-redesign .topbar,
+  .crm-readable-redesign .two-columns,
+  .crm-readable-redesign .contacts-layout,
+  .crm-readable-redesign .documents-grid,
+  .crm-readable-redesign .drive-documents-grid,
+  .crm-readable-redesign .vendor-invoices-view,
+  .crm-readable-redesign .house-tracking-grid { grid-template-columns: 1fr !important; }
+  .crm-readable-redesign .topbar-actions { justify-content: flex-start !important; }
+}
+
+@media (max-width: 720px) {
+  .crm-readable-redesign .content-panel { padding: 12px !important; }
+  .crm-readable-redesign .card,
+  .crm-readable-redesign .form-card,
+  .crm-readable-redesign .documents-list-card,
+  .crm-readable-redesign .documents-form-card { padding: 15px !important; }
+  .crm-readable-redesign .form-grid { grid-template-columns: 1fr !important; }
+  .crm-readable-redesign .planning-entry-submit,
+  .crm-readable-redesign .document-card,
+  .crm-readable-redesign .document-folder-card { grid-template-columns: 1fr !important; }
+  .crm-readable-redesign .planning-entry-side-clean,
+  .crm-readable-redesign .document-file-actions,
+  .crm-readable-redesign .item-actions { justify-content: flex-start !important; }
+}
+
+/* === CRM GLOBAL READABILITY REDESIGN v20260626 END === */
