@@ -6441,3 +6441,318 @@ iframe.vendor-invoice-preview-frame {
     white-space: normal;
   }
 }
+
+/* CRM_PLANNING_CLEAN_COMPACT_LINES_20260626 */
+/* Objectif : planning lisible en 3 secondes. Une intervention = une ligne compacte. */
+
+.planning-list-summary {
+  padding: 14px 16px !important;
+  margin: 18px 0 12px !important;
+  border: 1px solid rgba(212, 177, 106, 0.20) !important;
+  background: rgba(255, 255, 255, 0.46) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+}
+
+.planning-list-summary strong {
+  display: block !important;
+  margin-bottom: 2px !important;
+  font-size: 0.92rem !important;
+  line-height: 1.2 !important;
+}
+
+.planning-list-summary span {
+  margin: 0 !important;
+  font-size: 0.82rem !important;
+  line-height: 1.25 !important;
+  opacity: 0.62 !important;
+}
+
+.planning-list-summary-actions .ghost-button,
+.planning-list-summary-actions .muted-action-button {
+  min-height: 34px !important;
+  padding: 8px 11px !important;
+  font-size: 0.64rem !important;
+  letter-spacing: 0.14em !important;
+  opacity: 0.72 !important;
+}
+
+.planning-priority-list {
+  gap: 8px !important;
+}
+
+.planning-priority-list .planning-entry-compact-row,
+.planning-entry-compact-row.planning-entry-line-clean {
+  min-height: 0 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  column-gap: 18px !important;
+  padding: 11px 14px !important;
+  border-width: 1px !important;
+  border-left-width: 3px !important;
+  box-shadow: none !important;
+}
+
+.planning-entry-line-clean.status-prevu {
+  border-color: rgba(157, 59, 59, 0.18) !important;
+  border-left-color: rgba(157, 59, 59, 0.75) !important;
+  background: rgba(157, 59, 59, 0.045) !important;
+}
+
+.planning-entry-line-clean.status-en-cours,
+.planning-entry-line-clean.status-a-confirmer {
+  border-color: rgba(214, 166, 61, 0.22) !important;
+  border-left-color: rgba(214, 166, 61, 0.85) !important;
+  background: rgba(214, 166, 61, 0.055) !important;
+}
+
+.planning-entry-line-clean.status-termine {
+  border-color: rgba(47, 125, 74, 0.18) !important;
+  border-left-color: rgba(47, 125, 74, 0.78) !important;
+  background: rgba(47, 125, 74, 0.05) !important;
+  opacity: 0.82 !important;
+}
+
+.planning-entry-line-clean.status-annule {
+  border-color: rgba(7, 31, 39, 0.10) !important;
+  border-left-color: rgba(7, 31, 39, 0.24) !important;
+  background: rgba(7, 31, 39, 0.025) !important;
+  opacity: 0.54 !important;
+}
+
+.planning-entry-info-clean {
+  min-width: 0 !important;
+}
+
+.planning-entry-info-clean strong {
+  display: block !important;
+  max-width: 100% !important;
+  margin: 0 0 3px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 0.94rem !important;
+  line-height: 1.18 !important;
+}
+
+.planning-entry-main-line,
+.planning-entry-secondary-line {
+  display: block !important;
+  max-width: 100% !important;
+  margin-top: 2px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 0.80rem !important;
+  line-height: 1.25 !important;
+}
+
+.planning-entry-main-line {
+  opacity: 0.72 !important;
+}
+
+.planning-entry-secondary-line {
+  opacity: 0.48 !important;
+}
+
+.planning-entry-info-clean .action-meta,
+.planning-entry-info-clean [class*="action-meta"] {
+  margin-top: 4px !important;
+  font-size: 0.64rem !important;
+  letter-spacing: 0.10em !important;
+  opacity: 0.62 !important;
+}
+
+.planning-entry-side-clean {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 12px !important;
+  min-width: 330px !important;
+}
+
+.planning-entry-badges-clean {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  justify-content: flex-end !important;
+  gap: 6px !important;
+}
+
+.planning-entry-badges-clean .badge {
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 5px 8px !important;
+  border-radius: 0 !important;
+  font-size: 0.60rem !important;
+  line-height: 1 !important;
+  letter-spacing: 0.12em !important;
+  white-space: nowrap !important;
+  text-transform: uppercase !important;
+}
+
+.planning-entry-line-clean.status-termine .badge {
+  border-color: rgba(47, 125, 74, 0.22) !important;
+  background: rgba(47, 125, 74, 0.09) !important;
+  color: #2f6d43 !important;
+}
+
+.planning-entry-line-clean.status-en-cours .badge,
+.planning-entry-line-clean.status-a-confirmer .badge {
+  border-color: rgba(214, 166, 61, 0.26) !important;
+  background: rgba(214, 166, 61, 0.10) !important;
+  color: #755716 !important;
+}
+
+.planning-entry-line-clean.status-prevu .badge {
+  border-color: rgba(157, 59, 59, 0.20) !important;
+  background: rgba(157, 59, 59, 0.075) !important;
+  color: #7a2b2f !important;
+}
+
+.planning-quick-actions-clean {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-wrap: nowrap !important;
+  gap: 6px !important;
+}
+
+.planning-quick-actions-clean .planning-edit-main,
+.planning-entry-more-clean summary {
+  min-height: 30px !important;
+  height: 30px !important;
+  padding: 6px 9px !important;
+  border-radius: 0 !important;
+  font-size: 0.62rem !important;
+  line-height: 1 !important;
+  letter-spacing: 0.12em !important;
+  white-space: nowrap !important;
+}
+
+.planning-quick-actions-clean .planning-edit-main {
+  background: transparent !important;
+  border: 0 !important;
+  color: rgba(2, 29, 48, 0.72) !important;
+  box-shadow: none !important;
+}
+
+.planning-quick-actions-clean .planning-edit-main:hover {
+  color: rgba(2, 29, 48, 1) !important;
+  text-decoration: underline !important;
+}
+
+.planning-entry-more-clean {
+  position: relative !important;
+  display: inline-block !important;
+}
+
+.planning-entry-more-clean summary {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 34px !important;
+  border: 1px solid rgba(212, 177, 106, 0.28) !important;
+  background: rgba(255, 255, 255, 0.42) !important;
+  color: rgba(2, 29, 48, 0.72) !important;
+  cursor: pointer !important;
+  list-style: none !important;
+}
+
+.planning-entry-more-clean summary::-webkit-details-marker {
+  display: none !important;
+}
+
+.planning-entry-more-clean[open] {
+  z-index: 50 !important;
+}
+
+.planning-entry-more-menu {
+  position: absolute !important;
+  right: 0 !important;
+  top: calc(100% + 6px) !important;
+  display: grid !important;
+  gap: 4px !important;
+  min-width: 190px !important;
+  padding: 8px !important;
+  border: 1px solid rgba(212, 177, 106, 0.28) !important;
+  background: #fffaf2 !important;
+  box-shadow: 0 14px 32px rgba(2, 29, 48, 0.14) !important;
+}
+
+.planning-entry-more-menu button,
+.planning-entry-more-clean[open] .planning-delete-button {
+  position: static !important;
+  width: 100% !important;
+  min-height: 30px !important;
+  padding: 7px 9px !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: rgba(2, 29, 48, 0.72) !important;
+  font-size: 0.64rem !important;
+  letter-spacing: 0.10em !important;
+  text-align: left !important;
+  text-transform: uppercase !important;
+  cursor: pointer !important;
+  opacity: 1 !important;
+}
+
+.planning-entry-more-menu button:hover {
+  background: rgba(212, 177, 106, 0.11) !important;
+}
+
+.planning-entry-more-menu .planning-delete-button {
+  margin-top: 4px !important;
+  color: rgba(150, 50, 55, 0.78) !important;
+}
+
+.planning-priority-cockpit-card,
+.planning-completion-alerts-card {
+  display: none !important;
+}
+
+@media (max-width: 1100px) {
+  .planning-entry-compact-row.planning-entry-line-clean {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .planning-entry-side-clean {
+    min-width: 0 !important;
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+
+  .planning-entry-badges-clean {
+    flex-wrap: wrap !important;
+    justify-content: flex-start !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .planning-list-summary {
+    align-items: stretch !important;
+    flex-direction: column !important;
+  }
+
+  .planning-entry-side-clean {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+
+  .planning-quick-actions-clean,
+  .planning-quick-actions-clean .planning-edit-main,
+  .planning-entry-more-clean,
+  .planning-entry-more-clean summary {
+    width: 100% !important;
+  }
+
+  .planning-entry-more-menu {
+    position: static !important;
+    margin-top: 6px !important;
+    width: 100% !important;
+  }
+}

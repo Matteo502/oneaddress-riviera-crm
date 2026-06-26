@@ -8690,27 +8690,29 @@ function PlanningView({
     const isClosed = status === "Terminé" || status === "Annulé";
 
     return (
-      <div className="planning-quick-actions">
-        {!isClosed ? (
-          <>
-            <button className="asset-edit-button" type="button" onClick={() => markPlanningEntryDone(entry)}>Terminer</button>
-            <button className="asset-edit-button" type="button" onClick={() => postponePlanningEntry(entry)}>Reporter</button>
-            <button className="ghost-button muted-action-button" type="button" onClick={() => cancelPlanningEntryOperationally(entry)}>Annuler</button>
-          </>
-        ) : null}
-        <button className="asset-edit-button" type="button" onClick={() => startPlanningEntryEdit(entry)}>Modifier</button>
-        <details className="planning-entry-more">
+      <div className="planning-quick-actions planning-quick-actions-clean">
+        <button className="asset-edit-button planning-edit-main" type="button" onClick={() => startPlanningEntryEdit(entry)}>Modifier</button>
+        <details className="planning-entry-more planning-entry-more-clean">
           <summary aria-label="Plus d'actions">•••</summary>
-          <button
-            className="planning-delete-button"
-            type="button"
-            onClick={() => {
-              if (editingPlanningEntry?.id === entry.id) {
-                setEditingPlanningEntry(null);
-              }
-              onDeletePlanningEntry(entry.id);
-            }}
-          >Supprimer définitivement</button>
+          <div className="planning-entry-more-menu">
+            {!isClosed ? (
+              <>
+                <button type="button" onClick={() => markPlanningEntryDone(entry)}>Terminer</button>
+                <button type="button" onClick={() => postponePlanningEntry(entry)}>Reporter</button>
+                <button type="button" onClick={() => cancelPlanningEntryOperationally(entry)}>Annuler</button>
+              </>
+            ) : null}
+            <button
+              className="planning-delete-button"
+              type="button"
+              onClick={() => {
+                if (editingPlanningEntry?.id === entry.id) {
+                  setEditingPlanningEntry(null);
+                }
+                onDeletePlanningEntry(entry.id);
+              }}
+            >Supprimer définitivement</button>
+          </div>
         </details>
       </div>
     );
@@ -9274,19 +9276,21 @@ function PlanningView({
                 const asset = assets.find((item) => item.type === entry.assetType && item.id === entry.assetId);
 
                 return (
-                  <article className={`mini-row planning-entry-compact-row status-${getPlanningStatusClass(getPlanningEntryStatus(entry))}`} key={entry.id} data-notification-target={`planning-${entry.id}`}>
-                    <div>
+                  <article className={`mini-row planning-entry-compact-row planning-entry-line-clean status-${getPlanningStatusClass(getPlanningEntryStatus(entry))}`} key={entry.id} data-notification-target={`planning-${entry.id}`}>
+                    <div className="planning-entry-info-clean">
                       <strong>{entry.title}</strong>
                       <span className="planning-entry-main-line">
                         {formatPlanningDateTimeRange(entry)} · {entry.contactName || "Aucun contact lié"}{asset ? ` · ${asset.label}` : ""}
                       </span>
-                      <span className="planning-entry-secondary-line">Planning {getPlanningEntryCategory(entry)} · {entry.type}{entry.notes ? ` · ${entry.notes}` : ""}</span>
+                      <span className="planning-entry-secondary-line">{entry.type}{entry.notes ? ` · ${entry.notes}` : ""}</span>
                       <ActionMeta item={entry} />
                     </div>
-                    <div className="item-actions planning-entry-actions">
-                      <Badge>{getPlanningEntryStatus(entry)}</Badge>
-                      <Badge>{entry.blocksAvailability ? "Bloquant" : "Non bloquant"}</Badge>
-                      {entry.priority && entry.priority !== "Normal" ? <Badge>{entry.priority}</Badge> : null}
+                    <div className="planning-entry-side-clean">
+                      <div className="planning-entry-badges-clean">
+                        <Badge>{getPlanningEntryStatus(entry)}</Badge>
+                        <Badge>{entry.blocksAvailability ? "Bloquant" : "Non bloquant"}</Badge>
+                        {entry.priority && entry.priority !== "Normal" ? <Badge>{entry.priority}</Badge> : null}
+                      </div>
                       {renderPlanningQuickActions(entry)}
                     </div>
                   </article>
