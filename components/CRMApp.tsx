@@ -3363,6 +3363,7 @@ function HouseTrackingView({
   const [showAllHoursHistory, setShowAllHoursHistory] = useState(false);
   const [showAllPaymentsHistory, setShowAllPaymentsHistory] = useState(false);
   const [uploadingWorkerDocument, setUploadingWorkerDocument] = useState(false);
+  const [houseSection, setHouseSection] = useState<"today" | "hours" | "payments" | "settings">("today");
 
   function normalizeHouseDateValue(value: string) {
     if (!value) return "";
@@ -3783,24 +3784,24 @@ function HouseTrackingView({
   }
 
   return (
-    <div className="stack house-tracking-view">
-      <section className="card">
-        <div className="section-heading">
+    <div className="stack house-tracking-view house-simple-tabs-view">
+      <section className="card house-control-card">
+        <div className="section-heading house-section-heading">
           <div>
-            <p className="eyebrow">Gestion privée maison</p>
-            <h3>Suivi des heures, salaires et paiements</h3>
+            <p className="eyebrow">Suivi maison</p>
+            <h3>Gestion simple des heures et paiements</h3>
           </div>
           <button className="secondary-button" type="button" onClick={exportHouseCsv}>Export CSV</button>
         </div>
 
-        <div className="stats-grid">
-          <StatCard label="Heures travaillées" value={formatHours(totalHours)} caption="Dates sélectionnées" />
-          <StatCard label="Dette créée" value={currency.format(totalDue)} caption="Dates sélectionnées" />
-          <StatCard label="Payé imputé" value={currency.format(totalPaid)} caption="Dates sélectionnées" />
-          <StatCard label="Delta période" value={formatHouseBalanceLabel(totalBalance)} caption="Sur la période" />
+        <div className="stats-grid house-summary-grid">
+          <StatCard label="Heures" value={formatHours(totalHours)} caption="Période sélectionnée" />
+          <StatCard label="À payer" value={currency.format(totalDue)} caption="Dette créée" />
+          <StatCard label="Payé" value={currency.format(totalPaid)} caption="Paiements imputés" />
+          <StatCard label="Solde" value={formatHouseBalanceLabel(totalBalance)} caption="Delta réel" />
         </div>
 
-        <div className="form-grid" style={{ marginTop: 18 }}>
+        <div className="house-filter-row">
           <label>Date début
             <input
               type="date"
@@ -3833,84 +3834,67 @@ function HouseTrackingView({
         </div>
       </section>
 
-      <div className="house-tracking-grid">
-        <aside className="stack">
-          <section className="card">
-            <p className="eyebrow">Maisons</p>
-            <h3>Maisons</h3>
-            <form className="form-grid" onSubmit={submitHouse}>
-              <label>Nom
-                <input name="name" placeholder="Maison principale" />
-              </label>
-              <label>Adresse
-                <input name="address" placeholder="Adresse" />
-              </label>
-              <label>Notes
-                <textarea name="notes" placeholder="Accès, alarmes, consignes..." />
-              </label>
-              <button className="primary-button planning-entry-submit" type="submit">Ajouter la maison</button>
-            </form>
+      <nav className="house-tabs" aria-label="Navigation suivi maison">
+        <button className={houseSection === "today" ? "primary-button house-tab active" : "secondary-button house-tab"} type="button" onClick={() => setHouseSection("today")}>Aujourd’hui</button>
+        <button className={houseSection === "hours" ? "primary-button house-tab active" : "secondary-button house-tab"} type="button" onClick={() => setHouseSection("hours")}>Heures</button>
+        <button className={houseSection === "payments" ? "primary-button house-tab active" : "secondary-button house-tab"} type="button" onClick={() => setHouseSection("payments")}>Paiements</button>
+        <button className={houseSection === "settings" ? "primary-button house-tab active" : "secondary-button house-tab"} type="button" onClick={() => setHouseSection("settings")}>Réglages</button>
+      </nav>
 
-            <div className="list-stack" style={{ marginTop: 18 }}>
-              {houses.length === 0 ? <p className="muted-line">Aucune maison.</p> : houses.map((house) => (
-                <article className="mini-row" key={house.id}>
+      {houseSection === "today" && (
+        <section className="card house-tab-panel">
+          <div className="section-heading house-section-heading">
+            <div>
+              <p className="eyebrow">Vue rapide</p>
+              <h3>Aujourd’hui</h3>
+            </div>
+            <div className="house-quick-actions">
+              <button className="primary-button" type="button" onClick={() => setHouseSection("hours")}>Ajouter heures</button>
+              <button className="secondary-button" type="button" onClick={() => setHouseSection("payments")}>Ajouter paiement</button>
+              <button className="secondary-button" type="button" onClick={() => setHouseSection("settings")}>Réglages</button>
+            </div>
+          </div>
+
+          <div className="house-today-grid">
+            <div className="house-mini-panel">
+              <p className="eyebrow">À payer</p>
+              {balanceRows.filter((row) => row.balance > 0).length === 0 ? (
+                <p className="muted-line">Aucun solde à payer sur la période.</p>
+              ) : balanceRows.filter((row) => row.balance > 0).slice(0, 6).map((row) => (
+                <article className="mini-row house-compact-row" key={row.worker.id} data-notification-target={`house-worker-${row.worker.id}`}>
                   <div>
-                    <strong>{house.name}</strong>
-                    <span>{house.address || "Adresse à compléter"}</span>
+                    <strong>{row.worker.contactName}</strong>
+                    <span>{formatHours(row.hours)} · {currency.format(row.due)} dû · {currency.format(row.paid)} payé</span>
                   </div>
-                  <button className="danger-link" type="button" onClick={() => window.confirm("Supprimer cette maison ?") && onDeleteHouse(house.id)}>Suppr.</button>
+                  <strong className="house-balance-positive">{formatHouseBalanceLabel(row.balance)}</strong>
                 </article>
               ))}
             </div>
-          </section>
 
-          <section className="card">
-            <p className="eyebrow">Intervenants</p>
-            <h3>Intervenants</h3>
-            <form className="form-grid" onSubmit={submitWorker}>
-              <label>Contact CRM
-                <input name="contactSearch" list="house-contact-options" placeholder="Tapez un nom, prénom, société, email ou téléphone" autoComplete="off" />
-                <datalist id="house-contact-options">
-                  {sortedHouseContacts.map((contact) => <option key={contact.id} value={getHouseContactSearchLabel(contact)} />)}
-                </datalist>
-              </label>
-              <label>Taux horaire
-                <input name="hourlyRate" type="number" min="0" step="0.5" placeholder="Ex : 18" />
-              </label>
-              <label>Document à télécharger
-                <input name="documentFile" type="file" />
-              </label>
-              <label>Notes
-                <textarea name="notes" placeholder="Disponibilités, conditions, préférences..." />
-              </label>
-              <button className="primary-button" type="submit" disabled={uploadingWorkerDocument}>
-                {uploadingWorkerDocument ? "Chargement..." : "Ajouter l’intervenant"}
-              </button>
-            </form>
-
-            <div className="list-stack" style={{ marginTop: 18 }}>
-              {workers.length === 0 ? <p className="muted-line">Aucun intervenant.</p> : workers.map((worker) => (
-                <article className="mini-row" key={worker.id} data-notification-target={`house-worker-${worker.id}`}>
+            <div className="house-mini-panel">
+              <p className="eyebrow">Heures du jour</p>
+              {filteredEntries.filter((entry) => normalizeHouseDateValue(entry.date) === today).length === 0 ? (
+                <p className="muted-line">Aucune heure saisie aujourd’hui.</p>
+              ) : filteredEntries.filter((entry) => normalizeHouseDateValue(entry.date) === today).slice(0, 6).map((entry) => (
+                <article className="mini-row house-compact-row" key={entry.id}>
                   <div>
-                    <strong>{worker.contactName}</strong>
-                    <span>{worker.role} · {currency.format(worker.hourlyRate)}/h</span>
-                    {worker.documentFileName && <span>Document : {worker.documentFileName}</span>}
-                    {worker.documentStoragePath && (
-                      <button className="secondary-link" type="button" onClick={() => void downloadHouseWorkerDocument(worker)}>Télécharger document</button>
-                    )}
+                    <strong>{entry.workerName}</strong>
+                    <span>{entry.houseName} · {entry.startTime} à {entry.endTime}</span>
                   </div>
-                  <button className="danger-link" type="button" onClick={() => window.confirm("Supprimer cet intervenant ?") && onDeleteWorker(worker.id)}>Suppr.</button>
+                  <strong>{formatHours(getHouseTimeHours(entry))}</strong>
                 </article>
               ))}
             </div>
-          </section>
-        </aside>
+          </div>
+        </section>
+      )}
 
-        <main className="stack">
-          <section className="card">
+      {houseSection === "hours" && (
+        <div className="house-two-columns">
+          <section className="card house-tab-panel">
             <p className="eyebrow">Saisie</p>
-            <h3>Saisie des heures</h3>
-            <form className="form-grid" onSubmit={submitTimeEntry}>
+            <h3>Ajouter des heures</h3>
+            <form className="form-grid house-compact-form" onSubmit={submitTimeEntry}>
               <label>Date
                 <input type="date" value={hourDraft.date} onChange={(event) => setHourDraft((current) => ({ ...current, date: event.target.value }))} />
               </label>
@@ -3942,19 +3926,44 @@ function HouseTrackingView({
                 <input type="number" min="0" step="0.5" value={hourDraft.hourlyRate} onChange={(event) => setHourDraft((current) => ({ ...current, hourlyRate: event.target.value }))} />
               </label>
               <label>Note
-                <input value={hourDraft.note} onChange={(event) => setHourDraft((current) => ({ ...current, note: event.target.value }))} placeholder="Ex : ménage complet, soirée enfants..." />
+                <input value={hourDraft.note} onChange={(event) => setHourDraft((current) => ({ ...current, note: event.target.value }))} placeholder="Ex : ménage complet" />
               </label>
-              <div className="full muted-line" style={{ padding: 14, background: "rgba(7,31,39,0.04)" }}>
+              <div className="full house-calculation-line">
                 Calcul immédiat : <strong>{formatHours(previewHours)}</strong> — <strong>{currency.format(previewAmount)}</strong>
               </div>
               <button className="primary-button planning-entry-submit" type="submit">Ajouter les heures</button>
             </form>
           </section>
 
-          <section className="card">
+          <section className="card house-tab-panel">
+            <p className="eyebrow">Historique</p>
+            <h3>Heures saisies</h3>
+            <div className="list-stack house-history-list">
+              {filteredEntries.length === 0 ? <p className="muted-line">Aucune heure saisie.</p> : visibleHourEntries.map((entry) => (
+                <article className="mini-row house-compact-row" key={entry.id}>
+                  <div>
+                    <strong>{entry.workerName}</strong>
+                    <span>{entry.date} · {entry.houseName} · {entry.startTime} à {entry.endTime} · {formatHours(getHouseTimeHours(entry))} · {currency.format(getHouseTimeAmount(entry))}</span>
+                  </div>
+                  <button className="danger-link" type="button" onClick={() => window.confirm("Supprimer ces heures ?") && onDeleteTimeEntry(entry.id)}>Suppr.</button>
+                </article>
+              ))}
+            </div>
+            {filteredEntries.length > 7 && (
+              <button className="secondary-button" type="button" onClick={() => setShowAllHoursHistory((current) => !current)}>
+                {showAllHoursHistory ? "Réduire à 7 lignes" : `Afficher tout (${filteredEntries.length})`}
+              </button>
+            )}
+          </section>
+        </div>
+      )}
+
+      {houseSection === "payments" && (
+        <div className="house-two-columns">
+          <section className="card house-tab-panel">
             <p className="eyebrow">Paiements</p>
-            <h3>Saisie des paiements</h3>
-            <form className="form-grid" onSubmit={submitPayment}>
+            <h3>Ajouter un paiement</h3>
+            <form className="form-grid house-compact-form" onSubmit={submitPayment}>
               <label>Date
                 <input name="date" type="date" defaultValue={today} />
               </label>
@@ -3989,13 +3998,103 @@ function HouseTrackingView({
             </form>
           </section>
 
-          <section className="card">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Soldes</p>
-                <h3>Delta réel par intervenant</h3>
-              </div>
+          <section className="card house-tab-panel">
+            <p className="eyebrow">Historique</p>
+            <h3>Paiements saisis</h3>
+            <div className="list-stack house-history-list">
+              {filteredPayments.length === 0 ? <p className="muted-line">Aucun paiement saisi.</p> : visiblePaymentEntries.map((payment) => (
+                <article className="mini-row house-compact-row" key={payment.id}>
+                  <div>
+                    <strong>{payment.workerName}</strong>
+                    <span>{payment.date} · {payment.houseName} · {currency.format(payment.amount)} · {payment.method}</span>
+                  </div>
+                  <button className="danger-link" type="button" onClick={() => window.confirm("Supprimer ce paiement ?") && onDeletePayment(payment.id)}>Suppr.</button>
+                </article>
+              ))}
             </div>
+            {filteredPayments.length > 7 && (
+              <button className="secondary-button" type="button" onClick={() => setShowAllPaymentsHistory((current) => !current)}>
+                {showAllPaymentsHistory ? "Réduire à 7 lignes" : `Afficher tout (${filteredPayments.length})`}
+              </button>
+            )}
+          </section>
+        </div>
+      )}
+
+      {houseSection === "settings" && (
+        <div className="house-two-columns">
+          <section className="card house-tab-panel">
+            <p className="eyebrow">Réglages</p>
+            <h3>Maisons</h3>
+            <form className="form-grid house-compact-form" onSubmit={submitHouse}>
+              <label>Nom
+                <input name="name" placeholder="Maison principale" />
+              </label>
+              <label>Adresse
+                <input name="address" placeholder="Adresse" />
+              </label>
+              <label>Notes
+                <textarea name="notes" placeholder="Accès, alarmes, consignes..." />
+              </label>
+              <button className="primary-button planning-entry-submit" type="submit">Ajouter la maison</button>
+            </form>
+            <div className="list-stack house-history-list">
+              {houses.length === 0 ? <p className="muted-line">Aucune maison.</p> : houses.map((house) => (
+                <article className="mini-row house-compact-row" key={house.id}>
+                  <div>
+                    <strong>{house.name}</strong>
+                    <span>{house.address || "Adresse à compléter"}</span>
+                  </div>
+                  <button className="danger-link" type="button" onClick={() => window.confirm("Supprimer cette maison ?") && onDeleteHouse(house.id)}>Suppr.</button>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="card house-tab-panel">
+            <p className="eyebrow">Réglages</p>
+            <h3>Intervenants</h3>
+            <form className="form-grid house-compact-form" onSubmit={submitWorker}>
+              <label>Contact CRM
+                <input name="contactSearch" list="house-contact-options" placeholder="Nom, société, email ou téléphone" autoComplete="off" />
+                <datalist id="house-contact-options">
+                  {sortedHouseContacts.map((contact) => <option key={contact.id} value={getHouseContactSearchLabel(contact)} />)}
+                </datalist>
+              </label>
+              <label>Taux horaire
+                <input name="hourlyRate" type="number" min="0" step="0.5" placeholder="Ex : 18" />
+              </label>
+              <label>Document
+                <input name="documentFile" type="file" />
+              </label>
+              <label>Notes
+                <textarea name="notes" placeholder="Disponibilités, conditions, préférences..." />
+              </label>
+              <button className="primary-button" type="submit" disabled={uploadingWorkerDocument}>
+                {uploadingWorkerDocument ? "Chargement..." : "Ajouter l’intervenant"}
+              </button>
+            </form>
+
+            <div className="list-stack house-history-list">
+              {workers.length === 0 ? <p className="muted-line">Aucun intervenant.</p> : workers.map((worker) => (
+                <article className="mini-row house-compact-row" key={worker.id} data-notification-target={`house-worker-${worker.id}`}>
+                  <div>
+                    <strong>{worker.contactName}</strong>
+                    <span>{worker.role} · {currency.format(worker.hourlyRate)}/h</span>
+                    {worker.documentFileName && <span>Document : {worker.documentFileName}</span>}
+                    {worker.documentStoragePath && (
+                      <button className="secondary-link" type="button" onClick={() => void downloadHouseWorkerDocument(worker)}>Télécharger document</button>
+                    )}
+                  </div>
+                  <button className="danger-link" type="button" onClick={() => window.confirm("Supprimer cet intervenant ?") && onDeleteWorker(worker.id)}>Suppr.</button>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="card house-tab-panel full">
+            <p className="eyebrow">Soldes</p>
+            <h3>Delta réel par intervenant</h3>
             {balanceRows.length === 0 ? (
               <p className="muted-line">Aucun delta sur la période sélectionnée.</p>
             ) : (
@@ -4025,50 +4124,8 @@ function HouseTrackingView({
               </div>
             )}
           </section>
-
-          <section className="card">
-            <p className="eyebrow">Historique</p>
-            <h3>Historique des heures</h3>
-            <div className="list-stack">
-              {filteredEntries.length === 0 ? <p className="muted-line">Aucune heure saisie.</p> : visibleHourEntries.map((entry) => (
-                <article className="mini-row" key={entry.id}>
-                  <div>
-                    <strong>{entry.workerName}</strong>
-                    <span>{entry.date} · {entry.houseName} · {entry.startTime} à {entry.endTime} · {formatHours(getHouseTimeHours(entry))} · {currency.format(getHouseTimeAmount(entry))}</span>
-                  </div>
-                  <button className="danger-link" type="button" onClick={() => window.confirm("Supprimer ces heures ?") && onDeleteTimeEntry(entry.id)}>Suppr.</button>
-                </article>
-              ))}
-            </div>
-            {filteredEntries.length > 7 && (
-              <button className="secondary-button" type="button" onClick={() => setShowAllHoursHistory((current) => !current)}>
-                {showAllHoursHistory ? "Réduire à 7 lignes" : `Afficher tout (${filteredEntries.length})`}
-              </button>
-            )}
-          </section>
-
-          <section className="card">
-            <p className="eyebrow">Historique</p>
-            <h3>Historique des paiements</h3>
-            <div className="list-stack">
-              {filteredPayments.length === 0 ? <p className="muted-line">Aucun paiement saisi.</p> : visiblePaymentEntries.map((payment) => (
-                <article className="mini-row" key={payment.id}>
-                  <div>
-                    <strong>{payment.workerName}</strong>
-                    <span>{payment.date} · {payment.houseName} · {currency.format(payment.amount)} · {payment.method}</span>
-                  </div>
-                  <button className="danger-link" type="button" onClick={() => window.confirm("Supprimer ce paiement ?") && onDeletePayment(payment.id)}>Suppr.</button>
-                </article>
-              ))}
-            </div>
-            {filteredPayments.length > 7 && (
-              <button className="secondary-button" type="button" onClick={() => setShowAllPaymentsHistory((current) => !current)}>
-                {showAllPaymentsHistory ? "Réduire à 7 lignes" : `Afficher tout (${filteredPayments.length})`}
-              </button>
-            )}
-          </section>
-        </main>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -7780,37 +7837,41 @@ function createQuoteDraftFromLead(lead: Lead) {
       </aside>
 
       <section className="content-panel">
-        <header className="topbar">
-          <div>
+        <header className="topbar crm-topbar-compact">
+          <div className="crm-topbar-title">
             <p className="eyebrow">CRM interne</p>
             <h2>{titleForTab(activeTab)}</h2>
           </div>
-          <div className="topbar-actions">
-<input
-              className="search-input"
+          <div className="topbar-actions crm-topbar-actions-compact">
+            <input
+              className="search-input crm-topbar-search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Rechercher client, bien, lead..."
               aria-label="Recherche"
             />
-            <span className="muted-line">Connecté : {sessionEmail}</span>
-            <label className="actor-select-label">
+            <span className="muted-line crm-session-email">Connecté : {sessionEmail}</span>
+            <label className="actor-select-label crm-actor-select-label">
               <span>Actions par</span>
               <select value={activeActor} onChange={(event) => setActiveActor(event.target.value as CRMActor)}>
                 {crmActors.map((actor) => <option key={actor}>{actor}</option>)}
               </select>
             </label>
-            <button className="secondary-button" type="button" onClick={onLogout}>Déconnexion</button>
-            <button className="secondary-button" type="button" onClick={openSafeCsvImportPrompt}>Import sécurisé</button>
-            <button className="secondary-button" onClick={exportJson}>Backup fichier</button>
-            <button className="secondary-button" type="button" onClick={saveCrmBackupToSupabase}>Sauvegarde cloud</button>
-            <button className="secondary-button" type="button" onClick={reloadSharedWorkspaceFromCloud}>Recharger cloud</button>
-            <button className="secondary-button" type="button" onClick={forceSaveSharedWorkspaceNow}>Forcer synchro</button>
-            
-            <button className="secondary-button" onClick={() => {
-            exportCRMAsCsv(data);
-            notify("Export CSV téléchargé.");
-          }}>Export CSV</button>
+            <details className="crm-topbar-menu">
+              <summary className="secondary-button crm-topbar-menu-button">Actions</summary>
+              <div className="crm-topbar-menu-panel">
+                <button type="button" onClick={onLogout}>Déconnexion</button>
+                <button type="button" onClick={openSafeCsvImportPrompt}>Import sécurisé</button>
+                <button type="button" onClick={exportJson}>Backup fichier</button>
+                <button type="button" onClick={saveCrmBackupToSupabase}>Sauvegarde cloud</button>
+                <button type="button" onClick={reloadSharedWorkspaceFromCloud}>Recharger cloud</button>
+                <button type="button" onClick={forceSaveSharedWorkspaceNow}>Forcer synchro</button>
+                <button type="button" onClick={() => {
+                  exportCRMAsCsv(data);
+                  notify("Export CSV téléchargé.");
+                }}>Export CSV</button>
+              </div>
+            </details>
           </div>
         </header>
 
