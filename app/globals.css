@@ -7761,3 +7761,66 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
   text-transform: uppercase;
 }
 /* === PLANNING EDIT SCROLL FIX END === */
+
+/* === CONTACTS TOOLBAR EMPTY SPACE FIX START === */
+
+/* Réduit le grand vide dans l'en-tête Contacts */
+.contacts-workspace .contacts-toolbar {
+  min-height: 0 !important;
+  padding: 24px !important;
+  display: grid !important;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(520px, 1.1fr) !important;
+  gap: 22px !important;
+  align-items: start !important;
+}
+
+/* Le texte de gauche ne doit plus occuper une hauteur inutile */
+.contacts-workspace .contacts-toolbar .section-heading {
+  min-height: 0 !important;
+  align-self: start !important;
+}
+
+/* Les 3 cartes stats passent en ligne au lieu d'être empilées */
+.contacts-workspace .contacts-toolbar .stats-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  align-items: stretch !important;
+  width: 100% !important;
+}
+
+/* Cartes stats plus compactes */
+.contacts-workspace .contacts-toolbar .stats-grid > * {
+  min-height: 112px !important;
+  padding: 18px !important;
+}
+
+/* Les filtres viennent sous toute la largeur, sans créer de grand vide */
+.contacts-workspace .contacts-toolbar .contact-filter-row {
+  grid-column: 1 / -1 !important;
+  margin-top: 4px !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  justify-content: flex-start !important;
+}
+
+/* Boutons filtres plus propres */
+.contacts-workspace .contacts-toolbar .contact-filter-row button {
+  min-height: 42px !important;
+  padding: 10px 22px !important;
+}
+
+/* Responsive : si écran plus petit, tout repasse proprement en une colonne */
+@media (max-width: 1200px) {
+  .contacts-workspace .contacts-toolbar {
+    grid-template-columns: 1fr !important;
+  }
+
+  .contacts-workspace .contacts-toolbar .stats-grid {
+    grid-template-columns: repeat(3, minmax(140px, 1fr)) !important;
+  }
+}
+
+/* === CONTACTS TOOLBAR EMPTY SPACE FIX END === */
+
