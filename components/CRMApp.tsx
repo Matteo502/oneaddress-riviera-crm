@@ -9012,9 +9012,46 @@ function PlanningView({
   function startPlanningEntryEdit(entry: PlanningEntry) {
     setEditingPlanningEntry(entry);
 
-    requestAnimationFrame(() => {
-      document.querySelector('[data-planning-entry-form="true"]')?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    const scrollToPlanningForm = () => {
+      const target = document.querySelector<HTMLElement>('[data-planning-entry-form="true"]');
+
+      if (!target) return;
+
+      target.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+
+      const scrollContainers = [
+        document.querySelector<HTMLElement>(".content-panel"),
+        document.querySelector<HTMLElement>(".crm-readable-redesign"),
+        document.scrollingElement as HTMLElement | null
+      ].filter(Boolean) as HTMLElement[];
+
+      for (const container of scrollContainers) {
+        const targetRect = target.getBoundingClientRect();
+        const containerRect = container === document.scrollingElement
+          ? { top: 0 }
+          : container.getBoundingClientRect();
+
+        const nextTop = container.scrollTop + targetRect.top - containerRect.top - 110;
+
+        if (Number.isFinite(nextTop)) {
+          container.scrollTo({
+            top: Math.max(0, nextTop),
+            behavior: "smooth"
+          });
+        }
+      }
+
+      window.setTimeout(() => {
+        const titleInput = target.querySelector<HTMLInputElement>('input[name="title"]');
+        titleInput?.focus({ preventScroll: true });
+      }, 260);
+    };
+
+    window.setTimeout(scrollToPlanningForm, 80);
+    window.setTimeout(scrollToPlanningForm, 260);
   }
 
   function cancelPlanningEntryEdit() {
@@ -9187,7 +9224,7 @@ function PlanningView({
         )}
       </section>
 
-      <section className="card" data-planning-entry-form="true">
+      <section id="planning-entry-form" className={`card planning-entry-form-card ${editingPlanningEntry ? "is-editing" : ""}`} data-planning-entry-form="true">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Planning interne</p>

@@ -7746,3 +7746,18 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
 
 /* === CONTACTS DIRECT LAYOUT FIX END === */
 
+
+/* === PLANNING EDIT SCROLL FIX START === */
+.planning-entry-form-card.is-editing {
+  outline: 2px solid rgba(187, 149, 81, 0.55);
+  box-shadow: 0 22px 60px rgba(4, 19, 49, 0.12);
+}
+
+.planning-entry-form-card.is-editing h3::before {
+  content: "ÉDITION EN COURS · ";
+  color: #BB9551;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+/* === PLANNING EDIT SCROLL FIX END === */
