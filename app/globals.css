@@ -7534,3 +7534,215 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
 
 /* === CONTACTS STABLE READABLE LAYOUT END === */
 
+/* === CONTACTS DIRECT LAYOUT FIX START === */
+/* Correction ciblée de la page Contacts uniquement. Factures prestataires et Suivi maison non touchés. */
+
+.oar-contacts-workspace,
+.oar-contacts-workspace * {
+  box-sizing: border-box;
+}
+
+.oar-contacts-workspace {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.oar-contacts-toolbar {
+  display: grid !important;
+  grid-template-columns: minmax(260px, 1fr) minmax(260px, 520px) !important;
+  gap: 18px !important;
+  align-items: start !important;
+  overflow: visible !important;
+}
+
+.oar-contacts-toolbar .oar-contact-filter-row,
+.oar-contacts-toolbar label {
+  grid-column: 1 / -1 !important;
+}
+
+.oar-contacts-stats {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+}
+
+.oar-contact-filter-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+}
+
+.oar-contact-filter-row button {
+  min-width: 132px !important;
+  min-height: 42px !important;
+  padding: 10px 18px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+}
+
+.oar-contacts-layout {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 390px) !important;
+  gap: 24px !important;
+  align-items: start !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.oar-contacts-list-card,
+.oar-contacts-form-card {
+  min-width: 0 !important;
+  max-width: none !important;
+  overflow: visible !important;
+}
+
+.oar-contact-list-stack {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 14px !important;
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+.oar-contact-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(170px, 210px) !important;
+  gap: 20px !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  padding: 18px 20px !important;
+  overflow: visible !important;
+}
+
+.oar-contact-row > div:first-child {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  display: block !important;
+}
+
+.oar-contact-row > div:first-child p,
+.oar-contact-row > div:first-child span,
+.oar-contact-row > div:first-child strong,
+.oar-contact-row > div:first-child h3 {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: anywhere !important;
+  line-height: 1.35 !important;
+}
+
+.oar-contact-row > div:first-child h3 {
+  margin: 8px 0 10px !important;
+  line-height: 1.12 !important;
+}
+
+.oar-contact-row > div:first-child .eyebrow {
+  display: inline-flex !important;
+  width: auto !important;
+  max-width: 100% !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.oar-contact-actions {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+  align-content: center !important;
+  justify-content: stretch !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.oar-contact-actions a,
+.oar-contact-actions button {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 38px !important;
+  padding: 9px 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+}
+
+.oar-contacts-form-card {
+  position: sticky !important;
+  top: 92px !important;
+  align-self: start !important;
+}
+
+.oar-contacts-form-card .form-grid {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 12px !important;
+}
+
+.oar-contacts-form-card label,
+.oar-contacts-form-card .full {
+  grid-column: auto !important;
+}
+
+.oar-contacts-form-card input,
+.oar-contacts-form-card select,
+.oar-contacts-form-card textarea {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+@media (max-width: 1240px) {
+  .oar-contacts-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .oar-contacts-form-card {
+    position: static !important;
+  }
+
+  .oar-contact-row {
+    grid-template-columns: 1fr !important;
+    align-items: start !important;
+  }
+
+  .oar-contact-actions {
+    grid-template-columns: repeat(3, minmax(120px, 1fr)) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .oar-contacts-toolbar {
+    grid-template-columns: 1fr !important;
+  }
+
+  .oar-contacts-stats {
+    grid-template-columns: 1fr !important;
+  }
+
+  .oar-contact-actions {
+    grid-template-columns: repeat(2, minmax(120px, 1fr)) !important;
+  }
+}
+
+@media (max-width: 620px) {
+  .oar-contact-actions {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* === CONTACTS DIRECT LAYOUT FIX END === */
+

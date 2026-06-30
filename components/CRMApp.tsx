@@ -2081,7 +2081,7 @@ function QuotesView({
           </div>
         </div>
 
-        <div className="list-stack">
+        <div className="list-stack oar-contact-list-stack">
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 22 }}>
           {(["Tous", ...quoteStatuses] as Array<QuoteStatus | "Tous">).map((status) => (
             <button
@@ -2358,7 +2358,7 @@ function SuppliersView({
         {visibleSuppliers.length === 0 ? (
           <p className="muted-line">Aucun prestataire dans cette catégorie.</p>
         ) : (
-          <div className="list-stack">
+          <div className="list-stack oar-contact-list-stack">
             {visibleSuppliers.map((supplier) => (
               <article className="item-card" key={supplier.id}>
                 <div>
@@ -2374,7 +2374,7 @@ function SuppliersView({
                   {supplier.notes && <p>{supplier.notes}</p>}
                 </div>
 
-                <div className="item-actions contact-row-actions">
+                <div className="item-actions contact-row-actions oar-contact-actions">
                   {supplier.phone && (
                     <a className="secondary-button" href={`tel:${supplier.phone}`}>
                       Appeler
@@ -2584,7 +2584,7 @@ function BookingsView({
       {confirmedQuotes.length === 0 ? (
         <p className="muted-line">Aucune réservation confirmée pour le moment.</p>
       ) : (
-        <div className="list-stack">
+        <div className="list-stack oar-contact-list-stack">
           {confirmedQuotes.map((quote) => {
             const services = getQuoteItems(quote)
               .map((item) => getQuoteCategoryFrenchLabel(item.category))
@@ -2610,7 +2610,7 @@ function BookingsView({
                     Du {formatQuoteDate(quote.startDate)} au {formatQuoteDate(quote.endDate)}
                   </p>
 
-                  <div className="stats-grid" style={{ marginTop: 18 }}>
+                  <div className="stats-grid oar-contacts-stats" style={{ marginTop: 18 }}>
                     <div className="mini-stat">
                       <span>Prix client</span>
                       <strong>{formatQuotePrice(clientPrice)}</strong>
@@ -2767,7 +2767,7 @@ function BookingsView({
                   </form>
                 </div>
 
-                <div className="item-actions contact-row-actions">
+                <div className="item-actions contact-row-actions oar-contact-actions">
                   <span className="status-pill">{quote.bookingStatus || "À préparer"}</span>
                   <button className="secondary-button" type="button" onClick={() => openQuotePdf(quote)}>
                     Ouvrir devis
@@ -3159,7 +3159,7 @@ function DocumentsView({
                   <h3>📁 {folder.title}</h3>
                   <p className="muted-line">Ouvrez-le pour importer ou glissez un fichier directement dessus.</p>
                 </div>
-                <div className="item-actions contact-row-actions">
+                <div className="item-actions contact-row-actions oar-contact-actions">
                   <button className="primary-button compact-button" type="button" onClick={() => setCurrentFolderId(folder.id)}>Ouvrir</button>
                   {folder.driveWebViewLink && <a className="secondary-button compact-button" href={folder.driveWebViewLink} target="_blank" rel="noreferrer">Drive</a>}
                   {canManageDocuments && <button className="danger-link compact-danger" type="button" onClick={() => void deleteDriveBackedDocument(folder)}>Supprimer</button>}
@@ -4551,7 +4551,7 @@ function VendorInvoicesView({
         {visibleInvoices.length === 0 ? (
           <p className="muted-line">Aucune facture prestataire pour ce filtre.</p>
         ) : (
-          <div className="list-stack">
+          <div className="list-stack oar-contact-list-stack">
             {visibleInvoices.map((invoice) => (
               <article className="item-card vendor-invoice-card" key={invoice.id} id={`vendor-invoice-${invoice.id}`}>
                 <div>
@@ -4578,7 +4578,7 @@ function VendorInvoicesView({
                   </div>
                 </div>
 
-                <div className="item-actions contact-row-actions">
+                <div className="item-actions contact-row-actions oar-contact-actions">
                   <span className={`status-pill vendor-invoice-status ${invoice.status === "Payé" ? "semantic-success invoice-status-paid" : "semantic-danger invoice-status-danger"}`}>{invoice.status}</span>
                   {(invoice.invoiceDocumentStoragePath || invoice.invoiceDocumentUrl || documents.find((crmDocument) => crmDocument.id === invoice.linkedDocumentId)?.storagePath || documents.find((crmDocument) => crmDocument.id === invoice.linkedDocumentId)?.url) && (
                     <>
@@ -9369,7 +9369,7 @@ function PlanningView({
           </div>
         </div>
 
-        <div className="list-stack">
+        <div className="list-stack oar-contact-list-stack">
           {planningConflicts.length === 0 ? (
             <p className="muted-line">Aucun conflit détecté sur les actifs liés aux leads.</p>
           ) : (
@@ -9625,7 +9625,7 @@ function PlanningView({
           </div>
         </div>
 
-        <div className="list-stack">
+        <div className="list-stack oar-contact-list-stack">
           {visiblePendingBookings.length === 0 ? (
             <p className="muted-line">Aucune option en cours. Ajoutez un lead avec dates, actif lié et statut Contacté / Devis / Négociation pour le voir ici.</p>
           ) : (
@@ -9652,7 +9652,7 @@ function PlanningView({
           </div>
         </div>
 
-        <div className="list-stack">
+        <div className="list-stack oar-contact-list-stack">
           {visibleConfirmedBookings.length === 0 ? (
             <p className="muted-line">Aucune location confirmée pour le moment. Quand un lead est gagné avec dates et actif lié, il apparaîtra ici.</p>
           ) : (
@@ -9783,7 +9783,7 @@ function FollowUpsPanel({
         </div>
       </div>
 
-      <div className="list-stack">
+      <div className="list-stack oar-contact-list-stack">
         {recommendations.length === 0 ? (
           <p className="muted-line">Aucune relance urgente pour le moment. Les leads en retard, sans action ou les devis à suivre apparaîtront ici.</p>
         ) : (
@@ -9966,7 +9966,7 @@ function Dashboard({
             <p className="eyebrow">Aujourd’hui</p>
             <h4>Planning du jour</h4>
 
-            <div className="list-stack">
+            <div className="list-stack oar-contact-list-stack">
               {dashboardPlanningToday.length === 0 ? (
                 <p className="muted-line">Aucune intervention active aujourd’hui.</p>
               ) : (
@@ -9987,7 +9987,7 @@ function Dashboard({
             <p className="eyebrow">Devis</p>
             <h4>À relancer</h4>
 
-            <div className="list-stack">
+            <div className="list-stack oar-contact-list-stack">
               {quotesToFollow.length === 0 ? (
                 <p className="muted-line">Aucun devis urgent à relancer.</p>
               ) : (
@@ -10007,7 +10007,7 @@ function Dashboard({
             <p className="eyebrow">Réservations</p>
             <h4>À préparer</h4>
 
-            <div className="list-stack">
+            <div className="list-stack oar-contact-list-stack">
               {bookingsToPrepare.length === 0 ? (
                 <p className="muted-line">Aucune réservation à préparer.</p>
               ) : (
@@ -10027,7 +10027,7 @@ function Dashboard({
             <p className="eyebrow">Paiements</p>
             <h4>À suivre</h4>
 
-            <div className="list-stack">
+            <div className="list-stack oar-contact-list-stack">
               {paymentsToFollow.length === 0 ? (
                 <p className="muted-line">Aucun paiement urgent à suivre.</p>
               ) : (
@@ -10054,7 +10054,7 @@ function Dashboard({
               <h3>Leads chauds</h3>
             </div>
           </div>
-          <div className="list-stack">
+          <div className="list-stack oar-contact-list-stack">
             {hotLeads.map((lead) => (
               <article className="mini-row" key={lead.id}>
                 <div>
@@ -10076,7 +10076,7 @@ function Dashboard({
               <h3>Prochaines actions</h3>
             </div>
           </div>
-          <div className="list-stack">
+          <div className="list-stack oar-contact-list-stack">
             {nextTasks.map((task) => (
               <article className="mini-row" key={task.id}>
                 <div>
@@ -10252,8 +10252,8 @@ function ContactsView({
   }
 
   return (
-    <div className="stack contacts-workspace">
-      <section className="card contacts-toolbar">
+    <div className="stack contacts-workspace oar-contacts-workspace">
+      <section className="card contacts-toolbar oar-contacts-toolbar">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Contacts</p>
@@ -10262,13 +10262,13 @@ function ContactsView({
           <p className="muted-line">Clients et réseau prestataires au même endroit. Filtrez vite, ouvrez uniquement si nécessaire.</p>
         </div>
 
-        <div className="stats-grid">
+        <div className="stats-grid oar-contacts-stats">
           <StatCard label="Clients" value={String(clientCount)} caption="Demandes et leads" />
           <StatCard label="Prestataires" value={String(supplierCount)} caption="Prestataires activables" />
           <StatCard label="Propriétaires" value={String(ownerCount)} caption="Actifs privés" />
         </div>
 
-        <div className="contact-filter-row">
+        <div className="contact-filter-row oar-contact-filter-row">
           {filterOptions.map((option) => (
             <button
               key={option}
@@ -10295,14 +10295,14 @@ function ContactsView({
         )}
       </section>
 
-      <div className="contacts-layout">
-        <section className="card contacts-list-card">
+      <div className="contacts-layout oar-contacts-layout">
+        <section className="card contacts-list-card oar-contacts-list-card">
           {visibleContacts.length === 0 ? (
             <p className="muted-line">Aucun contact dans ce filtre.</p>
           ) : (
-            <div className="list-stack">
+            <div className="list-stack oar-contact-list-stack">
               {visibleContacts.map((contact) => (
-                <article className="item-card contact-row" key={contact.id}>
+                <article className="item-card contact-row oar-contact-row" key={contact.id}>
                   <div>
                     <p className="eyebrow">
                       {typeLabel(contact)}{isSupplierContact(contact) ? ` · ${getContactSupplierCategory(contact)}` : ""}
@@ -10329,7 +10329,7 @@ function ContactsView({
                     )}
                   </div>
 
-                  <div className="item-actions contact-row-actions">
+                  <div className="item-actions contact-row-actions oar-contact-actions">
                     {contact.phone && <a className="secondary-button" href={`tel:${contact.phone}`}>Appeler</a>}
                     {contact.email && <a className="secondary-button" href={`mailto:${contact.email}`}>Email</a>}
                     <button className="secondary-button" type="button" onClick={() => onCreateLead(getContactActionLabel(contact))}>
@@ -10358,7 +10358,7 @@ function ContactsView({
           )}
         </section>
 
-        <section className="card form-card contacts-form-card">
+        <section className="card form-card contacts-form-card oar-contacts-form-card">
           <p className="eyebrow">Nouveau</p>
           <h3>Ajouter un contact</h3>
 
@@ -10507,7 +10507,7 @@ function ContactsView({
             {!isSupplierContact(selectedContact) && (
               <div className="contact-related-section">
                 <p className="eyebrow">Synthèse commerciale</p>
-                <div className="list-stack">
+                <div className="list-stack oar-contact-list-stack">
                   <article className="mini-row">
                     <div><strong>Leads liés</strong><span>{getContactLeads(selectedContact).length} lead{getContactLeads(selectedContact).length > 1 ? "s" : ""}</span></div>
                     <Badge>{getContactLeads(selectedContact).filter((lead) => lead.status !== "Perdu").length}</Badge>
@@ -10981,7 +10981,7 @@ const visibleLeads = leads.filter((lead) => {
               </button>
 
               {!isCollapsed && (
-                <div className="list-stack">
+                <div className="list-stack oar-contact-list-stack">
                   {columnLeads.map((lead) => (
                     <article className={`lead-card ${getDueStatus(lead.dueDate)}`} key={lead.id} data-notification-target={`lead-${lead.id}`}>
                       <div className="lead-topline">
@@ -11103,7 +11103,7 @@ const visibleLeads = leads.filter((lead) => {
             <div className="lead-related-section">
               <p className="eyebrow">Tâches liées à ce lead</p>
 
-              <div className="list-stack">
+              <div className="list-stack oar-contact-list-stack">
                 {getLeadTasks(selectedLead).length === 0 && (
                   <p className="muted-line">Aucune tâche liée pour le moment.</p>
                 )}
@@ -11428,7 +11428,7 @@ function PropertiesView({
             <div className="asset-related-section">
               <p className="eyebrow">Leads liés à ce bien</p>
 
-              <div className="list-stack">
+              <div className="list-stack oar-contact-list-stack">
                 {getPropertyLeads(selectedProperty).length === 0 && (
                   <p className="muted-line">Aucun lead lié à ce bien.</p>
                 )}
@@ -11664,7 +11664,7 @@ function VehiclesView({
             <div className="asset-related-section">
               <p className="eyebrow">Leads liés à cette voiture</p>
 
-              <div className="list-stack">
+              <div className="list-stack oar-contact-list-stack">
                 {getVehicleLeads(selectedVehicle).length === 0 && (
                   <p className="muted-line">Aucun lead lié à cette voiture.</p>
                 )}
@@ -11899,7 +11899,7 @@ function BoatsView({
             <div className="asset-related-section">
               <p className="eyebrow">Leads liés à ce bateau</p>
 
-              <div className="list-stack">
+              <div className="list-stack oar-contact-list-stack">
                 {getBoatLeads(selectedBoat).length === 0 && (
                   <p className="muted-line">Aucun lead lié à ce bateau.</p>
                 )}
@@ -12055,7 +12055,7 @@ function TasksView({
                     <span>{columnTasks.length}</span>
                   </div>
 
-                  <div className="list-stack">
+                  <div className="list-stack oar-contact-list-stack">
                     {columnTasks.length === 0 ? (
                       <p className="muted-line">Aucune tâche.</p>
                     ) : (
