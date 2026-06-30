@@ -8127,3 +8127,529 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
 
 /* === CONTACTS STATS CLEAN FINAL END === */
 
+/* === CRM MOBILE ONLY USABLE START === */
+
+/*
+  Couche mobile uniquement.
+  Desktop inchangé : aucune règle hors @media max-width.
+  Objectif : rendre le CRM utilisable sur téléphone sans refonte ordinateur.
+*/
+
+@media (max-width: 768px) {
+  html,
+  body {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  body {
+    font-size: 14px !important;
+  }
+
+  #root,
+  #__next,
+  main,
+  .app,
+  .crm-app,
+  .crm-shell,
+  .crm-layout,
+  .crm-readable-redesign,
+  .content-panel,
+  .main-content,
+  .page-content,
+  .workspace,
+  .dashboard,
+  .contacts-workspace {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Layout général : une seule colonne sur mobile */
+  .crm-shell,
+  .crm-layout,
+  .crm-readable-redesign,
+  .app-shell,
+  .layout-shell {
+    display: block !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Sidebar mobile : devient une barre horizontale compacte au-dessus du contenu */
+  .sidebar,
+  .app-sidebar,
+  .crm-sidebar,
+  .main-sidebar,
+  .side-nav,
+  .sidenav,
+  [class*="sidebar"],
+  [class*="side-nav"],
+  [class*="sideNav"] {
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 10px 12px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    background: #041432 !important;
+    border-right: 0 !important;
+    z-index: 20 !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .sidebar::-webkit-scrollbar,
+  .app-sidebar::-webkit-scrollbar,
+  .crm-sidebar::-webkit-scrollbar,
+  .main-sidebar::-webkit-scrollbar,
+  .side-nav::-webkit-scrollbar,
+  .sidenav::-webkit-scrollbar,
+  [class*="sidebar"]::-webkit-scrollbar,
+  [class*="side-nav"]::-webkit-scrollbar,
+  [class*="sideNav"]::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  /* Logo sidebar compact */
+  .sidebar img,
+  .app-sidebar img,
+  .crm-sidebar img,
+  .main-sidebar img,
+  [class*="sidebar"] img {
+    max-width: 116px !important;
+    width: 116px !important;
+    height: auto !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+  }
+
+  /* Navigation de la sidebar en ligne */
+  .sidebar nav,
+  .sidebar ul,
+  .app-sidebar nav,
+  .app-sidebar ul,
+  .crm-sidebar nav,
+  .crm-sidebar ul,
+  .main-sidebar nav,
+  .main-sidebar ul,
+  [class*="sidebar"] nav,
+  [class*="sidebar"] ul {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: auto !important;
+    min-width: max-content !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .sidebar a,
+  .sidebar button,
+  .app-sidebar a,
+  .app-sidebar button,
+  .crm-sidebar a,
+  .crm-sidebar button,
+  .main-sidebar a,
+  .main-sidebar button,
+  [class*="sidebar"] a,
+  [class*="sidebar"] button {
+    flex: 0 0 auto !important;
+    min-height: 40px !important;
+    min-width: auto !important;
+    width: auto !important;
+    padding: 9px 12px !important;
+    white-space: nowrap !important;
+    border-radius: 12px !important;
+    letter-spacing: 0.12em !important;
+    font-size: 0.72rem !important;
+  }
+
+  /* Cartes MVP / sauvegardes en sidebar : masquées sur mobile pour gagner de la place */
+  .sidebar .mvp,
+  .app-sidebar .mvp,
+  .crm-sidebar .mvp,
+  .main-sidebar .mvp,
+  [class*="sidebar"] .mvp,
+  [class*="sidebar"] [class*="backup"],
+  [class*="sidebar"] [class*="Backup"],
+  [class*="sidebar"] [class*="sauvegarde"],
+  [class*="sidebar"] [class*="Sauvegarde"] {
+    display: none !important;
+  }
+
+  /* Contenu principal : padding réduit */
+  main,
+  .content-panel,
+  .main-content,
+  .page-content,
+  .workspace,
+  .crm-main,
+  .crm-content {
+    margin: 0 !important;
+    padding: 12px !important;
+  }
+
+  /* Header de page mobile : compact, pas de débordement */
+  header,
+  .page-header,
+  .crm-header,
+  .topbar,
+  .oar-page-header,
+  .app-header,
+  .section-header,
+  .content-header,
+  [class*="page-header"],
+  [class*="topbar"],
+  [class*="header"] {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .page-header,
+  .crm-header,
+  .topbar,
+  .oar-page-header,
+  .app-header,
+  .content-header,
+  .card:first-child {
+    padding: 16px !important;
+    border-radius: 18px !important;
+  }
+
+  .page-header,
+  .crm-header,
+  .topbar,
+  .oar-page-header,
+  .app-header,
+  .content-header {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    gap: 10px !important;
+    align-items: center !important;
+  }
+
+  h1,
+  h2 {
+    font-size: 1.55rem !important;
+    line-height: 1.05 !important;
+    margin: 0 !important;
+  }
+
+  h3 {
+    font-size: 1.15rem !important;
+    line-height: 1.12 !important;
+  }
+
+  .eyebrow {
+    font-size: 0.65rem !important;
+    letter-spacing: 0.16em !important;
+  }
+
+  /* Actions du haut : compactes et scrollables si besoin */
+  .global-actions,
+  .header-actions,
+  .top-actions,
+  .action-row,
+  .toolbar-actions,
+  .page-actions,
+  [class*="actions"] {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: auto !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .global-actions button,
+  .header-actions button,
+  .top-actions button,
+  .action-row button,
+  .toolbar-actions button,
+  .page-actions button,
+  [class*="actions"] button,
+  [class*="actions"] select {
+    flex: 0 0 auto !important;
+    min-height: 38px !important;
+    padding: 8px 12px !important;
+    font-size: 0.72rem !important;
+    white-space: nowrap !important;
+  }
+
+  /* On évite les headers énormes sur mobile */
+  input[type="search"],
+  .search-input,
+  [class*="search"] input {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Toutes les cartes en pleine largeur */
+  .card,
+  .panel,
+  .stat-card,
+  .contact-row,
+  .quote-card,
+  .task-card,
+  .planning-card,
+  .document-card,
+  .invoice-card,
+  .property-card,
+  .vehicle-card,
+  .boat-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    border-radius: 18px !important;
+  }
+
+  /* Toutes les grilles principales passent en une colonne */
+  .stats-grid,
+  .dashboard-grid,
+  .dashboard-main-stats,
+  .dashboard-cockpit-stats,
+  .contacts-layout,
+  .contacts-list,
+  .quotes-layout,
+  .quote-layout,
+  .vendor-invoice-layout,
+  .vendor-invoices-layout,
+  .house-layout,
+  .house-tracking-layout,
+  .planning-layout,
+  .planning-grid,
+  .documents-layout,
+  .properties-layout,
+  .vehicles-layout,
+  .boats-layout,
+  .form-grid,
+  .grid,
+  [class*="-layout"],
+  [class*="-grid"] {
+    grid-template-columns: 1fr !important;
+    display: grid !important;
+    gap: 12px !important;
+  }
+
+  /* Formulaires : une colonne, lisibles */
+  form,
+  fieldset,
+  .form-grid,
+  .form-row,
+  .input-grid,
+  .field-grid {
+    grid-template-columns: 1fr !important;
+    display: grid !important;
+    gap: 10px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  label,
+  form label,
+  .full,
+  .form-full {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  input,
+  select,
+  textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    font-size: 16px !important; /* évite le zoom iPhone */
+  }
+
+  input,
+  select {
+    min-height: 44px !important;
+  }
+
+  textarea {
+    min-height: 84px !important;
+  }
+
+  /* Désactive les panneaux sticky sur mobile */
+  aside,
+  .sticky,
+  .contact-form-card,
+  .side-panel,
+  .right-panel,
+  [class*="sticky"],
+  [class*="side-panel"],
+  [class*="right-panel"] {
+    position: relative !important;
+    top: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* Boutons : pleine largeur par défaut, sauf filtres et menus horizontaux */
+  .card button,
+  .panel button,
+  form button,
+  .primary-button,
+  .secondary-button {
+    min-height: 44px !important;
+    white-space: nowrap !important;
+  }
+
+  form button,
+  .card > button,
+  .panel > button {
+    width: 100% !important;
+  }
+
+  .contact-filter-row,
+  .filter-row,
+  .tabs,
+  .tab-row,
+  .segmented-control,
+  [class*="filter"],
+  [class*="tabs"] {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    padding-bottom: 4px !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .contact-filter-row button,
+  .filter-row button,
+  .tabs button,
+  .tab-row button,
+  .segmented-control button,
+  [class*="filter"] button,
+  [class*="tabs"] button {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 112px !important;
+  }
+
+  /* Contacts mobile */
+  .contacts-workspace .contacts-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .contacts-workspace .contact-row,
+  .contacts-workspace [class*="contact-row"] {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    padding: 16px !important;
+  }
+
+  .contacts-workspace .contact-row-actions,
+  .contacts-workspace [class*="contact-row-actions"] {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .contacts-workspace .contact-row-actions button,
+  .contacts-workspace .contact-row-actions a,
+  .contacts-workspace [class*="contact-row-actions"] button,
+  .contacts-workspace [class*="contact-row-actions"] a {
+    width: 100% !important;
+    min-width: 0 !important;
+    text-align: center !important;
+    justify-content: center !important;
+  }
+
+  /* Header Contacts mobile : pas de grand vide */
+  .contacts-workspace .oar-contacts-toolbar {
+    min-height: 0 !important;
+    padding: 16px !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .contacts-workspace .oar-contacts-toolbar .oar-contacts-stats,
+  .contacts-workspace .contacts-header-metrics,
+  .contacts-workspace .contacts-header-v3-metrics {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .contacts-workspace .oar-contacts-toolbar .oar-contacts-stats > *,
+  .contacts-workspace .contacts-header-metrics > *,
+  .contacts-workspace .contacts-header-v3-metrics > * {
+    width: auto !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 64px !important;
+    padding: 10px !important;
+    overflow: hidden !important;
+  }
+
+  /* Planning mobile */
+  .planning-grid,
+  .planning-layout,
+  .planning-day-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .planning-card,
+  .planning-entry,
+  [class*="planning"] .card {
+    padding: 14px !important;
+  }
+
+  /* Documents et factures : éviter l'horizontal cassé */
+  .documents-layout,
+  .vendor-invoices-layout,
+  .invoice-layout,
+  .quote-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Tables : scroll horizontal propre */
+  table,
+  .table-wrapper,
+  .data-table,
+  [class*="table"] {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Espacement vertical mobile */
+  .card + .card,
+  section + section {
+    margin-top: 12px !important;
+  }
+
+  /* Sécurité anti-débordement */
+  * {
+    max-width: 100%;
+  }
+}
+
+/* === CRM MOBILE ONLY USABLE END === */
+
