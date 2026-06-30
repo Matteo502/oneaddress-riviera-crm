@@ -7918,3 +7918,131 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
 }
 
 /* === CONTACTS TOOLBAR JSX COMPACT FIX END === */
+
+/* === CONTACTS COMPACT STRIP FINAL START === */
+
+.contacts-workspace .contacts-toolbar-strip-final {
+  min-height: 0 !important;
+  padding: 20px 24px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+}
+
+.contacts-workspace .contacts-toolbar-strip-final * {
+  box-sizing: border-box !important;
+}
+
+.contacts-workspace .contacts-strip-top {
+  display: grid !important;
+  grid-template-columns: minmax(320px, 1fr) auto !important;
+  gap: 22px !important;
+  align-items: center !important;
+  min-height: 0 !important;
+}
+
+.contacts-workspace .contacts-strip-title {
+  display: grid !important;
+  grid-template-columns: auto auto 1fr !important;
+  align-items: baseline !important;
+  column-gap: 16px !important;
+  row-gap: 4px !important;
+  min-height: 0 !important;
+}
+
+.contacts-workspace .contacts-strip-title .eyebrow {
+  grid-column: 1 / -1 !important;
+  margin: 0 !important;
+}
+
+.contacts-workspace .contacts-strip-title h3 {
+  margin: 0 !important;
+  line-height: 1.05 !important;
+  white-space: nowrap !important;
+}
+
+.contacts-workspace .contacts-strip-title .muted-line {
+  margin: 0 !important;
+  max-width: none !important;
+  line-height: 1.35 !important;
+}
+
+.contacts-workspace .contacts-strip-metrics {
+  display: flex !important;
+  gap: 10px !important;
+  align-items: stretch !important;
+  justify-content: flex-end !important;
+}
+
+.contacts-workspace .contacts-strip-metrics > div {
+  width: 148px !important;
+  min-height: 64px !important;
+  padding: 12px 14px !important;
+  border: 1px solid rgba(187, 149, 81, 0.24) !important;
+  border-radius: 14px !important;
+  background: rgba(255, 252, 245, 0.76) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+}
+
+.contacts-workspace .contacts-strip-metrics span {
+  font-size: 0.7rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.16em !important;
+  color: #BB9551 !important;
+  font-weight: 800 !important;
+}
+
+.contacts-workspace .contacts-strip-metrics strong {
+  margin-top: 4px !important;
+  font-size: 1.35rem !important;
+  line-height: 1 !important;
+  color: #041432 !important;
+}
+
+.contacts-workspace .contacts-strip-filters {
+  margin: 0 !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  justify-content: flex-start !important;
+}
+
+.contacts-workspace .contacts-strip-filters button {
+  min-height: 38px !important;
+  padding: 9px 20px !important;
+}
+
+.contacts-workspace .contacts-supplier-filter-strip {
+  max-width: 360px !important;
+  margin: 0 !important;
+}
+
+/* Neutralise les anciens styles si l'ancien bloc reste en cache */
+.contacts-workspace .contacts-toolbar:not(.contacts-toolbar-strip-final) {
+  min-height: 0 !important;
+}
+
+.contacts-workspace .contacts-toolbar:not(.contacts-toolbar-strip-final) .stats-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  align-items: stretch !important;
+}
+
+/* Mobile / petit écran */
+@media (max-width: 1250px) {
+  .contacts-workspace .contacts-strip-top {
+    grid-template-columns: 1fr !important;
+  }
+
+  .contacts-workspace .contacts-strip-metrics {
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+  }
+
+  .contacts-workspace .contacts-strip-metrics > div {
+    width: 150px !important;
+  }
+}
+
+/* === CONTACTS COMPACT STRIP FINAL END === */
