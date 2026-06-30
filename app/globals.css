@@ -7444,3 +7444,108 @@ iframe.vendor-invoice-preview-frame {
 
 /* === CRM TARGETED TOPBAR SIDEBAR HOUSE FIX END === */
 
+/* === CONTACTS HARD LAYOUT FIX START === */
+
+/*
+  Objectif :
+  - empêcher les cartes contacts de compresser le texte
+  - garder les infos à gauche, actions à droite
+  - éviter les mots coupés verticalement
+  - ne pas toucher aux factures, documents, suivi maison
+*/
+
+main:has(h1, h2) [class*="contact"] {
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+}
+
+/* Cartes contact : structure large et lisible */
+main:has(h1, h2) [class*="contact"] [class*="card"],
+main:has(h1, h2) .contact-card {
+  display: grid !important;
+  grid-template-columns: minmax(420px, 1fr) auto !important;
+  gap: 24px !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* Bloc texte contact : jamais en colonne étroite */
+main:has(h1, h2) [class*="contact"] [class*="card"] > div:first-child,
+main:has(h1, h2) .contact-card > div:first-child {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+}
+
+/* Tous les textes dans les cartes contacts restent lisibles */
+main:has(h1, h2) [class*="contact"] [class*="card"] p,
+main:has(h1, h2) [class*="contact"] [class*="card"] span,
+main:has(h1, h2) [class*="contact"] [class*="card"] div,
+main:has(h1, h2) .contact-card p,
+main:has(h1, h2) .contact-card span,
+main:has(h1, h2) .contact-card div {
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  white-space: normal !important;
+  max-width: none !important;
+}
+
+/* Actions contact : bloc compact à droite */
+main:has(h1, h2) [class*="contact"] [class*="card"] > div:last-child,
+main:has(h1, h2) .contact-card > div:last-child {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(130px, 160px)) !important;
+  gap: 10px !important;
+  justify-content: end !important;
+  align-items: center !important;
+  width: auto !important;
+  min-width: 280px !important;
+}
+
+/* Boutons contacts */
+main:has(h1, h2) [class*="contact"] a[href^="tel:"],
+main:has(h1, h2) [class*="contact"] button,
+main:has(h1, h2) .contact-card a[href^="tel:"],
+main:has(h1, h2) .contact-card button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 130px !important;
+  min-height: 42px !important;
+  padding: 10px 16px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+}
+
+/* Supprimer reste discret */
+main:has(h1, h2) [class*="contact"] button:last-child,
+main:has(h1, h2) .contact-card button:last-child {
+  color: #b56b6b !important;
+}
+
+/* Responsive : sur petit écran, actions passent dessous */
+@media (max-width: 1100px) {
+  main:has(h1, h2) [class*="contact"] [class*="card"],
+  main:has(h1, h2) .contact-card {
+    grid-template-columns: 1fr !important;
+  }
+
+  main:has(h1, h2) [class*="contact"] [class*="card"] > div:last-child,
+  main:has(h1, h2) .contact-card > div:last-child {
+    grid-template-columns: repeat(2, minmax(120px, 1fr)) !important;
+    justify-content: stretch !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+}
+
+/* === CONTACTS HARD LAYOUT FIX END === */
+
