@@ -7824,3 +7824,97 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
 
 /* === CONTACTS TOOLBAR EMPTY SPACE FIX END === */
 
+
+/* === CONTACTS TOOLBAR JSX COMPACT FIX START === */
+
+.contacts-toolbar-compact-v2 {
+  min-height: 0 !important;
+  padding: 22px 24px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 18px !important;
+}
+
+.contacts-toolbar-compact-v2 .contacts-toolbar-summary {
+  display: grid !important;
+  grid-template-columns: minmax(260px, 0.7fr) minmax(520px, 1.3fr) !important;
+  gap: 22px !important;
+  align-items: stretch !important;
+}
+
+.contacts-toolbar-compact-v2 .contacts-toolbar-total {
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+}
+
+.contacts-toolbar-compact-v2 .contacts-toolbar-total h3 {
+  margin: 0 !important;
+}
+
+.contacts-toolbar-compact-v2 .contacts-toolbar-total .muted-line {
+  max-width: 460px !important;
+  margin-top: 8px !important;
+}
+
+.contacts-toolbar-compact-v2 .contacts-toolbar-stats {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.contacts-toolbar-compact-v2 .contacts-toolbar-stat {
+  min-height: 96px !important;
+  padding: 16px 18px !important;
+  border: 1px solid rgba(187, 149, 81, 0.22) !important;
+  border-radius: 18px !important;
+  background: rgba(255, 252, 245, 0.72) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+}
+
+.contacts-toolbar-compact-v2 .contacts-toolbar-stat strong {
+  font-size: 1.65rem !important;
+  line-height: 1.1 !important;
+  color: #041432 !important;
+}
+
+.contacts-toolbar-compact-v2 .contacts-toolbar-stat span {
+  margin-top: 6px !important;
+  color: #66736f !important;
+  font-size: 0.88rem !important;
+}
+
+.contacts-toolbar-compact-v2 .contacts-filter-compact-v2 {
+  margin: 0 !important;
+  padding-top: 2px !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  justify-content: flex-start !important;
+}
+
+.contacts-toolbar-compact-v2 .contacts-filter-compact-v2 button {
+  min-height: 40px !important;
+  padding: 10px 22px !important;
+}
+
+.contacts-toolbar-compact-v2 .contacts-supplier-filter {
+  margin-top: 0 !important;
+  max-width: 360px !important;
+}
+
+@media (max-width: 1250px) {
+  .contacts-toolbar-compact-v2 .contacts-toolbar-summary {
+    grid-template-columns: 1fr !important;
+  }
+
+  .contacts-toolbar-compact-v2 .contacts-toolbar-stats {
+    grid-template-columns: repeat(3, minmax(140px, 1fr)) !important;
+  }
+}
+
+/* === CONTACTS TOOLBAR JSX COMPACT FIX END === */
