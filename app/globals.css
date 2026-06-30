@@ -8046,3 +8046,117 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
 }
 
 /* === CONTACTS COMPACT STRIP FINAL END === */
+
+/* === CONTACTS FLAT FINAL OVERRIDE START === */
+
+.contacts-workspace .contacts-toolbar.contacts-toolbar-flat-final {
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 22px 24px !important;
+  display: grid !important;
+  grid-template-columns: minmax(280px, 1fr) auto !important;
+  grid-template-areas:
+    "left metrics"
+    "filters filters"
+    "supplier supplier" !important;
+  gap: 16px 24px !important;
+  align-items: center !important;
+}
+
+.contacts-workspace .contacts-toolbar-flat-final .contacts-flat-left {
+  grid-area: left !important;
+  min-height: 0 !important;
+}
+
+.contacts-workspace .contacts-toolbar-flat-final .contacts-flat-left h3 {
+  margin: 0 !important;
+  line-height: 1.05 !important;
+}
+
+.contacts-workspace .contacts-toolbar-flat-final .contacts-flat-left .muted-line {
+  margin-top: 6px !important;
+  max-width: 520px !important;
+}
+
+.contacts-workspace .contacts-toolbar-flat-final .contacts-flat-metrics {
+  grid-area: metrics !important;
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 10px !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  width: auto !important;
+}
+
+.contacts-workspace .contacts-toolbar-flat-final .contacts-flat-metrics > div {
+  width: 142px !important;
+  min-height: 62px !important;
+  padding: 10px 12px !important;
+  border: 1px solid rgba(187,149,81,.25) !important;
+  border-radius: 14px !important;
+  background: rgba(255,252,245,.78) !important;
+  box-shadow: none !important;
+}
+
+.contacts-workspace .contacts-toolbar-flat-final .contacts-flat-metrics span {
+  display: block !important;
+  font-size: .66rem !important;
+  letter-spacing: .15em !important;
+  text-transform: uppercase !important;
+  color: #bb9551 !important;
+  font-weight: 800 !important;
+  line-height: 1.1 !important;
+}
+
+.contacts-workspace .contacts-toolbar-flat-final .contacts-flat-metrics strong {
+  display: block !important;
+  margin-top: 5px !important;
+  font-size: 1.3rem !important;
+  line-height: 1 !important;
+  color: #041432 !important;
+}
+
+.contacts-workspace .contacts-toolbar-flat-final .contacts-flat-filters {
+  grid-area: filters !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  justify-content: flex-start !important;
+}
+
+.contacts-workspace .contacts-toolbar-flat-final .contacts-flat-filters button {
+  min-height: 38px !important;
+  padding: 9px 20px !important;
+}
+
+.contacts-workspace .contacts-toolbar-flat-final .contacts-flat-supplier-filter {
+  grid-area: supplier !important;
+  max-width: 360px !important;
+  margin: 0 !important;
+}
+
+/* Neutralisation des anciennes stats si elles restent quelque part */
+.contacts-workspace .contacts-toolbar-flat-final .stats-grid,
+.contacts-workspace .contacts-toolbar-flat-final .section-heading {
+  display: none !important;
+}
+
+@media (max-width: 1250px) {
+  .contacts-workspace .contacts-toolbar.contacts-toolbar-flat-final {
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      "left"
+      "metrics"
+      "filters"
+      "supplier" !important;
+  }
+
+  .contacts-workspace .contacts-toolbar-flat-final .contacts-flat-metrics {
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+  }
+}
+
+/* === CONTACTS FLAT FINAL OVERRIDE END === */
