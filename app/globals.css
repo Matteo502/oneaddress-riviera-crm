@@ -7894,3 +7894,151 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
 
 /* === CONTACTS VISIBLE TOOLBAR FINAL FIX END === */
 
+/* === CONTACT SIDE FORM COMPACT FIX START === */
+
+/*
+  Page Contacts uniquement.
+  Objectif :
+  - le panneau Ajouter un contact reste propre à droite
+  - bordure visible
+  - hauteur limitée
+  - scroll interne si besoin
+  - champs plus compacts
+  - aucune modification Factures / Planning / Suivi maison
+*/
+
+.contacts-workspace .contacts-layout {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 430px) !important;
+  gap: 22px !important;
+  align-items: start !important;
+}
+
+/* Panneau droite : Ajouter / Modifier contact */
+.contacts-workspace .contacts-layout > .card:last-child,
+.contacts-workspace .contacts-layout > aside,
+.contacts-workspace .contacts-layout .contact-form-card {
+  position: sticky !important;
+  top: 104px !important;
+  align-self: start !important;
+
+  max-height: calc(100vh - 128px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  padding: 18px !important;
+  border: 1px solid rgba(187, 149, 81, 0.28) !important;
+  border-radius: 22px !important;
+  background: rgba(255, 252, 245, 0.94) !important;
+  box-shadow: 0 18px 44px rgba(4, 19, 49, 0.08) !important;
+}
+
+/* Titre du panneau plus compact */
+.contacts-workspace .contacts-layout > .card:last-child h3,
+.contacts-workspace .contacts-layout > aside h3,
+.contacts-workspace .contact-form-card h3 {
+  margin: 0 0 14px 0 !important;
+  font-size: 1.25rem !important;
+  line-height: 1.1 !important;
+}
+
+/* Eyebrow "Nouveau" */
+.contacts-workspace .contacts-layout > .card:last-child .eyebrow,
+.contacts-workspace .contacts-layout > aside .eyebrow,
+.contacts-workspace .contact-form-card .eyebrow {
+  margin-bottom: 6px !important;
+}
+
+/* Formulaire plus dense */
+.contacts-workspace .contacts-layout > .card:last-child form,
+.contacts-workspace .contacts-layout > aside form,
+.contacts-workspace .contact-form-card form {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 11px 12px !important;
+}
+
+/* Champs pleine largeur quand nécessaire */
+.contacts-workspace .contacts-layout > .card:last-child form label:has(textarea),
+.contacts-workspace .contacts-layout > aside form label:has(textarea),
+.contacts-workspace .contact-form-card form label:has(textarea) {
+  grid-column: 1 / -1 !important;
+}
+
+/* Labels plus petits */
+.contacts-workspace .contacts-layout > .card:last-child label,
+.contacts-workspace .contacts-layout > aside label,
+.contacts-workspace .contact-form-card label {
+  margin: 0 !important;
+  font-size: 0.68rem !important;
+  line-height: 1.1 !important;
+  letter-spacing: 0.15em !important;
+}
+
+/* Inputs compacts */
+.contacts-workspace .contacts-layout > .card:last-child input,
+.contacts-workspace .contacts-layout > .card:last-child select,
+.contacts-workspace .contacts-layout > aside input,
+.contacts-workspace .contacts-layout > aside select,
+.contacts-workspace .contact-form-card input,
+.contacts-workspace .contact-form-card select {
+  min-height: 40px !important;
+  height: 40px !important;
+  padding: 9px 12px !important;
+  border-radius: 12px !important;
+  font-size: 0.82rem !important;
+}
+
+/* Textareas limitées */
+.contacts-workspace .contacts-layout > .card:last-child textarea,
+.contacts-workspace .contacts-layout > aside textarea,
+.contacts-workspace .contact-form-card textarea {
+  min-height: 72px !important;
+  max-height: 120px !important;
+  padding: 10px 12px !important;
+  border-radius: 12px !important;
+  font-size: 0.82rem !important;
+  resize: vertical !important;
+}
+
+/* Bouton d'ajout/modification propre et visible */
+.contacts-workspace .contacts-layout > .card:last-child form button[type="submit"],
+.contacts-workspace .contacts-layout > aside form button[type="submit"],
+.contacts-workspace .contact-form-card form button[type="submit"] {
+  grid-column: 1 / -1 !important;
+  min-height: 46px !important;
+  margin-top: 4px !important;
+  border-radius: 14px !important;
+}
+
+/* Scrollbar discrète du panneau */
+.contacts-workspace .contacts-layout > .card:last-child::-webkit-scrollbar,
+.contacts-workspace .contacts-layout > aside::-webkit-scrollbar,
+.contacts-workspace .contact-form-card::-webkit-scrollbar {
+  width: 8px !important;
+}
+
+.contacts-workspace .contacts-layout > .card:last-child::-webkit-scrollbar-thumb,
+.contacts-workspace .contacts-layout > aside::-webkit-scrollbar-thumb,
+.contacts-workspace .contact-form-card::-webkit-scrollbar-thumb {
+  background: rgba(187, 149, 81, 0.28) !important;
+  border-radius: 999px !important;
+}
+
+/* Sur écran moyen, on garde lisible */
+@media (max-width: 1250px) {
+  .contacts-workspace .contacts-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .contacts-workspace .contacts-layout > .card:last-child,
+  .contacts-workspace .contacts-layout > aside,
+  .contacts-workspace .contacts-layout .contact-form-card {
+    position: relative !important;
+    top: auto !important;
+    max-height: none !important;
+  }
+}
+
+/* === CONTACT SIDE FORM COMPACT FIX END === */
+
