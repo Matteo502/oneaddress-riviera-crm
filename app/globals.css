@@ -8042,3 +8042,88 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
 
 /* === CONTACT SIDE FORM COMPACT FIX END === */
 
+/* === CONTACTS STATS CLEAN FINAL START === */
+
+/*
+  Correction ciblée Contacts.
+  Problème corrigé : les cartes Clients / Prestataires / Propriétaires étaient trop basses,
+  donc le texte était coupé.
+*/
+
+.contacts-workspace .oar-contacts-toolbar {
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 22px 24px !important;
+  overflow: visible !important;
+}
+
+.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  gap: 12px !important;
+  align-items: stretch !important;
+  justify-content: flex-end !important;
+  margin: 0 !important;
+  overflow: visible !important;
+}
+
+/* Cartes stats propres, ni énormes ni coupées */
+.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats > * {
+  width: 158px !important;
+  min-width: 158px !important;
+  max-width: 158px !important;
+  height: 76px !important;
+  min-height: 76px !important;
+  max-height: 76px !important;
+  padding: 12px 14px !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  box-shadow: none !important;
+}
+
+/* On garde seulement label + nombre. Le sous-texte crée le problème visuel. */
+.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats > * > *:nth-child(n+3) {
+  display: none !important;
+}
+
+/* Titre stat */
+.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats > * > *:first-child {
+  display: block !important;
+  margin: 0 0 8px 0 !important;
+  line-height: 1 !important;
+  font-size: 0.68rem !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+  color: #BB9551 !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+}
+
+/* Nombre stat */
+.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats > * > *:nth-child(2) {
+  display: block !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+  font-size: 1.45rem !important;
+  color: #041432 !important;
+  font-weight: 500 !important;
+}
+
+/* Supprime les demi-cercles décoratifs uniquement ici */
+.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats > *::before,
+.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats > *::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Les filtres restent propres sous le bloc */
+.contacts-workspace .oar-contacts-toolbar .contact-filter-row {
+  margin-top: 8px !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+}
+
+/* === CONTACTS STATS CLEAN FINAL END === */
+
