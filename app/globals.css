@@ -7762,368 +7762,246 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
 }
 /* === PLANNING EDIT SCROLL FIX END === */
 
-/* === CONTACTS VISIBLE TOOLBAR FINAL FIX START === */
+/* === CONTACTS DESKTOP STABLE LAYOUT START === */
+/* Desktop only. Contacts page only. No mobile patch. No vendor invoices, planning or house tracking impact. */
 
-/*
-  Correction ciblée sur le bloc actuellement visible :
-  <section class="card contacts-toolbar oar-contacts-toolbar">
-  Ne touche pas aux factures prestataires, planning, suivi maison.
-*/
+.contacts-workspace {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 20px !important;
+}
 
-.contacts-workspace .oar-contacts-toolbar {
+.contacts-workspace .contacts-toolbar-desktop-stable {
   min-height: 0 !important;
   height: auto !important;
-  padding: 22px 24px !important;
+  padding: 20px 24px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  overflow: visible !important;
+}
+
+.contacts-workspace .contacts-toolbar-stable-main {
   display: grid !important;
   grid-template-columns: minmax(360px, 1fr) auto !important;
-  grid-template-areas:
-    "heading stats"
-    "filters filters"
-    "supplier supplier" !important;
-  gap: 16px 24px !important;
+  gap: 24px !important;
   align-items: center !important;
 }
 
-/* Bloc texte gauche */
-.contacts-workspace .oar-contacts-toolbar > .section-heading,
-.contacts-workspace .oar-contacts-toolbar .section-heading {
-  grid-area: heading !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-  max-width: 560px !important;
+.contacts-workspace .contacts-toolbar-stable-title {
+  min-width: 0 !important;
 }
 
-/* Supprime toute hauteur artificielle héritée */
-.contacts-workspace .oar-contacts-toolbar .section-heading * {
-  margin-top: 0 !important;
+.contacts-workspace .contacts-toolbar-stable-title .eyebrow {
+  margin: 0 0 6px 0 !important;
 }
 
-/* Stats : en ligne, pas empilées */
-.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats {
-  grid-area: stats !important;
+.contacts-workspace .contacts-toolbar-stable-count {
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 8px !important;
+  white-space: nowrap !important;
+}
+
+.contacts-workspace .contacts-toolbar-stable-count strong {
+  font-size: 1.6rem !important;
+  line-height: 1 !important;
+  color: #041432 !important;
+}
+
+.contacts-workspace .contacts-toolbar-stable-count span {
+  font-size: 1.05rem !important;
+  color: #041432 !important;
+}
+
+.contacts-workspace .contacts-toolbar-stable-title .muted-line {
+  margin: 7px 0 0 0 !important;
+  max-width: 620px !important;
+  line-height: 1.35 !important;
+}
+
+.contacts-workspace .contacts-toolbar-stable-metrics {
   display: flex !important;
   flex-direction: row !important;
   flex-wrap: nowrap !important;
   gap: 10px !important;
   justify-content: flex-end !important;
   align-items: stretch !important;
-  width: auto !important;
-  min-width: 0 !important;
-  margin: 0 !important;
 }
 
-/* Chaque carte stat devient petite */
-.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats > * {
-  width: 145px !important;
-  min-width: 145px !important;
-  max-width: 145px !important;
-  min-height: 62px !important;
-  height: 62px !important;
-  padding: 10px 13px !important;
+.contacts-workspace .contacts-toolbar-stable-metrics > div {
+  width: 150px !important;
+  min-height: 68px !important;
+  padding: 11px 13px !important;
+  border: 1px solid rgba(187,149,81,.25) !important;
   border-radius: 14px !important;
+  background: rgba(255,252,245,.78) !important;
   box-shadow: none !important;
   overflow: hidden !important;
 }
 
-/* Neutralise les gros cercles décoratifs uniquement dans Contacts */
-.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats > *::before,
-.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats > *::after,
-.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats .stat-card::before,
-.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats .stat-card::after {
-  display: none !important;
-  content: none !important;
-}
-
-/* Texte stat compact */
-.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats p,
-.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats span {
-  margin: 0 !important;
+.contacts-workspace .contacts-toolbar-stable-metrics span {
+  display: block !important;
+  font-size: .66rem !important;
+  letter-spacing: .14em !important;
+  text-transform: uppercase !important;
+  color: #BB9551 !important;
+  font-weight: 800 !important;
   line-height: 1.1 !important;
-  font-size: 0.68rem !important;
-  letter-spacing: 0.14em !important;
+  white-space: nowrap !important;
 }
 
-.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats strong,
-.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats h3,
-.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats h4 {
-  margin: 4px 0 0 0 !important;
+.contacts-workspace .contacts-toolbar-stable-metrics strong {
+  display: block !important;
+  margin-top: 7px !important;
+  font-size: 1.35rem !important;
   line-height: 1 !important;
-  font-size: 1.25rem !important;
+  color: #041432 !important;
 }
 
-/* Filtres juste dessous, sans créer un grand vide */
-.contacts-workspace .oar-contacts-toolbar .contact-filter-row {
-  grid-area: filters !important;
+.contacts-workspace .contacts-toolbar-stable-filters {
   margin: 0 !important;
-  padding: 0 !important;
   display: flex !important;
   flex-wrap: wrap !important;
   gap: 10px !important;
   justify-content: flex-start !important;
-  align-items: center !important;
 }
 
-.contacts-workspace .oar-contacts-toolbar .contact-filter-row button {
+.contacts-workspace .contacts-toolbar-stable-filters button {
   min-height: 38px !important;
   padding: 9px 20px !important;
 }
 
-/* Filtre prestataire éventuel */
-.contacts-workspace .oar-contacts-toolbar .contacts-supplier-filter {
-  grid-area: supplier !important;
-  margin: 0 !important;
+.contacts-workspace .contacts-toolbar-stable-supplier-filter {
   max-width: 360px !important;
+  margin: 0 !important;
 }
-
-/* Responsive */
-@media (max-width: 1250px) {
-  .contacts-workspace .oar-contacts-toolbar {
-    grid-template-columns: 1fr !important;
-    grid-template-areas:
-      "heading"
-      "stats"
-      "filters"
-      "supplier" !important;
-  }
-
-  .contacts-workspace .oar-contacts-toolbar .oar-contacts-stats {
-    justify-content: flex-start !important;
-    flex-wrap: wrap !important;
-  }
-}
-
-/* === CONTACTS VISIBLE TOOLBAR FINAL FIX END === */
-
-/* === CONTACT SIDE FORM COMPACT FIX START === */
-
-/*
-  Page Contacts uniquement.
-  Objectif :
-  - le panneau Ajouter un contact reste propre à droite
-  - bordure visible
-  - hauteur limitée
-  - scroll interne si besoin
-  - champs plus compacts
-  - aucune modification Factures / Planning / Suivi maison
-*/
 
 .contacts-workspace .contacts-layout {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 430px) !important;
+  grid-template-columns: minmax(0, 1fr) 420px !important;
   gap: 22px !important;
   align-items: start !important;
 }
 
-/* Panneau droite : Ajouter / Modifier contact */
-.contacts-workspace .contacts-layout > .card:last-child,
-.contacts-workspace .contacts-layout > aside,
-.contacts-workspace .contacts-layout .contact-form-card {
-  position: sticky !important;
-  top: 104px !important;
-  align-self: start !important;
-
-  max-height: calc(100vh - 128px) !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-
-  padding: 18px !important;
-  border: 1px solid rgba(187, 149, 81, 0.28) !important;
-  border-radius: 22px !important;
-  background: rgba(255, 252, 245, 0.94) !important;
-  box-shadow: 0 18px 44px rgba(4, 19, 49, 0.08) !important;
+.contacts-workspace .contacts-list-card {
+  min-width: 0 !important;
+  overflow: visible !important;
 }
 
-/* Titre du panneau plus compact */
-.contacts-workspace .contacts-layout > .card:last-child h3,
-.contacts-workspace .contacts-layout > aside h3,
-.contacts-workspace .contact-form-card h3 {
+.contacts-workspace .contact-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 164px !important;
+  gap: 18px !important;
+  align-items: start !important;
+  padding: 18px 20px !important;
+  min-width: 0 !important;
+}
+
+.contacts-workspace .contact-row > div:first-child {
+  min-width: 0 !important;
+}
+
+.contacts-workspace .contact-row h3,
+.contacts-workspace .contact-row p,
+.contacts-workspace .contact-row span,
+.contacts-workspace .contact-row strong {
+  word-break: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+.contacts-workspace .contact-row h3 {
+  margin: 2px 0 8px 0 !important;
+  line-height: 1.15 !important;
+}
+
+.contacts-workspace .contact-row .muted-line {
+  margin: 4px 0 !important;
+  line-height: 1.32 !important;
+}
+
+.contacts-workspace .contact-row-actions {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+  min-width: 164px !important;
+  justify-items: stretch !important;
+}
+
+.contacts-workspace .contact-row-actions a,
+.contacts-workspace .contact-row-actions button {
+  width: 100% !important;
+  min-height: 36px !important;
+  padding: 8px 10px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+  font-size: .78rem !important;
+}
+
+.contacts-workspace .contacts-form-card {
+  position: sticky !important;
+  top: 96px !important;
+  max-height: calc(100vh - 118px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 18px !important;
+  border: 1px solid rgba(187,149,81,.32) !important;
+  border-radius: 22px !important;
+  background: rgba(255,252,245,.95) !important;
+  box-shadow: 0 18px 42px rgba(4,19,49,.08) !important;
+}
+
+.contacts-workspace .contacts-form-card h3 {
   margin: 0 0 14px 0 !important;
-  font-size: 1.25rem !important;
+  font-size: 1.18rem !important;
   line-height: 1.1 !important;
 }
 
-/* Eyebrow "Nouveau" */
-.contacts-workspace .contacts-layout > .card:last-child .eyebrow,
-.contacts-workspace .contacts-layout > aside .eyebrow,
-.contacts-workspace .contact-form-card .eyebrow {
-  margin-bottom: 6px !important;
-}
-
-/* Formulaire plus dense */
-.contacts-workspace .contacts-layout > .card:last-child form,
-.contacts-workspace .contacts-layout > aside form,
-.contacts-workspace .contact-form-card form {
+.contacts-workspace .contacts-form-card form {
   display: grid !important;
   grid-template-columns: 1fr 1fr !important;
   gap: 11px 12px !important;
 }
 
-/* Champs pleine largeur quand nécessaire */
-.contacts-workspace .contacts-layout > .card:last-child form label:has(textarea),
-.contacts-workspace .contacts-layout > aside form label:has(textarea),
-.contacts-workspace .contact-form-card form label:has(textarea) {
+.contacts-workspace .contacts-form-card form .full,
+.contacts-workspace .contacts-form-card form label:has(textarea) {
   grid-column: 1 / -1 !important;
 }
 
-/* Labels plus petits */
-.contacts-workspace .contacts-layout > .card:last-child label,
-.contacts-workspace .contacts-layout > aside label,
-.contacts-workspace .contact-form-card label {
+.contacts-workspace .contacts-form-card label {
   margin: 0 !important;
-  font-size: 0.68rem !important;
+  font-size: .68rem !important;
   line-height: 1.1 !important;
-  letter-spacing: 0.15em !important;
+  letter-spacing: .14em !important;
 }
 
-/* Inputs compacts */
-.contacts-workspace .contacts-layout > .card:last-child input,
-.contacts-workspace .contacts-layout > .card:last-child select,
-.contacts-workspace .contacts-layout > aside input,
-.contacts-workspace .contacts-layout > aside select,
-.contacts-workspace .contact-form-card input,
-.contacts-workspace .contact-form-card select {
-  min-height: 40px !important;
+.contacts-workspace .contacts-form-card input,
+.contacts-workspace .contacts-form-card select {
   height: 40px !important;
+  min-height: 40px !important;
   padding: 9px 12px !important;
   border-radius: 12px !important;
-  font-size: 0.82rem !important;
+  font-size: .82rem !important;
 }
 
-/* Textareas limitées */
-.contacts-workspace .contacts-layout > .card:last-child textarea,
-.contacts-workspace .contacts-layout > aside textarea,
-.contacts-workspace .contact-form-card textarea {
+.contacts-workspace .contacts-form-card textarea {
   min-height: 72px !important;
   max-height: 120px !important;
   padding: 10px 12px !important;
   border-radius: 12px !important;
-  font-size: 0.82rem !important;
-  resize: vertical !important;
+  font-size: .82rem !important;
 }
 
-/* Bouton d'ajout/modification propre et visible */
-.contacts-workspace .contacts-layout > .card:last-child form button[type="submit"],
-.contacts-workspace .contacts-layout > aside form button[type="submit"],
-.contacts-workspace .contact-form-card form button[type="submit"] {
+.contacts-workspace .contacts-form-card button[type="submit"] {
   grid-column: 1 / -1 !important;
-  min-height: 46px !important;
+  min-height: 44px !important;
   margin-top: 4px !important;
-  border-radius: 14px !important;
 }
 
-/* Scrollbar discrète du panneau */
-.contacts-workspace .contacts-layout > .card:last-child::-webkit-scrollbar,
-.contacts-workspace .contacts-layout > aside::-webkit-scrollbar,
-.contacts-workspace .contact-form-card::-webkit-scrollbar {
-  width: 8px !important;
-}
-
-.contacts-workspace .contacts-layout > .card:last-child::-webkit-scrollbar-thumb,
-.contacts-workspace .contacts-layout > aside::-webkit-scrollbar-thumb,
-.contacts-workspace .contact-form-card::-webkit-scrollbar-thumb {
-  background: rgba(187, 149, 81, 0.28) !important;
-  border-radius: 999px !important;
-}
-
-/* Sur écran moyen, on garde lisible */
-@media (max-width: 1250px) {
-  .contacts-workspace .contacts-layout {
-    grid-template-columns: 1fr !important;
-  }
-
-  .contacts-workspace .contacts-layout > .card:last-child,
-  .contacts-workspace .contacts-layout > aside,
-  .contacts-workspace .contacts-layout .contact-form-card {
-    position: relative !important;
-    top: auto !important;
-    max-height: none !important;
-  }
-}
-
-/* === CONTACT SIDE FORM COMPACT FIX END === */
-
-/* === CONTACTS STATS CLEAN FINAL START === */
-
-/*
-  Correction ciblée Contacts.
-  Problème corrigé : les cartes Clients / Prestataires / Propriétaires étaient trop basses,
-  donc le texte était coupé.
-*/
-
-.contacts-workspace .oar-contacts-toolbar {
-  min-height: 0 !important;
-  height: auto !important;
-  padding: 22px 24px !important;
-  overflow: visible !important;
-}
-
-.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats {
-  display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: nowrap !important;
-  gap: 12px !important;
-  align-items: stretch !important;
-  justify-content: flex-end !important;
-  margin: 0 !important;
-  overflow: visible !important;
-}
-
-/* Cartes stats propres, ni énormes ni coupées */
-.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats > * {
-  width: 158px !important;
-  min-width: 158px !important;
-  max-width: 158px !important;
-  height: 76px !important;
-  min-height: 76px !important;
-  max-height: 76px !important;
-  padding: 12px 14px !important;
-  border-radius: 14px !important;
-  overflow: hidden !important;
-  box-shadow: none !important;
-}
-
-/* On garde seulement label + nombre. Le sous-texte crée le problème visuel. */
-.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats > * > *:nth-child(n+3) {
-  display: none !important;
-}
-
-/* Titre stat */
-.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats > * > *:first-child {
-  display: block !important;
-  margin: 0 0 8px 0 !important;
-  line-height: 1 !important;
-  font-size: 0.68rem !important;
-  letter-spacing: 0.16em !important;
-  text-transform: uppercase !important;
-  color: #BB9551 !important;
-  font-weight: 800 !important;
-  white-space: nowrap !important;
-}
-
-/* Nombre stat */
-.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats > * > *:nth-child(2) {
-  display: block !important;
-  margin: 0 !important;
-  line-height: 1 !important;
-  font-size: 1.45rem !important;
-  color: #041432 !important;
-  font-weight: 500 !important;
-}
-
-/* Supprime les demi-cercles décoratifs uniquement ici */
-.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats > *::before,
-.contacts-workspace .oar-contacts-toolbar .oar-contacts-stats > *::after {
-  display: none !important;
-  content: none !important;
-}
-
-/* Les filtres restent propres sous le bloc */
-.contacts-workspace .oar-contacts-toolbar .contact-filter-row {
-  margin-top: 8px !important;
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 10px !important;
-}
-
-/* === CONTACTS STATS CLEAN FINAL END === */
+/* === CONTACTS DESKTOP STABLE LAYOUT END === */
 

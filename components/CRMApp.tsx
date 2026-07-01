@@ -10290,22 +10290,25 @@ function ContactsView({
 
   return (
     <div className="stack contacts-workspace oar-contacts-workspace">
-      <section className="card contacts-toolbar oar-contacts-toolbar">
-        <div className="section-heading">
-          <div>
+      <section className="card contacts-toolbar contacts-toolbar-desktop-stable" data-contacts-desktop-version="stable-1">
+        <div className="contacts-toolbar-stable-main">
+          <div className="contacts-toolbar-stable-title">
             <p className="eyebrow">Contacts</p>
-            <h3>{visibleContacts.length} contact{visibleContacts.length > 1 ? "s" : ""}</h3>
+            <div className="contacts-toolbar-stable-count">
+              <strong>{visibleContacts.length}</strong>
+              <span>contact{visibleContacts.length > 1 ? "s" : ""}</span>
+            </div>
+            <p className="muted-line">Clients, prestataires et propriétaires. Lecture rapide, action uniquement si nécessaire.</p>
           </div>
-          <p className="muted-line">Clients et réseau prestataires au même endroit. Filtrez vite, ouvrez uniquement si nécessaire.</p>
+
+          <div className="contacts-toolbar-stable-metrics" aria-label="Synthèse contacts">
+            <div><span>Clients</span><strong>{clientCount}</strong></div>
+            <div><span>Prestataires</span><strong>{supplierCount}</strong></div>
+            <div><span>Propriétaires</span><strong>{ownerCount}</strong></div>
+          </div>
         </div>
 
-        <div className="stats-grid oar-contacts-stats">
-          <StatCard label="Clients" value={String(clientCount)} caption="Demandes et leads" />
-          <StatCard label="Prestataires" value={String(supplierCount)} caption="Prestataires activables" />
-          <StatCard label="Propriétaires" value={String(ownerCount)} caption="Actifs privés" />
-        </div>
-
-        <div className="contact-filter-row oar-contact-filter-row">
+        <div className="contact-filter-row contacts-toolbar-stable-filters">
           {filterOptions.map((option) => (
             <button
               key={option}
@@ -10319,7 +10322,7 @@ function ContactsView({
         </div>
 
         {contactFilter === "Prestataires" && (
-          <div style={{ marginTop: 16 }}>
+          <div className="contacts-toolbar-stable-supplier-filter">
             <label>Profession / activité
               <select value={supplierCategoryFilter} onChange={(event) => setSupplierCategoryFilter(event.target.value)}>
                 <option>Toutes</option>
