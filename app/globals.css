@@ -8217,3 +8217,10 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
 
 /* === DASHBOARD DESKTOP STABLE END === */
 
+/* === DASHBOARD START CARD REMOVED START === */
+/* Sécurité desktop: l'ancienne case Démarrer ici ne doit plus occuper d'espace si elle réapparaît. */
+.dashboard-workspace .dashboard-start-card {
+  display: none !important;
+}
+/* === DASHBOARD START CARD REMOVED END === */
+

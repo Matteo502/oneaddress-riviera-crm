@@ -9930,54 +9930,6 @@ function Dashboard({
 
   return (
     <div className="stack dashboard-workspace">
-      <section
-        className="card dashboard-start-card"
-        style={{
-          padding: 24,
-          border: "1px solid rgba(160, 120, 70, 0.28)",
-          background: "rgba(247, 241, 231, 0.9)"
-        }}
-      >
-        <p className="eyebrow">Démarrer ici</p>
-        <div
-          style={{
-            margin: "8px 0 10px",
-            color: "#071f27",
-            fontSize: 26,
-            fontWeight: 600,
-            lineHeight: 1.2,
-            letterSpacing: "0.01em"
-          }}
-        >
-          Que voulez-vous faire maintenant ?
-        </div>
-        <p className="muted-line">
-          Créez rapidement les données, suivez les demandes et sauvegardez le CRM après chaque lot d’ajouts.
-        </p>
-
-        <div className="dashboard-quick-actions">
-          <button className="primary-button" type="button" onClick={onStartMessage}>
-            Créer depuis un message client
-          </button>
-
-          <button className="secondary-button" type="button" onClick={onStartContactLead}>
-            Ajouter contact / lead
-          </button>
-
-          <button className="secondary-button" type="button" onClick={onStartInventory}>
-            Ajouter bien / voiture / bateau
-          </button>
-
-          <button className="secondary-button" type="button" onClick={onShowLeads}>
-            Voir les leads
-          </button>
-
-          </div>
-
-        <p className="muted-line" style={{ marginTop: 16 }}>
-          Conseil : après 5 à 10 ajouts, utilisez Backup fichier puis Sauvegarde cloud.
-        </p>
-      </section>
 
       <div className="stats-grid dashboard-main-stats">
         <StatCard label="Pipeline actif" value={currency.format(stats.pipeline)} caption="Valeur des opportunités non perdues" />
