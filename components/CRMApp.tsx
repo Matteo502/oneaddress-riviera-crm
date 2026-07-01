@@ -9069,8 +9069,8 @@ function PlanningView({
   );
 
   return (
-    <div className="stack">
-      <section className="card">
+    <div className="stack planning-workspace">
+      <section className="card planning-filter-card">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Planning</p>
@@ -9424,7 +9424,7 @@ function PlanningView({
         </div>
       </section>
 
-      <section className="card">
+      <section className="card planning-calendar-card">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Calendrier mensuel</p>
