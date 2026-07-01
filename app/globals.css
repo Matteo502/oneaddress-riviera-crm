@@ -8647,3 +8647,82 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
 
 /* === PLANNING DAY SEGMENTS NO SCROLL CSS END === */
 
+/* === PLANNING CALENDAR READABLE INFO START === */
+
+/* Planning desktop uniquement : le calendrier doit rester complet à l'écran, sans scroll horizontal. */
+.planning-month-table-wrap {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: visible !important;
+}
+
+.planning-month-table {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+}
+
+.planning-month-table th,
+.planning-month-table td {
+  width: 14.285714% !important;
+  min-width: 0 !important;
+  max-width: 14.285714% !important;
+  overflow: visible !important;
+  vertical-align: top !important;
+}
+
+/* On accepte plus de hauteur verticale, mais jamais de scroll horizontal. */
+.planning-month-table .planning-day {
+  min-width: 0 !important;
+  min-height: 168px !important;
+  height: auto !important;
+  padding: 8px !important;
+  overflow: visible !important;
+}
+
+/* Les événements ne doivent plus être coupés avec "...". */
+.planning-month-table .planning-event-pill {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 42px !important;
+  max-height: none !important;
+  padding: 7px 8px !important;
+  border-radius: 8px !important;
+  font-size: 0.63rem !important;
+  line-height: 1.25 !important;
+  text-align: left !important;
+  white-space: pre-line !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere !important;
+  word-break: normal !important;
+}
+
+.planning-month-table .planning-event-pill + .planning-event-pill {
+  margin-top: 6px !important;
+}
+
+/* Vue semaine : même principe, on garde les infos visibles. */
+.planning-week-event {
+  height: auto !important;
+  min-height: 38px !important;
+  max-height: none !important;
+  white-space: pre-line !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere !important;
+  line-height: 1.25 !important;
+}
+
+/* Si un ancien patch a forcé le clipping sur les containers internes, on le neutralise. */
+.planning-month-table .planning-day *,
+.planning-month-table .planning-event-pill * {
+  max-width: 100% !important;
+}
+
+/* === PLANNING CALENDAR READABLE INFO END === */
+

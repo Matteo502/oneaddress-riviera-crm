@@ -8551,13 +8551,14 @@ function getPlanningCalendarEventLabel(event: any, dayIso?: string) {
   const segment = getPlanningCalendarDaySegmentStatus(event, dayIso || startDate);
   const title = event?.source === "planning" ? event?.title : event?.contactName;
   const owner = event?.source === "planning" ? event?.contactName : event?.assetLabel;
+  const asset = event?.source === "planning" ? event?.assetLabel : "";
   const timeLabel = formatPlanningTimeRange(event?.startTime, event?.endTime) || "journée";
+  const dayPrefix = event?.source === "planning" && dayCount > 1 ? `J${dayNumber}/${dayCount}` : "";
 
-  if (event?.source === "planning" && dayCount > 1) {
-    return [`J${dayNumber}/${dayCount}`, timeLabel, segment.label, title, owner].filter(Boolean).join(" · ");
-  }
+  const firstLine = [dayPrefix, timeLabel, segment.label].filter(Boolean).join(" · ");
+  const secondLine = [title, owner, asset].filter(Boolean).join(" · ");
 
-  return [timeLabel, segment.label, title, owner].filter(Boolean).join(" · ");
+  return [firstLine, secondLine].filter(Boolean).join("\\n");
 }
 /* === PLANNING DAY SEGMENT STATUS HELPERS END === */
 
