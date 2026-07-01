@@ -8726,3 +8726,61 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
 
 /* === PLANNING CALENDAR READABLE INFO END === */
 
+/* === PLANNING CLEAN CALENDAR LABELS START === */
+
+/* Planning desktop uniquement : le statut est porté par la couleur, pas par du texte répété. */
+.planning-event-pill,
+.planning-week-event {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  word-break: normal !important;
+  overflow-wrap: anywhere !important;
+  line-height: 1.2 !important;
+  font-size: 0.68rem !important;
+  font-weight: 750 !important;
+  padding: 8px 9px !important;
+  min-height: 0 !important;
+}
+
+.planning-day {
+  min-height: 132px !important;
+  vertical-align: top !important;
+}
+
+.planning-day > div {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+.planning-day strong {
+  margin-bottom: 2px !important;
+}
+
+.planning-event-pill + .planning-event-pill {
+  margin-top: 0 !important;
+}
+
+/* On garde la couleur comme statut visuel : vert terminé, rouge à venir, doré en cours/à confirmer. */
+.planning-event-pill.status-termine {
+  border-color: rgba(47, 125, 74, 0.34) !important;
+  background: rgba(47, 125, 74, 0.13) !important;
+  color: #2d6b3f !important;
+}
+
+.planning-event-pill.status-prevu {
+  border-color: rgba(157, 59, 59, 0.32) !important;
+  background: rgba(157, 59, 59, 0.12) !important;
+  color: #7a2929 !important;
+}
+
+.planning-event-pill.status-en-cours,
+.planning-event-pill.status-a-confirmer {
+  border-color: rgba(214, 166, 61, 0.42) !important;
+  background: rgba(214, 166, 61, 0.16) !important;
+  color: #765512 !important;
+}
+
+/* === PLANNING CLEAN CALENDAR LABELS END === */
+

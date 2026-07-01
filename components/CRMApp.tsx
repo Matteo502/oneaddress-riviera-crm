@@ -8596,6 +8596,19 @@ function getPlanningCalendarWeeks(monthValue: string) {
   return weeks;
 }
 
+
+function cleanPlanningCalendarVisibleLabel(value: string) {
+  return value
+    .replace(/\\n/g, " · ")
+    .replace(/\s*[·•-]\s*(terminée|terminé|à faire|a faire|en cours|à confirmer|a confirmer)\b/gi, "")
+    .replace(/\b(terminée|terminé|à faire|a faire|en cours|à confirmer|a confirmer)\s*[·•-]?\s*/gi, "")
+    .replace(/\s*·\s*·\s*/g, " · ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/^\s*[·•-]\s*/, "")
+    .replace(/\s*[·•-]\s*$/, "")
+    .trim();
+}
+
 function PlanningView({
   leads,
   properties,
@@ -9745,7 +9758,7 @@ function PlanningView({
                                     onClick={() => startPlanningEntryEdit(matchingPlanningEntry)}
                                     title={eventExplanation}
                                   >
-                                    {eventLabel}
+                                    {cleanPlanningCalendarVisibleLabel(eventLabel)}
                                   </button>
                                 ) : (
                                   <span
@@ -9753,7 +9766,7 @@ function PlanningView({
                                     key={`${event.source}-${event.id}`}
                                     title={eventExplanation}
                                   >
-                                    {eventLabel}
+                                    {cleanPlanningCalendarVisibleLabel(eventLabel)}
                                   </span>
                                 );
                               })
@@ -9810,7 +9823,7 @@ function PlanningView({
                             onClick={() => startPlanningEntryEdit(matchingPlanningEntry)}
                             title={eventExplanation}
                           >
-                            {eventLabel}
+                            {cleanPlanningCalendarVisibleLabel(eventLabel)}
                           </button>
                         ) : (
                           <span
@@ -9818,7 +9831,7 @@ function PlanningView({
                             key={`${event.source}-${event.id}-${day.iso}`}
                             title={eventExplanation}
                           >
-                            {eventLabel}
+                            {cleanPlanningCalendarVisibleLabel(eventLabel)}
                           </span>
                         );
                       })
