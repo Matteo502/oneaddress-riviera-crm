@@ -8235,6 +8235,35 @@ function getPlanningMonthTitle(monthValue: string) {
   }).format(new Date(year, month - 1, 1));
 }
 
+
+function normalizePlanningTimeForDate(value?: string | null, fallback = "00:00") {
+  const raw = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace("h", ":")
+    .replace(/[^0-9:]/g, "");
+
+  if (!raw) return fallback;
+
+  const [hourText = "", minuteText = "0"] = raw.split(":");
+  const hour = Number(hourText);
+  const minute = Number(minuteText || "0");
+
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return fallback;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return fallback;
+
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function getPlanningDateTimeValue(dateValue?: string, timeValue?: string, fallbackTime = "00:00") {
+  if (!dateValue || !isValidPlanningDate(dateValue)) return Number.NaN;
+
+  const time = normalizePlanningTimeForDate(timeValue, fallbackTime);
+  const date = new Date(`${dateValue}T${time}:00`);
+
+  return date.getTime();
+}
+
 function formatPlanningTimeRange(startTime?: string, endTime?: string) {
   const start = String(startTime || "").trim();
   const end = String(endTime || "").trim();
@@ -8246,27 +8275,30 @@ function formatPlanningTimeRange(startTime?: string, endTime?: string) {
   return "";
 }
 
-function getPlanningEntryStatus(entry: Pick<PlanningEntry, "status" | "startDate" | "endDate">): PlanningEntryStatus {
+
+function getPlanningEntryStatus(entry: Pick<PlanningEntry, "status" | "startDate" | "endDate" | "startTime" | "endTime">): PlanningEntryStatus {
   const storedStatus = entry.status || "Prévu";
 
   // Statut automatique opérationnel :
-  // - Annulé reste Annulé.
-  // - Le jour de l'intervention, le statut affiché devient En cours.
-  // - Le lendemain de la fin d'intervention, le statut affiché devient Terminé.
-  // On ne modifie pas brutalement la donnée en base : c'est un statut calculé pour éviter les écritures automatiques risquées.
-  if (storedStatus === "Annulé") return "Annulé";
+  // - Annulé et Terminé restent des statuts fermés.
+  // - Si une heure de fin existe et qu'elle est dépassée, l'intervention passe en Terminé.
+  // - Si l'heure actuelle est entre le début et la fin, elle s'affiche En cours.
+  // - Sans heure de fin, on garde un comportement journée entière pour éviter de fermer à tort.
+  // La donnée n'est pas écrite automatiquement en base : le statut est calculé à l'affichage.
+  if (storedStatus === "Annulé" || storedStatus === "Terminé") return storedStatus;
 
   const effectiveEndDate = entry.endDate || entry.startDate;
-  if (!isValidPlanningDate(entry.startDate) || !isValidPlanningDate(effectiveEndDate)) {
+  const startValue = getPlanningDateTimeValue(entry.startDate, entry.startTime, "00:00");
+  const endValue = getPlanningDateTimeValue(effectiveEndDate, entry.endTime, "23:59");
+
+  if (!Number.isFinite(startValue) || !Number.isFinite(endValue)) {
     return storedStatus;
   }
 
-  const todayValue = planningDateValue(formatPlanningDateValue(new Date()));
-  const startValue = planningDateValue(entry.startDate);
-  const endValue = planningDateValue(effectiveEndDate);
+  const nowValue = Date.now();
 
-  if (todayValue > endValue) return "Terminé";
-  if (todayValue >= startValue && todayValue <= endValue) return "En cours";
+  if (nowValue > endValue) return "Terminé";
+  if (nowValue >= startValue && nowValue <= endValue) return "En cours";
 
   return storedStatus;
 }
@@ -8283,25 +8315,30 @@ function getPlanningStatusClass(status?: string) {
 }
 
 // CRM_PLANNING_STATUS_COLORS_20260622
+
 function getPlanningEventOperationalStatus(event: any): PlanningEntryStatus {
   const rawStatus = String(event?.status || "Prévu");
   const normalizedStatus = getPlanningStatusClass(rawStatus);
 
   if (normalizedStatus === "annule") return "Annulé";
+  if (normalizedStatus === "termine") return "Terminé";
 
   const startDate = String(event?.startDate || "");
   const endDate = String(event?.endDate || event?.startDate || "");
+  const startTime = String(event?.startTime || "");
+  const endTime = String(event?.endTime || "");
 
   if (isValidPlanningDate(startDate) && isValidPlanningDate(endDate)) {
-    const todayValue = planningDateValue(formatPlanningDateValue(new Date()));
-    const startValue = planningDateValue(startDate);
-    const endValue = planningDateValue(endDate);
+    const startValue = getPlanningDateTimeValue(startDate, startTime, "00:00");
+    const endValue = getPlanningDateTimeValue(endDate, endTime, "23:59");
+    const nowValue = Date.now();
 
-    if (todayValue > endValue) return "Terminé";
-    if (todayValue >= startValue && todayValue <= endValue) return "En cours";
+    if (Number.isFinite(startValue) && Number.isFinite(endValue)) {
+      if (nowValue > endValue) return "Terminé";
+      if (nowValue >= startValue && nowValue <= endValue) return "En cours";
+    }
   }
 
-  if (normalizedStatus === "termine") return "Terminé";
   if (normalizedStatus === "en-cours") return "En cours";
   if (normalizedStatus === "a-confirmer") return "À confirmer";
 
@@ -8406,6 +8443,12 @@ function PlanningView({
   const [planningWeekStart, setPlanningWeekStart] = useState(() => formatPlanningDateValue(new Date()));
   const [showAllUpcomingPlanningEntries, setShowAllUpcomingPlanningEntries] = useState(false);
   const [showCompletedPlanningEntries, setShowCompletedPlanningEntries] = useState(false);
+  const [planningClockTick, setPlanningClockTick] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setPlanningClockTick(Date.now()), 60000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const assets = useMemo<PlanningAsset[]>(() => {
     return [
@@ -8633,9 +8676,9 @@ function PlanningView({
     (categoryFilter === "Tous" || getPlanningEntryCategory(entry) === activePlanningCategory) && planningItemMatchesAsset(entry)
   );
 
-  const todayIso = formatPlanningDateValue(new Date());
-  const tomorrowIso = formatPlanningDateValue(addPlanningDays(new Date(), 1));
-  const nextSevenDaysIso = formatPlanningDateValue(addPlanningDays(new Date(), 7));
+  const todayIso = formatPlanningDateValue(new Date(planningClockTick));
+  const tomorrowIso = formatPlanningDateValue(addPlanningDays(new Date(planningClockTick), 1));
+  const nextSevenDaysIso = formatPlanningDateValue(addPlanningDays(new Date(planningClockTick), 7));
 
   // CRM_PLANNING_COLLAPSED_PRIORITY_LIST_20260622
   // La liste opérationnelle affiche d'abord ce qui arrive / ce qui est en cours.
@@ -8840,7 +8883,7 @@ function PlanningView({
         if (dateDiff !== 0) return dateDiff;
         return String(a.startTime || "").localeCompare(String(b.startTime || ""));
       });
-  }, [confirmedBookings, pendingBookings, planningEntries, assets, categoryFilter]);
+  }, [confirmedBookings, pendingBookings, planningEntries, assets, categoryFilter, planningClockTick]);
 
   const planningConflicts = useMemo(() => {
     const usableLeads = leads
