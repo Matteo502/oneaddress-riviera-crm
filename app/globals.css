@@ -8560,3 +8560,47 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
 
 /* === PLANNING DESKTOP STABLE END === */
 
+/* === PLANNING PERFECT STATUS DISPLAY CSS START === */
+
+/* Desktop uniquement : rend explicites les durées et statuts Planning. */
+.planning-entry-timing-explanation,
+.planning-agenda-explanation {
+  display: block;
+  margin-top: 4px;
+  color: #5f6d68;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+}
+
+.planning-entry-line-clean.status-en-cours .planning-entry-timing-explanation,
+.planning-agenda-item.status-en-cours .planning-agenda-explanation {
+  color: #7a5a12;
+  font-weight: 700;
+}
+
+.planning-entry-line-clean.status-termine .planning-entry-timing-explanation,
+.planning-agenda-item.status-termine .planning-agenda-explanation {
+  color: #47715a;
+  font-weight: 700;
+}
+
+.planning-event-pill,
+.planning-week-event {
+  white-space: normal !important;
+  line-height: 1.25 !important;
+  text-align: left !important;
+}
+
+.planning-event-pill.status-en-cours,
+.planning-week-event.status-en-cours {
+  border-color: rgba(187, 149, 81, 0.48) !important;
+}
+
+.planning-event-pill.status-termine,
+.planning-week-event.status-termine {
+  opacity: 0.78;
+}
+
+/* === PLANNING PERFECT STATUS DISPLAY CSS END === */
+
