@@ -8348,8 +8348,10 @@ function getPlanningEventOperationalStatus(event: any): PlanningEntryStatus {
   return "Prévu";
 }
 
-function getPlanningDayStatusClass(events: any[]) {
-  const statuses = events.map((event) => getPlanningEventOperationalStatus(event));
+function getPlanningDayStatusClass(events: any[], dayIso?: string) {
+  const statuses = events.map((event) => dayIso
+    ? getPlanningCalendarDaySegmentStatus(event, dayIso).status
+    : getPlanningEventOperationalStatus(event));
 
   if (statuses.includes("En cours")) return "planning-day-status-en-cours";
   if (statuses.includes("À confirmer")) return "planning-day-status-a-confirmer";
@@ -8377,7 +8379,10 @@ function formatPlanningDateTimeRange(entry: Pick<PlanningEntry, "startDate" | "e
 }
 
 
-/* === PLANNING PERFECT STATUS DISPLAY HELPERS START === */
+
+
+
+/* === PLANNING DAY SEGMENT STATUS HELPERS START === */
 function getPlanningInclusiveDayCount(startDate?: string, endDate?: string) {
   const start = String(startDate || "");
   const end = String(endDate || start || "");
@@ -8386,6 +8391,35 @@ function getPlanningInclusiveDayCount(startDate?: string, endDate?: string) {
 
   const diff = Math.floor((planningDateValue(end) - planningDateValue(start)) / 86400000) + 1;
   return Math.max(1, diff);
+}
+
+function getPlanningDayNumberInRange(startDate?: string, dayIso?: string) {
+  const start = String(startDate || "");
+  const day = String(dayIso || start || "");
+
+  if (!isValidPlanningDate(start) || !isValidPlanningDate(day)) return 1;
+
+  return Math.max(1, Math.floor((planningDateValue(day) - planningDateValue(start)) / 86400000) + 1);
+}
+
+function parsePlanningTimeToMinutes(value?: string) {
+  const time = String(value || "").trim();
+  const match = time.match(/^(\d{1,2}):(\d{2})/);
+
+  if (!match) return null;
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+
+  return hours * 60 + minutes;
+}
+
+function getPlanningNowMinutes() {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
 }
 
 function formatPlanningShortDate(value?: string) {
@@ -8399,99 +8433,133 @@ function formatPlanningShortDate(value?: string) {
   }).format(new Date(`${dateValue}T00:00:00`));
 }
 
-function formatPlanningDateTimeForExplanation(dateValue?: string, timeValue?: string) {
-  const dateLabel = isValidPlanningDate(String(dateValue || "")) ? formatDateFR(String(dateValue || "")) : "date non renseignée";
-  const time = String(timeValue || "").trim();
+function getPlanningCalendarDaySegmentStatus(event: any, dayIso?: string): { status: PlanningEntryStatus; label: string; explanation: string } {
+  const rawStatus = String(event?.status || "Prévu");
+  const normalizedStatus = getPlanningStatusClass(rawStatus);
 
-  return time ? `${dateLabel} à ${time}` : dateLabel;
+  if (normalizedStatus === "annule") {
+    return { status: "Annulé", label: "Annulé", explanation: "Intervention annulée." };
+  }
+
+  if (normalizedStatus === "termine") {
+    return { status: "Terminé", label: "Terminé", explanation: "Intervention marquée terminée." };
+  }
+
+  const startDate = String(event?.startDate || "");
+  const endDate = String(event?.endDate || event?.startDate || "");
+  const day = String(dayIso || startDate || "");
+
+  if (!isValidPlanningDate(startDate) || !isValidPlanningDate(endDate) || !isValidPlanningDate(day)) {
+    return { status: getPlanningEventOperationalStatus(event), label: getPlanningEventOperationalStatus(event), explanation: "Date à compléter." };
+  }
+
+  // Les leads / réservations restent gérés comme des plages de séjour continues.
+  if (event?.source !== "planning") {
+    const status = getPlanningEventOperationalStatus(event);
+    return { status, label: status, explanation: status === "À confirmer" ? "Demande ou option à confirmer." : `Statut réservation : ${status}.` };
+  }
+
+  const todayIso = formatPlanningDateValue(new Date());
+  const dayValue = planningDateValue(day);
+  const todayValue = planningDateValue(todayIso);
+  const dayCount = getPlanningInclusiveDayCount(startDate, endDate);
+  const dayNumber = getPlanningDayNumberInRange(startDate, day);
+  const startMinutes = parsePlanningTimeToMinutes(event?.startTime);
+  const endMinutes = parsePlanningTimeToMinutes(event?.endTime);
+  const rangeLabel = event?.startTime || event?.endTime
+    ? formatPlanningTimeRange(event?.startTime, event?.endTime)
+    : "journée";
+  const dayPrefix = dayCount > 1 ? `J${dayNumber}/${dayCount}` : "Intervention";
+
+  if (dayValue < todayValue) {
+    return {
+      status: "Terminé",
+      label: "Terminé",
+      explanation: `${dayPrefix} terminé : cette journée d’intervention est passée.`
+    };
+  }
+
+  if (dayValue > todayValue) {
+    return {
+      status: "Prévu",
+      label: "À faire",
+      explanation: `${dayPrefix} à faire : cette journée d’intervention n’a pas encore eu lieu.`
+    };
+  }
+
+  const nowMinutes = getPlanningNowMinutes();
+
+  if (startMinutes !== null && nowMinutes < startMinutes) {
+    return {
+      status: "Prévu",
+      label: "À faire",
+      explanation: `${dayPrefix} à faire aujourd’hui · début prévu à ${event.startTime}.`
+    };
+  }
+
+  if (endMinutes !== null && nowMinutes > endMinutes) {
+    return {
+      status: "Terminé",
+      label: "Terminé",
+      explanation: `${dayPrefix} terminé aujourd’hui · heure de fin ${event.endTime} dépassée.`
+    };
+  }
+
+  if (startMinutes !== null || endMinutes !== null) {
+    return {
+      status: "En cours",
+      label: "En cours",
+      explanation: `${dayPrefix} en cours maintenant · créneau ${rangeLabel}.`
+    };
+  }
+
+  return {
+    status: "En cours",
+    label: "En cours",
+    explanation: `${dayPrefix} en cours aujourd’hui · aucune heure de fin renseignée.`
+  };
 }
 
 function getPlanningTimingExplanation(item: any) {
   const startDate = String(item?.startDate || "");
   const endDate = String(item?.endDate || item?.startDate || "");
-  const startTime = String(item?.startTime || "").trim();
-  const endTime = String(item?.endTime || "").trim();
   const dayCount = getPlanningInclusiveDayCount(startDate, endDate);
-  const status = item?.source ? getPlanningEventOperationalStatus(item) : getPlanningEntryStatus(item as PlanningEntry);
 
-  if (!isValidPlanningDate(startDate)) return "Dates à compléter pour comprendre le statut.";
+  if (!isValidPlanningDate(startDate)) return "Dates à compléter.";
 
   if (dayCount > 1) {
-    const endLabel = formatPlanningDateTimeForExplanation(endDate, endTime || "fin de journée");
-    const startLabel = formatPlanningDateTimeForExplanation(startDate, startTime || "début de journée");
+    const todayIso = formatPlanningDateValue(new Date());
+    const todayInsideRange = planningRangesOverlap(todayIso, todayIso, startDate, endDate);
+    const todaySegment = todayInsideRange ? getPlanningCalendarDaySegmentStatus(item, todayIso) : null;
+    const endLabel = `${formatPlanningShortDate(endDate)}${item?.endTime ? ` à ${item.endTime}` : ""}`;
 
-    if (status === "En cours") {
-      return `En cours car l’intervention dure ${dayCount} jours · fin prévue le ${endLabel}.`;
+    if (todaySegment) {
+      return `${todaySegment.explanation} Intervention totale sur ${dayCount} jours · fin globale ${endLabel}.`;
     }
 
-    if (status === "Terminé") {
-      return `Terminé automatiquement : intervention de ${dayCount} jours finie le ${endLabel}.`;
-    }
-
-    if (status === "Prévu") {
-      return `Prévu · intervention sur ${dayCount} jours, du ${startLabel} au ${endLabel}.`;
-    }
-
-    return `${status} · intervention sur ${dayCount} jours, du ${startLabel} au ${endLabel}.`;
+    return `Intervention sur ${dayCount} jours · du ${formatPlanningShortDate(startDate)} au ${endLabel}. Chaque journée a son propre statut dans le calendrier.`;
   }
 
-  if (status === "En cours") {
-    return endTime
-      ? `En cours · fin prévue aujourd’hui à ${endTime}.`
-      : "En cours · aucune heure de fin renseignée, donc traité comme une intervention sur la journée.";
-  }
-
-  if (status === "Terminé") {
-    return endTime
-      ? `Terminé automatiquement car l’heure de fin ${endTime} est dépassée.`
-      : "Terminé automatiquement car la date est passée.";
-  }
-
-  if (status === "Prévu") {
-    return startTime
-      ? `Prévu · démarre à ${startTime}${endTime ? ` et finit à ${endTime}` : ""}.`
-      : "Prévu · pas encore commencé.";
-  }
-
-  if (status === "À confirmer") {
-    return "À confirmer · option ou intervention non verrouillée.";
-  }
-
-  if (status === "Annulé") {
-    return "Annulé · n’apparaît plus comme action active.";
-  }
-
-  return `${status} · statut calculé à partir des dates et horaires.`;
+  return getPlanningCalendarDaySegmentStatus(item, startDate).explanation;
 }
 
 function getPlanningCalendarEventLabel(event: any, dayIso?: string) {
   const startDate = String(event?.startDate || "");
   const endDate = String(event?.endDate || event?.startDate || "");
-  const startTime = String(event?.startTime || "").trim();
-  const endTime = String(event?.endTime || "").trim();
   const dayCount = getPlanningInclusiveDayCount(startDate, endDate);
-  const status = getPlanningEventOperationalStatus(event);
+  const dayNumber = getPlanningDayNumberInRange(startDate, dayIso || startDate);
+  const segment = getPlanningCalendarDaySegmentStatus(event, dayIso || startDate);
   const title = event?.source === "planning" ? event?.title : event?.contactName;
   const owner = event?.source === "planning" ? event?.contactName : event?.assetLabel;
+  const timeLabel = formatPlanningTimeRange(event?.startTime, event?.endTime) || "journée";
 
-  if (dayCount > 1) {
-    const dayNumber = dayIso && isValidPlanningDate(dayIso) && isValidPlanningDate(startDate)
-      ? Math.min(dayCount, Math.max(1, Math.floor((planningDateValue(dayIso) - planningDateValue(startDate)) / 86400000) + 1))
-      : 1;
-
-    const timing = `${startTime || "journée"} → ${formatPlanningShortDate(endDate)}${endTime ? ` ${endTime}` : ""}`;
-
-    return [`J${dayNumber}/${dayCount}`, timing, status, title, owner].filter(Boolean).join(" · ");
+  if (event?.source === "planning" && dayCount > 1) {
+    return [`J${dayNumber}/${dayCount}`, timeLabel, segment.label, title, owner].filter(Boolean).join(" · ");
   }
 
-  return [
-    formatPlanningTimeRange(startTime, endTime) || "Journée",
-    status,
-    title,
-    owner
-  ].filter(Boolean).join(" · ");
+  return [timeLabel, segment.label, title, owner].filter(Boolean).join(" · ");
 }
-/* === PLANNING PERFECT STATUS DISPLAY HELPERS END === */
+/* === PLANNING DAY SEGMENT STATUS HELPERS END === */
 
 function getPlanningCalendarWeeks(monthValue: string) {
   const [yearText, monthText] = monthValue.split("-");
@@ -9627,8 +9695,8 @@ function PlanningView({
         </form>
 
         {planningViewMode === "month" ? (
-          <div className="table-wrap">
-            <table>
+          <div className="table-wrap planning-month-table-wrap">
+            <table className="planning-month-table">
             <thead>
               <tr>
                 {calendarWeekDays.map((day) => (
@@ -9644,7 +9712,8 @@ function PlanningView({
                     const events = day ? getEventsForCalendarDay(day.iso) : [];
 
                     const hasBlockingEvent = events.some((event) => event.blocksAvailability);
-                    const dayStatusClass = getPlanningDayStatusClass(events);
+                    const safeDayIso = day?.iso || "";
+                  const dayStatusClass = safeDayIso ? getPlanningDayStatusClass(events, safeDayIso) : "";
                     const dayClassName = [
                       "planning-day",
                       events.length > 0 ? "planning-day-filled" : "",
@@ -9664,11 +9733,12 @@ function PlanningView({
                                   ? planningEntries.find((entry) => entry.id === event.id)
                                   : null;
                                 const eventLabel = getPlanningCalendarEventLabel(event, day.iso);
-                                const eventExplanation = getPlanningTimingExplanation(event);
+                                const eventSegment = getPlanningCalendarDaySegmentStatus(event, day.iso);
+                                const eventExplanation = eventSegment.explanation;
 
                                 return matchingPlanningEntry ? (
                                   <button
-                                    className={`planning-event-pill planning-event-button ${event.blocksAvailability ? "blocked" : "entry"} status-${getPlanningStatusClass(getPlanningEventOperationalStatus(event))}`}
+                                    className={`planning-event-pill planning-event-button ${event.blocksAvailability ? "blocked" : "entry"} status-${getPlanningStatusClass(eventSegment.status)}`}
                                     key={`${event.source}-${event.id}`}
                                     type="button"
                                     onClick={() => startPlanningEntryEdit(matchingPlanningEntry)}
@@ -9678,7 +9748,7 @@ function PlanningView({
                                   </button>
                                 ) : (
                                   <span
-                                    className={`planning-event-pill ${event.blocksAvailability ? "blocked" : "option"} status-${getPlanningStatusClass(getPlanningEventOperationalStatus(event))}`}
+                                    className={`planning-event-pill ${event.blocksAvailability ? "blocked" : "option"} status-${getPlanningStatusClass(eventSegment.status)}`}
                                     key={`${event.source}-${event.id}`}
                                     title={eventExplanation}
                                   >
@@ -9728,11 +9798,12 @@ function PlanningView({
                           ? planningEntries.find((entry) => entry.id === event.id)
                           : null;
                         const eventLabel = getPlanningCalendarEventLabel(event, day.iso);
-                        const eventExplanation = getPlanningTimingExplanation(event);
+                        const eventSegment = getPlanningCalendarDaySegmentStatus(event, day.iso);
+                        const eventExplanation = eventSegment.explanation;
 
                         return matchingPlanningEntry ? (
                           <button
-                            className={`planning-week-event ${event.blocksAvailability ? "blocked" : "entry"} status-${getPlanningStatusClass(getPlanningEventOperationalStatus(event))}`}
+                            className={`planning-week-event ${event.blocksAvailability ? "blocked" : "entry"} status-${getPlanningStatusClass(eventSegment.status)}`}
                             key={`${event.source}-${event.id}-${day.iso}`}
                             type="button"
                             onClick={() => startPlanningEntryEdit(matchingPlanningEntry)}
@@ -9742,7 +9813,7 @@ function PlanningView({
                           </button>
                         ) : (
                           <span
-                            className={`planning-week-event ${event.blocksAvailability ? "blocked" : "option"} status-${getPlanningStatusClass(getPlanningEventOperationalStatus(event))}`}
+                            className={`planning-week-event ${event.blocksAvailability ? "blocked" : "option"} status-${getPlanningStatusClass(eventSegment.status)}`}
                             key={`${event.source}-${event.id}-${day.iso}`}
                             title={eventExplanation}
                           >

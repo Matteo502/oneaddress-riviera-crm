@@ -8560,9 +8560,61 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
 
 /* === PLANNING DESKTOP STABLE END === */
 
-/* === PLANNING PERFECT STATUS DISPLAY CSS START === */
+/* === PLANNING DAY SEGMENTS NO SCROLL CSS START === */
 
-/* Desktop uniquement : rend explicites les durées et statuts Planning. */
+/* Desktop uniquement : calendrier planning visible sans glisser horizontalement. */
+.planning-month-table-wrap {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: visible !important;
+}
+
+.planning-month-table {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+}
+
+.planning-month-table th,
+.planning-month-table td {
+  width: 14.285714% !important;
+  min-width: 0 !important;
+  max-width: 14.285714% !important;
+  overflow: hidden !important;
+  vertical-align: top !important;
+}
+
+.planning-month-table .planning-day {
+  min-width: 0 !important;
+  min-height: 112px !important;
+  height: 112px !important;
+  padding: 8px !important;
+}
+
+.planning-month-table .planning-event-pill {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  padding: 6px 7px !important;
+  border-radius: 8px !important;
+  font-size: 0.64rem !important;
+  line-height: 1.2 !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.planning-month-table .planning-event-pill + .planning-event-pill {
+  margin-top: 5px !important;
+}
+
+.planning-month-table .planning-day strong {
+  margin-bottom: 6px !important;
+}
+
 .planning-entry-timing-explanation,
 .planning-agenda-explanation {
   display: block;
@@ -8570,37 +8622,28 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
   color: #5f6d68;
   font-size: 0.78rem;
   line-height: 1.35;
-  letter-spacing: 0.01em;
-}
-
-.planning-entry-line-clean.status-en-cours .planning-entry-timing-explanation,
-.planning-agenda-item.status-en-cours .planning-agenda-explanation {
-  color: #7a5a12;
-  font-weight: 700;
-}
-
-.planning-entry-line-clean.status-termine .planning-entry-timing-explanation,
-.planning-agenda-item.status-termine .planning-agenda-explanation {
-  color: #47715a;
-  font-weight: 700;
-}
-
-.planning-event-pill,
-.planning-week-event {
-  white-space: normal !important;
-  line-height: 1.25 !important;
-  text-align: left !important;
-}
-
-.planning-event-pill.status-en-cours,
-.planning-week-event.status-en-cours {
-  border-color: rgba(187, 149, 81, 0.48) !important;
 }
 
 .planning-event-pill.status-termine,
 .planning-week-event.status-termine {
-  opacity: 0.78;
+  border-color: rgba(47, 125, 74, 0.36) !important;
+  background: rgba(47, 125, 74, 0.14) !important;
+  color: #245f38 !important;
 }
 
-/* === PLANNING PERFECT STATUS DISPLAY CSS END === */
+.planning-event-pill.status-prevu,
+.planning-week-event.status-prevu {
+  border-color: rgba(157, 59, 59, 0.34) !important;
+  background: rgba(157, 59, 59, 0.13) !important;
+  color: #7a2929 !important;
+}
+
+.planning-event-pill.status-en-cours,
+.planning-week-event.status-en-cours {
+  border-color: rgba(214, 166, 61, 0.42) !important;
+  background: rgba(214, 166, 61, 0.17) !important;
+  color: #765512 !important;
+}
+
+/* === PLANNING DAY SEGMENTS NO SCROLL CSS END === */
 
