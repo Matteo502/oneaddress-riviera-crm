@@ -9872,7 +9872,10 @@ function Dashboard({
   onShowLeads: () => void;
   onCloudBackup: () => void;
 }) {
-  const nextTasks = [...data.tasks].filter((task) => task.status !== "Terminé").sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  const nextTasks = [...data.tasks]
+    .filter((task) => task.status !== "Terminé")
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+    .slice(0, 6);
   const hotLeads = [...data.leads].filter((lead) => lead.status !== "Perdu").sort((a, b) => b.value - a.value).slice(0, 4);
 
   const cockpitQuotes = mergeQuoteRequests((((data as any).quotes ?? []) as QuoteRequest[]), loadSavedQuotes());
@@ -9983,7 +9986,7 @@ function Dashboard({
         <StatCard label="Biens disponibles" value={String(stats.availableProperties)} caption="Inventaire prêt à proposer" />
       </div>
 
-      <section className="card">
+      <section className="card dashboard-cockpit-card">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Cockpit</p>
