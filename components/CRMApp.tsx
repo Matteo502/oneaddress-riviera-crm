@@ -5608,27 +5608,41 @@ const toneRank: Record<ActionNotification["tone"], number> = {
 
     if (!target) return;
 
+    const scrollOnceToTarget = () => {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          const targetElement = target.targetId
+            ? Array.from(document.querySelectorAll<HTMLElement>("[data-notification-target]")).find((element) =>
+                element.dataset.notificationTarget === target.targetId
+              ) || document.getElementById(target.targetId)
+            : null;
+
+          const fallbackElement = document.querySelector<HTMLElement>(".app-content, .crm-content, main") || document.body;
+          const destination = targetElement || fallbackElement;
+          const headerOffset = 118;
+          const nextTop = Math.max(destination.getBoundingClientRect().top + window.scrollY - headerOffset, 0);
+          const previousScrollBehavior = document.documentElement.style.scrollBehavior;
+
+          document.documentElement.style.scrollBehavior = "auto";
+          window.scrollTo(0, nextTop);
+
+          window.setTimeout(() => {
+            document.documentElement.style.scrollBehavior = previousScrollBehavior;
+          }, 120);
+
+          if (targetElement) {
+            targetElement.classList.add("notification-focus");
+
+            window.setTimeout(() => {
+              targetElement.classList.remove("notification-focus");
+            }, 2200);
+          }
+        });
+      });
+    };
+
     setActiveTab(target.tab);
-
-    window.setTimeout(() => {
-      const targetElement = target.targetId
-        ? Array.from(document.querySelectorAll<HTMLElement>("[data-notification-target]")).find((element) =>
-            element.dataset.notificationTarget === target.targetId
-          ) || document.getElementById(target.targetId)
-        : null;
-
-      if (!targetElement) {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-        return;
-      }
-
-      targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
-      targetElement.classList.add("notification-focus");
-
-      window.setTimeout(() => {
-        targetElement.classList.remove("notification-focus");
-      }, 3200);
-    }, 220);
+    window.setTimeout(scrollOnceToTarget, activeTab === target.tab ? 80 : 420);
   }
 
   function notify(message: string, tone: Toast["tone"] = "success") {
@@ -10524,6 +10538,8 @@ function Dashboard({
     }))
   ];
 
+  const vendorInvoiceAlertItems = urgentItems.filter((item) => item.tab === "vendorInvoices");
+
   const todayItems: DashboardItem[] = todayPlanning.map((entry) => ({
     id: `today-${entry.id}`,
     title: `${entry.startTime || "journée"}${entry.endTime ? ` → ${entry.endTime}` : ""} · ${entry.title}`,
@@ -10683,11 +10699,11 @@ function Dashboard({
         </section>
 
         <div className="dashboard-command-kpis">
-          <DashboardQuickTile label="À traiter" value={String(urgentItems.length)} caption="Alertes opérationnelles" onClick={() => {
-            const firstUrgent = urgentItems.find((item) => item.action || item.tab);
+          <DashboardQuickTile label="À traiter" value={String(vendorInvoiceAlertItems.length)} caption="Alertes opérationnelles" onClick={() => {
+            const firstUrgent = vendorInvoiceAlertItems.find((item) => item.action || item.tab);
             if (firstUrgent?.action) firstUrgent.action();
             else if (firstUrgent?.tab) onDashboardAction(firstUrgent.tab, firstUrgent.targetId);
-            else onDashboardAction("vendorInvoices");
+            else onDashboardAction("vendorInvoices" as Tab);
           }} />
           <DashboardQuickTile label="Aujourd’hui" value={String(todayPlanning.length)} caption="Interventions du jour" onClick={() => onDashboardAction("planning")} />
           <DashboardQuickTile label="À payer" value={currency.format(vendorAmountToPay + houseAmountToPay)} caption="Prestataires + maison" onClick={() => onDashboardAction(vendorAmountToPay > 0 ? "vendorInvoices" : "houseTracking")} />
@@ -10697,7 +10713,7 @@ function Dashboard({
 
       <div className="dashboard-command-grid dashboard-command-grid-priority">
         <DashboardCommandCard eyebrow="Urgent" title="À traiter maintenant" summary={`${urgentItems.length} action${urgentItems.length > 1 ? "s" : ""}`} tone={urgentItems.some((item) => item.tone === "danger") ? "danger" : urgentItems.length > 0 ? "warning" : "success"}>
-          {renderDashboardList(urgentItems, "Aucune alerte urgente pour le moment.", 6)}
+          {renderDashboardList(vendorInvoiceAlertItems, "Aucune alerte urgente pour le moment.", 6)}
         </DashboardCommandCard>
 
         <DashboardCommandCard eyebrow="Aujourd’hui" title="Planning du jour" summary={`${todayPlanning.length} élément${todayPlanning.length > 1 ? "s" : ""}`} tone={activePlanning.length > 0 ? "warning" : "neutral"}>

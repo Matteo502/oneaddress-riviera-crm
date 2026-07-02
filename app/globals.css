@@ -8885,3 +8885,32 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
 
 /* === DASHBOARD CLICKABLE ACTIONS CLEAN BLUE END === */
 
+/* === DASHBOARD STABLE CLICKS VENDOR ALERTS START === */
+
+html {
+  scroll-behavior: auto !important;
+}
+
+.dashboard-command-center .dashboard-command-row.is-clickable,
+.dashboard-command-center .dashboard-command-kpi-tile {
+  cursor: pointer !important;
+}
+
+.dashboard-command-center .dashboard-command-hero,
+.dashboard-command-center .dashboard-command-kpis,
+.dashboard-command-center .dashboard-command-grid,
+.dashboard-command-center .dashboard-command-grid-priority,
+.dashboard-command-center .dashboard-command-grid-control {
+  background-color: transparent !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+
+.notification-focus {
+  outline: 2px solid rgba(187, 149, 81, 0.7) !important;
+  outline-offset: 4px !important;
+  transition: outline-color 0.2s ease !important;
+}
+
+/* === DASHBOARD STABLE CLICKS VENDOR ALERTS END === */
+
