@@ -8802,3 +8802,86 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
 
 /* === DASHBOARD COMMAND CENTER DESKTOP END === */
 
+/* === DASHBOARD CLICKABLE ACTIONS CLEAN BLUE START === */
+
+.dashboard-command-center .dashboard-command-hero,
+.dashboard-command-center .dashboard-command-kpis {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+  overflow: visible !important;
+}
+
+.dashboard-command-center .dashboard-command-hero::before,
+.dashboard-command-center .dashboard-command-hero::after,
+.dashboard-command-center .dashboard-command-kpis::before,
+.dashboard-command-center .dashboard-command-kpis::after {
+  display: none !important;
+  content: none !important;
+}
+
+.dashboard-command-center .dashboard-command-kpis {
+  min-width: 0 !important;
+}
+
+.dashboard-command-center .dashboard-command-kpi-tile {
+  width: 100% !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  border: 1px solid rgba(187, 149, 81, 0.18) !important;
+  background: rgba(255, 252, 245, 0.92) !important;
+  color: #071f27 !important;
+  appearance: none !important;
+}
+
+.dashboard-command-center .dashboard-command-kpi-tile:hover,
+.dashboard-command-center .dashboard-command-row.is-clickable:hover {
+  transform: translateY(-1px);
+  border-color: rgba(187, 149, 81, 0.46) !important;
+  box-shadow: 0 14px 28px rgba(4, 19, 49, 0.08) !important;
+}
+
+.dashboard-command-center button.dashboard-command-row {
+  width: 100% !important;
+  border: 1px solid rgba(187, 149, 81, 0.18);
+  font: inherit !important;
+  text-align: left !important;
+  appearance: none !important;
+  cursor: pointer !important;
+}
+
+.dashboard-command-center .dashboard-command-row.is-clickable {
+  position: relative;
+  padding-right: 42px !important;
+}
+
+.dashboard-command-center .dashboard-command-row.is-clickable::after {
+  content: "Ouvrir";
+  position: absolute;
+  right: 12px;
+  bottom: 9px;
+  color: rgba(187, 149, 81, 0.95);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.dashboard-command-center .dashboard-command-row.is-clickable:focus-visible,
+.dashboard-command-center .dashboard-command-kpi-tile:focus-visible {
+  outline: 2px solid rgba(187, 149, 81, 0.55) !important;
+  outline-offset: 3px !important;
+}
+
+.dashboard-command-center,
+.dashboard-command-center .dashboard-command-grid,
+.dashboard-command-center .dashboard-command-grid-priority,
+.dashboard-command-center .dashboard-command-grid-control {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+/* === DASHBOARD CLICKABLE ACTIONS CLEAN BLUE END === */
+

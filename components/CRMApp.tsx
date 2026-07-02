@@ -5346,7 +5346,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             id: `task-missing-date-${task.id}`,
             title: "Tâche sans échéance",
             detail: task.title || "Tâche à compléter",
-            tab: "tasks",
+            tab: "tasks" as Tab,
             tone: "warning",
             targetId: `task-${task.id}`
           });
@@ -5358,7 +5358,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             id: `task-late-${task.id}`,
             title: "Tâche en retard",
             detail: `${task.title} · ${task.dueDate}`,
-            tab: "tasks",
+            tab: "tasks" as Tab,
             tone: "danger",
             targetId: `task-${task.id}`
           });
@@ -5370,7 +5370,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             id: `task-today-${task.id}`,
             title: "Date aujourd’hui",
             detail: task.title,
-            tab: "tasks",
+            tab: "tasks" as Tab,
             tone: "warning",
             targetId: `task-${task.id}`
           });
@@ -5382,7 +5382,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             id: `task-soon-${task.id}`,
             title: "Date proche",
             detail: `${task.title} · dans ${days} jour${days > 1 ? "s" : ""}`,
-            tab: "tasks",
+            tab: "tasks" as Tab,
             tone: "info",
             targetId: `task-${task.id}`
           });
@@ -5397,7 +5397,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             id: `lead-incomplete-${lead.id}`,
             title: "Lead incomplet",
             detail: `${lead.contactName} · prochaine action ou échéance manquante`,
-            tab: "leads",
+            tab: "leads" as Tab,
             tone: "warning",
             targetId: `lead-${lead.id}`
           });
@@ -5410,7 +5410,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             id: `lead-late-${lead.id}`,
             title: "Lead en retard",
             detail: `${lead.contactName} · ${lead.nextAction || "Action à faire"}`,
-            tab: "leads",
+            tab: "leads" as Tab,
             tone: "danger",
             targetId: `lead-${lead.id}`
           });
@@ -5428,7 +5428,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
           id: `quote-follow-${quote.id}`,
           title: ageDays >= 3 ? "Relance devis 72h" : "Relance devis 24h",
           detail: `${quote.clientName} · ${formatQuotePrice(getQuoteTotal(quote))}`,
-          tab: "quotes",
+          tab: "quotes" as Tab,
           tone: ageDays >= 3 ? "danger" : "warning",
           targetId: `quote-${quote.id}`
         });
@@ -5439,7 +5439,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
           id: `quote-negotiation-${quote.id}`,
           title: "Négociation à suivre",
           detail: `${quote.clientName} · devis en négociation`,
-          tab: "quotes",
+          tab: "quotes" as Tab,
           tone: "warning",
           targetId: `quote-${quote.id}`
         });
@@ -5454,7 +5454,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
               id: `booking-supplier-${quote.id}`,
               title: "Prestataire à confirmer",
               detail: `${quote.clientName} · ${quote.title || "Réservation"}`,
-              tab: "bookings",
+              tab: "bookings" as Tab,
               tone: "warning",
               targetId: `booking-${quote.id}`
             });
@@ -5465,7 +5465,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
               id: `booking-details-${quote.id}`,
               title: "Détails client à envoyer",
               detail: `${quote.clientName} · réservation confirmée`,
-              tab: "bookings",
+              tab: "bookings" as Tab,
               tone: "info",
               targetId: `booking-${quote.id}`
             });
@@ -5482,7 +5482,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
             id: `payment-${quote.id}`,
             title: days !== null && days < 0 ? "Paiement en retard" : "Paiement à suivre",
             detail: `${quote.clientName} · ${formatQuotePrice(remaining)} restant`,
-            tab: "bookings",
+            tab: "bookings" as Tab,
             tone: days !== null && days < 0 ? "danger" : "warning",
             targetId: `booking-${quote.id}`
           });
@@ -5509,7 +5509,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
           id: `house-balance-${worker.id}`,
           title: "Intervenant à payer",
           detail: `${worker.contactName} · ${currency.format(balance)} à payer`,
-          tab: "houseTracking",
+          tab: "houseTracking" as Tab,
           tone: "warning",
           targetId: `house-worker-${worker.id}`
         });
@@ -5532,7 +5532,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
         id: `vendor-invoice-payment-${invoice.id}`,
         title: days !== null && days < 0 ? "Facture prestataire en retard" : "Facture prestataire à payer",
         detail: `${invoice.contactName} · ${formatQuotePrice(remaining)} restant`,
-        tab: "vendorInvoices",
+        tab: "vendorInvoices" as Tab,
         tone: days !== null && days < 0 ? "danger" : "warning",
         targetId: `vendor-invoice-${invoice.id}`
       });
@@ -5552,7 +5552,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
         id: `document-check-${crmDocument.id}`,
         title: isExpired ? "Document expiré" : "Document à vérifier",
         detail: `${crmDocument.title} · ${crmDocument.category}`,
-        tab: "documents",
+        tab: "documents" as Tab,
         tone: isExpired ? "danger" : "warning",
         targetId: `document-${crmDocument.id}`
       });
@@ -5614,7 +5614,7 @@ const toneRank: Record<ActionNotification["tone"], number> = {
       const targetElement = target.targetId
         ? Array.from(document.querySelectorAll<HTMLElement>("[data-notification-target]")).find((element) =>
             element.dataset.notificationTarget === target.targetId
-          )
+          ) || document.getElementById(target.targetId)
         : null;
 
       if (!targetElement) {
@@ -7966,6 +7966,14 @@ function createQuoteDraftFromLead(lead: Lead) {
               onStartInventory={openQuickInventoryPrompt}
               onShowLeads={() => setActiveTab("leads")}
               onCloudBackup={saveCrmBackupToSupabase}
+              onDashboardAction={(tab, targetId) => handleNotificationAction({
+                id: `dashboard-action-${tab}-${targetId || "top"}`,
+                title: "Ouvrir",
+                detail: "Action Dashboard",
+                tone: "info",
+                tab,
+                targetId
+              })}
             />
 
             <FollowUpsPanel
@@ -10224,7 +10232,8 @@ function Dashboard({
   onStartContactLead,
   onStartInventory,
   onShowLeads,
-  onCloudBackup
+  onCloudBackup,
+  onDashboardAction
 }: {
   stats: { pipeline: number; won: number; openTasks: number; availableProperties: number };
   data: CRMData;
@@ -10235,6 +10244,7 @@ function Dashboard({
   onStartInventory: () => void;
   onShowLeads: () => void;
   onCloudBackup: () => void;
+  onDashboardAction: (tab: Tab, targetId?: string) => void;
 }) {
   type DashboardItem = {
     id: string;
@@ -10242,6 +10252,9 @@ function Dashboard({
     detail: string;
     badge?: string;
     tone?: "neutral" | "warning" | "danger" | "success";
+    tab?: Tab;
+    targetId?: string;
+    action?: () => void;
   };
 
   const today = new Date();
@@ -10291,15 +10304,35 @@ function Dashboard({
 
     return (
       <div className="dashboard-command-list">
-        {visibleItems.map((item) => (
-          <article className={`dashboard-command-row tone-${item.tone || "neutral"}`} key={item.id}>
-            <div>
-              <strong>{item.title}</strong>
-              <span>{item.detail}</span>
-            </div>
-            {item.badge ? <Badge>{item.badge}</Badge> : null}
-          </article>
-        ))}
+        {visibleItems.map((item) => {
+          const isClickable = Boolean(item.action || item.tab);
+          const rowClassName = `dashboard-command-row tone-${item.tone || "neutral"} ${isClickable ? "is-clickable" : ""}`;
+          const rowContent = (
+            <>
+              <div>
+                <strong>{item.title}</strong>
+                <span>{item.detail}</span>
+              </div>
+              {item.badge ? <Badge>{item.badge}</Badge> : null}
+            </>
+          );
+
+          if (!isClickable) {
+            return <article className={rowClassName} key={item.id}>{rowContent}</article>;
+          }
+
+          return (
+            <button
+              className={rowClassName}
+              key={item.id}
+              type="button"
+              onClick={() => item.action ? item.action() : item.tab ? onDashboardAction(item.tab, item.targetId) : undefined}
+              title="Ouvrir le module concerné"
+            >
+              {rowContent}
+            </button>
+          );
+        })}
       </div>
     );
   }
@@ -10330,6 +10363,27 @@ function Dashboard({
       </section>
     );
   }
+
+  function DashboardQuickTile({
+    label,
+    value,
+    caption,
+    onClick
+  }: {
+    label: string;
+    value: string;
+    caption: string;
+    onClick: () => void;
+  }) {
+    return (
+      <button className="stat-card dashboard-command-kpi-tile" type="button" onClick={onClick} title="Ouvrir le module concerné">
+        <p>{label}</p>
+        <strong>{value}</strong>
+        <span>{caption}</span>
+      </button>
+    );
+  }
+
 
   const quotes = mergeQuoteRequests((((data as any).quotes ?? []) as QuoteRequest[]), loadSavedQuotes());
   const confirmedBookings = quotes.filter((quote) => getQuoteStatus(quote.status) === "Accepted");
@@ -10438,28 +10492,35 @@ function Dashboard({
       title: "Facture prestataire en retard",
       detail: `${invoice.contactName || invoice.title} · ${currency.format(getVendorInvoiceRemaining(invoice))} restant`,
       badge: "Retard",
-      tone: "danger" as const
+      tone: "danger" as const,
+      tab: "vendorInvoices" as Tab,
+      targetId: `vendor-invoice-${invoice.id}`
     })),
     ...clientPaymentsLate.slice(0, 2).map((quote) => ({
       id: `client-payment-late-${quote.id}`,
       title: "Paiement client en retard",
       detail: `${quote.clientName} · ${currency.format(paymentRemaining(quote))} restant`,
       badge: "Client",
-      tone: "danger" as const
+      tone: "danger" as const,
+      tab: "bookings" as Tab,
+      targetId: `booking-${quote.id}`
     })),
     ...blockingPlanning.slice(0, 2).map((entry) => ({
       id: `planning-blocking-${entry.id}`,
       title: "Intervention bloquante",
       detail: `${entry.title} · ${entry.startDate || "Date à compléter"}`,
       badge: getPlanningEntryStatus(entry),
-      tone: "warning" as const
+      tone: "warning" as const,
+      tab: "planning" as Tab,
+      targetId: `planning-${entry.id}`
     })),
     ...houseDueItems.slice(0, 2).map((item, index) => ({
       id: `house-due-${index}-${item.workerName}`,
       title: "Intervenant à payer",
       detail: `${item.workerName} · ${currency.format(item.due)}`,
       badge: "À payer",
-      tone: "warning" as const
+      tone: "warning" as const,
+      tab: "houseTracking" as Tab
     }))
   ];
 
@@ -10468,7 +10529,9 @@ function Dashboard({
     title: `${entry.startTime || "journée"}${entry.endTime ? ` → ${entry.endTime}` : ""} · ${entry.title}`,
     detail: `${entry.contactName || "Aucun contact lié"}${entry.notes ? ` · ${entry.notes}` : ""}`,
     badge: getPlanningEntryStatus(entry),
-    tone: getPlanningEntryStatus(entry) === "En cours" ? "warning" : getPlanningEntryStatus(entry) === "Terminé" ? "success" : "neutral"
+    tone: getPlanningEntryStatus(entry) === "En cours" ? "warning" : getPlanningEntryStatus(entry) === "Terminé" ? "success" : "neutral",
+    tab: "planning" as Tab,
+    targetId: `planning-${entry.id}`
   }));
 
   const moneyItems: DashboardItem[] = [
@@ -10477,21 +10540,24 @@ function Dashboard({
       title: `${currency.format(vendorAmountToPay + houseAmountToPay)} à payer`,
       detail: `${unpaidVendorInvoices.length} facture(s) prestataire · ${houseDueItems.length} intervenant(s) maison`,
       badge: "Sortie",
-      tone: vendorAmountToPay + houseAmountToPay > 0 ? "warning" as const : "neutral" as const
+      tone: vendorAmountToPay + houseAmountToPay > 0 ? "warning" as const : "neutral" as const,
+      action: () => onDashboardAction(vendorAmountToPay > 0 ? "vendorInvoices" : "houseTracking")
     } : null,
     clientAmountToReceive > 0 ? {
       id: "money-client-payments",
       title: `${currency.format(clientAmountToReceive)} à recevoir`,
       detail: `${clientPaymentsToFollow.length} paiement(s) client à suivre`,
       badge: "Entrée",
-      tone: clientPaymentsLate.length > 0 ? "danger" as const : "warning" as const
+      tone: clientPaymentsLate.length > 0 ? "danger" as const : "warning" as const,
+      tab: "bookings" as Tab
     } : null,
     {
       id: "money-confirmed-margin",
       title: `${currency.format(estimatedMargin)} de marge estimée`,
       detail: `${currency.format(confirmedRevenue)} de chiffre confirmé`,
       badge: "Confirmé",
-      tone: confirmedRevenue > 0 ? "success" as const : "neutral" as const
+      tone: confirmedRevenue > 0 ? "success" as const : "neutral" as const,
+      tab: "bookings" as Tab
     }
   ].filter(Boolean) as DashboardItem[];
 
@@ -10500,7 +10566,9 @@ function Dashboard({
     title: `${quote.clientName} · ${quote.title || "Réservation"}`,
     detail: `${shortDate(quote.startDate)} → ${shortDate(quote.endDate)} · ${quote.bookingStatus || "À préparer"}`,
     badge: paymentRemaining(quote) > 0 ? "Paiement" : "OK",
-    tone: paymentRemaining(quote) > 0 ? "warning" as const : "success" as const
+    tone: paymentRemaining(quote) > 0 ? "warning" as const : "success" as const,
+    tab: "bookings" as Tab,
+    targetId: `booking-${quote.id}`
   }));
 
   const commercialItems: DashboardItem[] = [
@@ -10509,14 +10577,18 @@ function Dashboard({
       title: `${lead.contactName || "Lead sans contact"} · ${lead.category}`,
       detail: `${lead.nextAction || "Action à définir"} · ${currency.format(Number(lead.value || 0))}`,
       badge: lead.priority,
-      tone: lead.priority === "Haute" ? "danger" as const : "warning" as const
+      tone: lead.priority === "Haute" ? "danger" as const : "warning" as const,
+      tab: "leads" as Tab,
+      targetId: `lead-${lead.id}`
     })),
     ...quotesToFollow.slice(0, 3).map((quote) => ({
       id: `quote-follow-${quote.id}`,
       title: `${quote.clientName} · devis à relancer`,
       detail: `${getQuoteStatusFrenchLabel(getQuoteStatus(quote.status))} · ${currency.format(getQuoteTotal(quote))}`,
       badge: "Devis",
-      tone: "warning" as const
+      tone: "warning" as const,
+      tab: "quotes" as Tab,
+      targetId: `quote-${quote.id}`
     }))
   ];
 
@@ -10526,21 +10598,24 @@ function Dashboard({
       title: `${activePlanning.length} intervention(s) en cours`,
       detail: activePlanning.slice(0, 2).map((entry) => entry.title).join(" · "),
       badge: "En cours",
-      tone: "warning" as const
+      tone: "warning" as const,
+      tab: "planning" as Tab
     } : null,
     blockingPlanning.length > 0 ? {
       id: "planning-blocking-count",
       title: `${blockingPlanning.length} intervention(s) bloquante(s)`,
       detail: "Contrôle des disponibilités à vérifier.",
       badge: "Bloquant",
-      tone: "danger" as const
+      tone: "danger" as const,
+      tab: "planning" as Tab
     } : null,
     planningWithoutContact.length > 0 ? {
       id: "planning-no-contact",
       title: `${planningWithoutContact.length} intervention(s) sans contact lié`,
       detail: "À compléter pour éviter les pertes d’information.",
       badge: "Données",
-      tone: "warning" as const
+      tone: "warning" as const,
+      tab: "planning" as Tab
     } : null
   ].filter(Boolean) as DashboardItem[];
 
@@ -10550,21 +10625,24 @@ function Dashboard({
       title: `${availableProperties.length} villa(s) disponible(s)`,
       detail: availableProperties.slice(0, 3).map((property) => property.name).join(" · ") || "Aucune villa disponible renseignée.",
       badge: "Villas",
-      tone: availableProperties.length > 0 ? "success" : "neutral"
+      tone: availableProperties.length > 0 ? "success" : "neutral",
+      tab: "properties" as Tab
     },
     {
       id: "availability-vehicles-boats",
       title: `${availableVehicles.length + availableBoats.length} véhicule(s) / bateau(x) disponible(s)`,
       detail: `${availableVehicles.length} voiture(s) · ${availableBoats.length} bateau(x)`,
       badge: "Actifs",
-      tone: availableVehicles.length + availableBoats.length > 0 ? "success" : "neutral"
+      tone: availableVehicles.length + availableBoats.length > 0 ? "success" : "neutral",
+      action: () => onDashboardAction(availableVehicles.length > 0 ? "vehicles" : "boats")
     },
     assetsInMaintenance.length > 0 ? {
       id: "availability-maintenance",
       title: `${assetsInMaintenance.length} actif(s) en maintenance`,
       detail: assetsInMaintenance.slice(0, 3).join(" · "),
       badge: "Maintenance",
-      tone: "warning" as const
+      tone: "warning" as const,
+      action: () => onDashboardAction("vehicles")
     } : null
   ].filter(Boolean) as DashboardItem[];
 
@@ -10574,21 +10652,24 @@ function Dashboard({
       title: `${contactsIncomplete.length} contact(s) incomplet(s)`,
       detail: "Email ou téléphone manquant.",
       badge: "Contacts",
-      tone: "warning" as const
+      tone: "warning" as const,
+      tab: "contacts" as Tab
     } : null,
     leadsWithoutBudget.length > 0 ? {
       id: "quality-leads-budget",
       title: `${leadsWithoutBudget.length} lead(s) sans budget`,
       detail: "Valeur commerciale à compléter.",
       badge: "Leads",
-      tone: "warning" as const
+      tone: "warning" as const,
+      tab: "leads" as Tab
     } : null,
     documentsToCheck.length > 0 ? {
       id: "quality-documents",
       title: `${documentsToCheck.length} document(s) à vérifier`,
       detail: documentsToCheck.slice(0, 3).map((document) => document.title).join(" · "),
       badge: "Docs",
-      tone: "warning" as const
+      tone: "warning" as const,
+      tab: "documents" as Tab
     } : null
   ].filter(Boolean) as DashboardItem[];
 
@@ -10602,10 +10683,15 @@ function Dashboard({
         </section>
 
         <div className="dashboard-command-kpis">
-          <StatCard label="À traiter" value={String(urgentItems.length)} caption="Alertes opérationnelles" />
-          <StatCard label="Aujourd’hui" value={String(todayPlanning.length)} caption="Interventions du jour" />
-          <StatCard label="À payer" value={currency.format(vendorAmountToPay + houseAmountToPay)} caption="Prestataires + maison" />
-          <StatCard label="À recevoir" value={currency.format(clientAmountToReceive)} caption="Paiements clients" />
+          <DashboardQuickTile label="À traiter" value={String(urgentItems.length)} caption="Alertes opérationnelles" onClick={() => {
+            const firstUrgent = urgentItems.find((item) => item.action || item.tab);
+            if (firstUrgent?.action) firstUrgent.action();
+            else if (firstUrgent?.tab) onDashboardAction(firstUrgent.tab, firstUrgent.targetId);
+            else onDashboardAction("vendorInvoices");
+          }} />
+          <DashboardQuickTile label="Aujourd’hui" value={String(todayPlanning.length)} caption="Interventions du jour" onClick={() => onDashboardAction("planning")} />
+          <DashboardQuickTile label="À payer" value={currency.format(vendorAmountToPay + houseAmountToPay)} caption="Prestataires + maison" onClick={() => onDashboardAction(vendorAmountToPay > 0 ? "vendorInvoices" : "houseTracking")} />
+          <DashboardQuickTile label="À recevoir" value={currency.format(clientAmountToReceive)} caption="Paiements clients" onClick={() => onDashboardAction("bookings")} />
         </div>
       </div>
 
