@@ -4553,7 +4553,7 @@ function VendorInvoicesView({
         ) : (
           <div className="list-stack oar-contact-list-stack">
             {visibleInvoices.map((invoice) => (
-              <article className="item-card vendor-invoice-card" key={invoice.id} id={`vendor-invoice-${invoice.id}`}>
+              <article className="item-card vendor-invoice-card" key={invoice.id} id={`vendor-invoice-${invoice.id}`} data-notification-target={`vendor-invoice-${invoice.id}`}>
                 <div>
                   <p className={`eyebrow ${invoice.status === "Payé" ? "invoice-eyebrow-paid" : "invoice-eyebrow-danger"}`}>{invoice.category} · {invoice.status}</p>
                   <h3>{invoice.contactName}</h3>
@@ -5608,41 +5608,54 @@ const toneRank: Record<ActionNotification["tone"], number> = {
 
     if (!target) return;
 
-    const scrollOnceToTarget = () => {
+    const targetTab = target.tab;
+    const targetId = target.targetId;
+
+    const findTargetElement = () => {
+      if (!targetId) return null;
+
+      return Array.from(document.querySelectorAll<HTMLElement>("[data-notification-target]")).find((element) =>
+        element.dataset.notificationTarget === targetId
+      ) || document.getElementById(targetId);
+    };
+
+    const scrollToElement = (element: HTMLElement | null) => {
+      const previousScrollBehavior = document.documentElement.style.scrollBehavior;
+      document.documentElement.style.scrollBehavior = "auto";
+
+      if (element) {
+        const headerOffset = 118;
+        const nextTop = Math.max(element.getBoundingClientRect().top + window.scrollY - headerOffset, 0);
+        window.scrollTo({ top: nextTop, behavior: "auto" });
+        element.classList.add("notification-focus");
+
+        window.setTimeout(() => {
+          element.classList.remove("notification-focus");
+        }, 2400);
+      } else {
+        window.scrollTo({ top: 0, behavior: "auto" });
+      }
+
+      window.setTimeout(() => {
+        document.documentElement.style.scrollBehavior = previousScrollBehavior;
+      }, 80);
+    };
+
+    const runScroll = (attempt = 0) => {
       window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => {
-          const targetElement = target.targetId
-            ? Array.from(document.querySelectorAll<HTMLElement>("[data-notification-target]")).find((element) =>
-                element.dataset.notificationTarget === target.targetId
-              ) || document.getElementById(target.targetId)
-            : null;
+        const element = findTargetElement();
 
-          const fallbackElement = document.querySelector<HTMLElement>(".app-content, .crm-content, main") || document.body;
-          const destination = targetElement || fallbackElement;
-          const headerOffset = 118;
-          const nextTop = Math.max(destination.getBoundingClientRect().top + window.scrollY - headerOffset, 0);
-          const previousScrollBehavior = document.documentElement.style.scrollBehavior;
+        if (targetId && !element && attempt < 14) {
+          window.setTimeout(() => runScroll(attempt + 1), 90);
+          return;
+        }
 
-          document.documentElement.style.scrollBehavior = "auto";
-          window.scrollTo(0, nextTop);
-
-          window.setTimeout(() => {
-            document.documentElement.style.scrollBehavior = previousScrollBehavior;
-          }, 120);
-
-          if (targetElement) {
-            targetElement.classList.add("notification-focus");
-
-            window.setTimeout(() => {
-              targetElement.classList.remove("notification-focus");
-            }, 2200);
-          }
-        });
+        scrollToElement(element);
       });
     };
 
-    setActiveTab(target.tab);
-    window.setTimeout(scrollOnceToTarget, activeTab === target.tab ? 80 : 420);
+    setActiveTab(targetTab);
+    window.setTimeout(() => runScroll(), activeTab === targetTab ? 80 : 180);
   }
 
   function notify(message: string, tone: Toast["tone"] = "success") {
@@ -10538,9 +10551,29 @@ function Dashboard({
     }))
   ];
 
-  const vendorInvoiceAlertItems = urgentItems.filter((item) => item.tab === "vendorInvoices");
+  const vendorInvoiceAlertItems: DashboardItem[] = unpaidVendorInvoices
+    .slice()
+    .sort((a, b) => {
+      const aLate = overdueVendorInvoices.some((invoice) => invoice.id === a.id) ? 1 : 0;
+      const bLate = overdueVendorInvoices.some((invoice) => invoice.id === b.id) ? 1 : 0;
 
-  const todayItems: DashboardItem[] = todayPlanning.map((entry) => ({
+      if (aLate !== bLate) return bLate - aLate;
+      return getVendorInvoiceRemaining(b) - getVendorInvoiceRemaining(a);
+    })
+    .map((invoice) => {
+      const isLate = overdueVendorInvoices.some((lateInvoice) => lateInvoice.id === invoice.id);
+
+      return {
+        id: `vendor-alert-${invoice.id}`,
+        title: isLate ? "Facture prestataire en retard" : "Facture prestataire à payer",
+        detail: `${invoice.contactName || invoice.title} · ${currency.format(getVendorInvoiceRemaining(invoice))} restant`,
+        badge: isLate ? "Retard" : "À payer",
+        tone: isLate ? "danger" as const : "warning" as const,
+        tab: "vendorInvoices" as Tab,
+        targetId: `vendor-invoice-${invoice.id}`
+      };
+    });
+const todayItems: DashboardItem[] = todayPlanning.map((entry) => ({
     id: `today-${entry.id}`,
     title: `${entry.startTime || "journée"}${entry.endTime ? ` → ${entry.endTime}` : ""} · ${entry.title}`,
     detail: `${entry.contactName || "Aucun contact lié"}${entry.notes ? ` · ${entry.notes}` : ""}`,
@@ -10658,7 +10691,7 @@ function Dashboard({
       detail: assetsInMaintenance.slice(0, 3).join(" · "),
       badge: "Maintenance",
       tone: "warning" as const,
-      action: () => onDashboardAction("vehicles")
+      action: () => onDashboardAction("vehicles" as Tab)
     } : null
   ].filter(Boolean) as DashboardItem[];
 
@@ -10699,20 +10732,20 @@ function Dashboard({
         </section>
 
         <div className="dashboard-command-kpis">
-          <DashboardQuickTile label="À traiter" value={String(vendorInvoiceAlertItems.length)} caption="Alertes opérationnelles" onClick={() => {
+          <DashboardQuickTile label="À traiter" value={String(vendorInvoiceAlertItems.length)} caption="Factures prestataires" onClick={() => {
             const firstUrgent = vendorInvoiceAlertItems.find((item) => item.action || item.tab);
             if (firstUrgent?.action) firstUrgent.action();
             else if (firstUrgent?.tab) onDashboardAction(firstUrgent.tab, firstUrgent.targetId);
             else onDashboardAction("vendorInvoices" as Tab);
           }} />
-          <DashboardQuickTile label="Aujourd’hui" value={String(todayPlanning.length)} caption="Interventions du jour" onClick={() => onDashboardAction("planning")} />
+          <DashboardQuickTile label="Aujourd’hui" value={String(todayPlanning.length)} caption="Interventions du jour" onClick={() => onDashboardAction("planning" as Tab)} />
           <DashboardQuickTile label="À payer" value={currency.format(vendorAmountToPay + houseAmountToPay)} caption="Prestataires + maison" onClick={() => onDashboardAction(vendorAmountToPay > 0 ? "vendorInvoices" : "houseTracking")} />
-          <DashboardQuickTile label="À recevoir" value={currency.format(clientAmountToReceive)} caption="Paiements clients" onClick={() => onDashboardAction("bookings")} />
+          <DashboardQuickTile label="À recevoir" value={currency.format(clientAmountToReceive)} caption="Paiements clients" onClick={() => onDashboardAction("bookings" as Tab)} />
         </div>
       </div>
 
       <div className="dashboard-command-grid dashboard-command-grid-priority">
-        <DashboardCommandCard eyebrow="Urgent" title="À traiter maintenant" summary={`${urgentItems.length} action${urgentItems.length > 1 ? "s" : ""}`} tone={urgentItems.some((item) => item.tone === "danger") ? "danger" : urgentItems.length > 0 ? "warning" : "success"}>
+        <DashboardCommandCard eyebrow="Factures prestataires" title="À traiter" summary={`${vendorInvoiceAlertItems.length} facture${vendorInvoiceAlertItems.length > 1 ? "s" : ""}`} tone={vendorInvoiceAlertItems.some((item) => item.tone === "danger") ? "danger" : vendorInvoiceAlertItems.length > 0 ? "warning" : "success"}>
           {renderDashboardList(vendorInvoiceAlertItems, "Aucune alerte urgente pour le moment.", 6)}
         </DashboardCommandCard>
 

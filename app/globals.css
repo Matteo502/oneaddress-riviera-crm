@@ -8914,3 +8914,61 @@ html {
 
 /* === DASHBOARD STABLE CLICKS VENDOR ALERTS END === */
 
+/* === DASHBOARD PRECISE VENDOR ACTIONS START === */
+
+html {
+  scroll-behavior: auto !important;
+}
+
+.dashboard-command-center .dashboard-command-hero,
+.dashboard-command-center .dashboard-command-kpis,
+.dashboard-command-center .dashboard-command-grid,
+.dashboard-command-center .dashboard-command-grid-priority,
+.dashboard-command-center .dashboard-command-grid-control {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+}
+
+.dashboard-command-center .dashboard-command-kpi-tile,
+.dashboard-command-center button.dashboard-command-row {
+  appearance: none !important;
+  font: inherit !important;
+  text-align: left !important;
+  cursor: pointer !important;
+}
+
+.dashboard-command-center .dashboard-command-row.is-clickable {
+  position: relative;
+  padding-right: 48px !important;
+}
+
+.dashboard-command-center .dashboard-command-row.is-clickable::after {
+  content: "Ouvrir";
+  position: absolute;
+  right: 12px;
+  bottom: 9px;
+  color: rgba(187, 149, 81, 0.96);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.dashboard-command-center .dashboard-command-kpi-tile:hover,
+.dashboard-command-center .dashboard-command-row.is-clickable:hover {
+  transform: translateY(-1px);
+  border-color: rgba(187, 149, 81, 0.46) !important;
+  box-shadow: 0 14px 28px rgba(4, 19, 49, 0.08) !important;
+}
+
+.notification-focus,
+.vendor-invoice-card.notification-focus {
+  outline: 2px solid rgba(187, 149, 81, 0.78) !important;
+  outline-offset: 5px !important;
+  box-shadow: 0 18px 46px rgba(187, 149, 81, 0.18) !important;
+}
+
+/* === DASHBOARD PRECISE VENDOR ACTIONS END === */
+
