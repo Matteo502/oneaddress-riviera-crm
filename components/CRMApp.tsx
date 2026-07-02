@@ -10236,220 +10236,424 @@ function Dashboard({
   onShowLeads: () => void;
   onCloudBackup: () => void;
 }) {
-  const nextTasks = [...data.tasks]
-    .filter((task) => task.status !== "Terminé")
-    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
-    .slice(0, 6);
-  const hotLeads = [...data.leads].filter((lead) => lead.status !== "Perdu").sort((a, b) => b.value - a.value).slice(0, 4);
+  type DashboardItem = {
+    id: string;
+    title: string;
+    detail: string;
+    badge?: string;
+    tone?: "neutral" | "warning" | "danger" | "success";
+  };
 
-  const cockpitQuotes = mergeQuoteRequests((((data as any).quotes ?? []) as QuoteRequest[]), loadSavedQuotes());
-  const confirmedBookings = cockpitQuotes.filter((quote) => getQuoteStatus(quote.status) === "Accepted");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayIso = formatPlanningDateValue(today);
 
-  function getDashboardPaymentRemaining(quote: QuoteRequest) {
+  function parseDashboardDate(dateText?: string) {
+    if (!dateText) return null;
+    const date = new Date(`${dateText}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return null;
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }
+
+  function daysFromToday(dateText?: string) {
+    const date = parseDashboardDate(dateText);
+    if (!date) return null;
+    return Math.round((date.getTime() - today.getTime()) / 86400000);
+  }
+
+  function isWithinNextDays(dateText: string | undefined, days: number) {
+    const diff = daysFromToday(dateText);
+    return diff !== null && diff >= 0 && diff <= days;
+  }
+
+  function paymentRemaining(quote: QuoteRequest) {
     const total = getQuoteTotal(quote);
     const paid = Number(quote.depositReceived || 0) + Number(quote.balanceReceived || 0);
-
     return Math.max(total - paid, 0);
   }
 
-  function getDashboardMargin(quote: QuoteRequest) {
+  function quoteMargin(quote: QuoteRequest) {
     return getQuoteTotal(quote) - Number(quote.supplierCost || 0);
   }
 
-  const quotesToFollow = cockpitQuotes
-    .filter((quote) => {
-      const status = getQuoteStatus(quote.status);
-      const ageDays = getQuoteAgeDays(quote.statusUpdatedAt || quote.createdAt);
+  function shortDate(dateText?: string) {
+    if (!dateText) return "Date à compléter";
+    return formatQuoteDate(dateText);
+  }
 
-      return (status === "Sent" && ageDays >= 1) || status === "Negotiation";
+  function renderDashboardList(items: DashboardItem[], emptyText: string, limit = 5) {
+    const visibleItems = items.slice(0, limit);
+
+    if (visibleItems.length === 0) {
+      return <p className="muted-line dashboard-command-empty">{emptyText}</p>;
+    }
+
+    return (
+      <div className="dashboard-command-list">
+        {visibleItems.map((item) => (
+          <article className={`dashboard-command-row tone-${item.tone || "neutral"}`} key={item.id}>
+            <div>
+              <strong>{item.title}</strong>
+              <span>{item.detail}</span>
+            </div>
+            {item.badge ? <Badge>{item.badge}</Badge> : null}
+          </article>
+        ))}
+      </div>
+    );
+  }
+
+  function DashboardCommandCard({
+    eyebrow,
+    title,
+    summary,
+    children,
+    tone = "neutral"
+  }: {
+    eyebrow: string;
+    title: string;
+    summary?: string;
+    children: any;
+    tone?: "neutral" | "warning" | "danger" | "success";
+  }) {
+    return (
+      <section className={`card dashboard-command-card tone-${tone}`}>
+        <div className="dashboard-command-card-heading">
+          <div>
+            <p className="eyebrow">{eyebrow}</p>
+            <h3>{title}</h3>
+          </div>
+          {summary ? <span>{summary}</span> : null}
+        </div>
+        {children}
+      </section>
+    );
+  }
+
+  const quotes = mergeQuoteRequests((((data as any).quotes ?? []) as QuoteRequest[]), loadSavedQuotes());
+  const confirmedBookings = quotes.filter((quote) => getQuoteStatus(quote.status) === "Accepted");
+  const planningEntries = (((data as any).planningEntries ?? []) as PlanningEntry[]);
+  const vendorInvoices = (((data as any).vendorInvoices ?? []) as VendorInvoice[]);
+  const documents = (((data as any).documents ?? []) as CRMDocument[]);
+  const houseTimeEntries = (((data as any).houseTimeEntries ?? []) as HouseTimeEntry[]);
+  const housePayments = (((data as any).housePayments ?? []) as HousePayment[]);
+
+  const unpaidVendorInvoices = vendorInvoices.filter((invoice) =>
+    invoice.status !== "Payé" && invoice.status !== "Annulé" && getVendorInvoiceRemaining(invoice) > 0
+  );
+  const overdueVendorInvoices = unpaidVendorInvoices.filter((invoice) =>
+    invoice.status === "En retard" || ((daysFromToday(invoice.dueDate) ?? 0) < 0)
+  );
+  const vendorAmountToPay = unpaidVendorInvoices.reduce((sum, invoice) => sum + getVendorInvoiceRemaining(invoice), 0);
+
+  const houseDueByWorker = new Map<string, { workerName: string; due: number }>();
+  houseTimeEntries.forEach((entry) => {
+    const key = entry.workerId || entry.workerName || entry.id;
+    const current = houseDueByWorker.get(key) || { workerName: entry.workerName || "Intervenant", due: 0 };
+    current.due += getHouseTimeAmount(entry);
+    houseDueByWorker.set(key, current);
+  });
+  housePayments.forEach((payment) => {
+    const key = payment.workerId || payment.workerName || payment.id;
+    const current = houseDueByWorker.get(key) || { workerName: payment.workerName || "Intervenant", due: 0 };
+    current.due -= Number(payment.amount || 0);
+    houseDueByWorker.set(key, current);
+  });
+  const houseDueItems = Array.from(houseDueByWorker.values())
+    .filter((item) => item.due > 0.5)
+    .sort((a, b) => b.due - a.due);
+  const houseAmountToPay = houseDueItems.reduce((sum, item) => sum + item.due, 0);
+
+  const clientPaymentsToFollow = confirmedBookings.filter((quote) => {
+    const status = quote.paymentStatus || "Non payé";
+    return status !== "Payé" && status !== "Annulé / remboursé" && paymentRemaining(quote) > 0;
+  });
+  const clientPaymentsLate = clientPaymentsToFollow.filter((quote) => {
+    const diff = daysFromToday(quote.paymentDueDate);
+    return diff !== null && diff < 0;
+  });
+  const clientAmountToReceive = clientPaymentsToFollow.reduce((sum, quote) => sum + paymentRemaining(quote), 0);
+
+  const confirmedRevenue = confirmedBookings.reduce((sum, quote) => sum + getQuoteTotal(quote), 0);
+  const estimatedMargin = confirmedBookings.reduce((sum, quote) => sum + quoteMargin(quote), 0);
+
+  const todayPlanning = planningEntries
+    .filter((entry) => {
+      const status = getPlanningEntryStatus(entry);
+      return status !== "Annulé" && planningRangesOverlap(todayIso, todayIso, entry.startDate, entry.endDate || entry.startDate);
     })
-    .slice(0, 5);
+    .sort((a, b) => String(a.startTime || "").localeCompare(String(b.startTime || "")));
+
+  const activePlanning = planningEntries.filter((entry) => getPlanningEntryStatus(entry) === "En cours");
+  const blockingPlanning = planningEntries.filter((entry) => {
+    const status = getPlanningEntryStatus(entry);
+    return entry.blocksAvailability && status !== "Terminé" && status !== "Annulé";
+  });
+  const planningWithoutContact = planningEntries.filter((entry) => {
+    const status = getPlanningEntryStatus(entry);
+    return status !== "Terminé" && status !== "Annulé" && !String(entry.contactName || "").trim();
+  });
 
   const bookingsToPrepare = confirmedBookings
     .filter((quote) => {
-      const status = quote.bookingStatus || "À préparer";
-      return status !== "Terminé" && status !== "Annulé";
+      const bookingStatus = quote.bookingStatus || "À préparer";
+      return bookingStatus !== "Terminé" && bookingStatus !== "Annulé";
     })
-    .slice(0, 5);
+    .sort((a, b) => String(a.startDate || "").localeCompare(String(b.startDate || "")));
 
-  const paymentsToFollow = confirmedBookings
+  const upcomingBookings = bookingsToPrepare.filter((quote) => isWithinNextDays(quote.startDate, 14));
+
+  const quotesToFollow = quotes
     .filter((quote) => {
-      const status = quote.paymentStatus || "Non payé";
-      return status !== "Payé" && status !== "Annulé / remboursé" && getDashboardPaymentRemaining(quote) > 0;
+      const status = getQuoteStatus(quote.status);
+      const ageDays = getQuoteAgeDays(quote.statusUpdatedAt || quote.createdAt);
+      return (status === "Sent" && ageDays >= 1) || status === "Negotiation";
     })
-    .slice(0, 5);
+    .sort((a, b) => getQuoteAgeDays(b.statusUpdatedAt || b.createdAt) - getQuoteAgeDays(a.statusUpdatedAt || a.createdAt));
 
-  const confirmedRevenue = confirmedBookings.reduce((sum, quote) => sum + getQuoteTotal(quote), 0);
-  const estimatedMargin = confirmedBookings.reduce((sum, quote) => sum + getDashboardMargin(quote), 0);
-  const remainingPayments = confirmedBookings.reduce((sum, quote) => sum + getDashboardPaymentRemaining(quote), 0);
+  const leadsToTreat = data.leads
+    .filter((lead) => lead.status !== "Gagné" && lead.status !== "Perdu")
+    .filter((lead) => !lead.nextAction || !lead.dueDate || ((daysFromToday(lead.dueDate) ?? 99) <= 1))
+    .sort((a, b) => {
+      const priorityScore = { Haute: 3, Moyenne: 2, Basse: 1 } as Record<string, number>;
+      return (priorityScore[b.priority] || 0) - (priorityScore[a.priority] || 0);
+    });
 
-  const dashboardTodayIso = formatPlanningDateValue(new Date());
-  const dashboardPlanningToday = ((((data as any).planningEntries ?? []) as PlanningEntry[]))
-    .filter((entry) => {
-      const status = getPlanningEntryStatus(entry);
-      return status !== "Terminé" && status !== "Annulé" && planningRangesOverlap(dashboardTodayIso, dashboardTodayIso, entry.startDate, entry.endDate || entry.startDate);
-    })
-    .sort((a, b) => String(a.startTime || "").localeCompare(String(b.startTime || "")))
-    .slice(0, 5);
+  const availableProperties = data.properties.filter((property) => property.status === "Disponible");
+  const availableVehicles = data.vehicles.filter((vehicle) => vehicle.status === "Disponible");
+  const availableBoats = data.boats.filter((boat) => boat.status === "Disponible");
+  const assetsInMaintenance = [
+    ...data.vehicles.filter((vehicle) => vehicle.status === "En maintenance").map((vehicle) => vehicle.name),
+    ...data.boats.filter((boat) => boat.status === "En maintenance").map((boat) => boat.name)
+  ];
+
+  const contactsIncomplete = data.contacts.filter((contact) => !contact.email || !contact.phone);
+  const leadsWithoutBudget = data.leads.filter((lead) => lead.status !== "Gagné" && lead.status !== "Perdu" && Number(lead.value || 0) <= 0);
+  const documentsToCheck = documents.filter((document) => !document.isFolder && document.status !== "À jour");
+
+  const urgentItems: DashboardItem[] = [
+    ...overdueVendorInvoices.slice(0, 3).map((invoice) => ({
+      id: `vendor-late-${invoice.id}`,
+      title: "Facture prestataire en retard",
+      detail: `${invoice.contactName || invoice.title} · ${currency.format(getVendorInvoiceRemaining(invoice))} restant`,
+      badge: "Retard",
+      tone: "danger" as const
+    })),
+    ...clientPaymentsLate.slice(0, 2).map((quote) => ({
+      id: `client-payment-late-${quote.id}`,
+      title: "Paiement client en retard",
+      detail: `${quote.clientName} · ${currency.format(paymentRemaining(quote))} restant`,
+      badge: "Client",
+      tone: "danger" as const
+    })),
+    ...blockingPlanning.slice(0, 2).map((entry) => ({
+      id: `planning-blocking-${entry.id}`,
+      title: "Intervention bloquante",
+      detail: `${entry.title} · ${entry.startDate || "Date à compléter"}`,
+      badge: getPlanningEntryStatus(entry),
+      tone: "warning" as const
+    })),
+    ...houseDueItems.slice(0, 2).map((item, index) => ({
+      id: `house-due-${index}-${item.workerName}`,
+      title: "Intervenant à payer",
+      detail: `${item.workerName} · ${currency.format(item.due)}`,
+      badge: "À payer",
+      tone: "warning" as const
+    }))
+  ];
+
+  const todayItems: DashboardItem[] = todayPlanning.map((entry) => ({
+    id: `today-${entry.id}`,
+    title: `${entry.startTime || "journée"}${entry.endTime ? ` → ${entry.endTime}` : ""} · ${entry.title}`,
+    detail: `${entry.contactName || "Aucun contact lié"}${entry.notes ? ` · ${entry.notes}` : ""}`,
+    badge: getPlanningEntryStatus(entry),
+    tone: getPlanningEntryStatus(entry) === "En cours" ? "warning" : getPlanningEntryStatus(entry) === "Terminé" ? "success" : "neutral"
+  }));
+
+  const moneyItems: DashboardItem[] = [
+    vendorAmountToPay + houseAmountToPay > 0 ? {
+      id: "money-supplier-payments",
+      title: `${currency.format(vendorAmountToPay + houseAmountToPay)} à payer`,
+      detail: `${unpaidVendorInvoices.length} facture(s) prestataire · ${houseDueItems.length} intervenant(s) maison`,
+      badge: "Sortie",
+      tone: vendorAmountToPay + houseAmountToPay > 0 ? "warning" as const : "neutral" as const
+    } : null,
+    clientAmountToReceive > 0 ? {
+      id: "money-client-payments",
+      title: `${currency.format(clientAmountToReceive)} à recevoir`,
+      detail: `${clientPaymentsToFollow.length} paiement(s) client à suivre`,
+      badge: "Entrée",
+      tone: clientPaymentsLate.length > 0 ? "danger" as const : "warning" as const
+    } : null,
+    {
+      id: "money-confirmed-margin",
+      title: `${currency.format(estimatedMargin)} de marge estimée`,
+      detail: `${currency.format(confirmedRevenue)} de chiffre confirmé`,
+      badge: "Confirmé",
+      tone: confirmedRevenue > 0 ? "success" as const : "neutral" as const
+    }
+  ].filter(Boolean) as DashboardItem[];
+
+  const bookingItems: DashboardItem[] = upcomingBookings.map((quote) => ({
+    id: `booking-upcoming-${quote.id}`,
+    title: `${quote.clientName} · ${quote.title || "Réservation"}`,
+    detail: `${shortDate(quote.startDate)} → ${shortDate(quote.endDate)} · ${quote.bookingStatus || "À préparer"}`,
+    badge: paymentRemaining(quote) > 0 ? "Paiement" : "OK",
+    tone: paymentRemaining(quote) > 0 ? "warning" as const : "success" as const
+  }));
+
+  const commercialItems: DashboardItem[] = [
+    ...leadsToTreat.slice(0, 3).map((lead) => ({
+      id: `lead-treat-${lead.id}`,
+      title: `${lead.contactName || "Lead sans contact"} · ${lead.category}`,
+      detail: `${lead.nextAction || "Action à définir"} · ${currency.format(Number(lead.value || 0))}`,
+      badge: lead.priority,
+      tone: lead.priority === "Haute" ? "danger" as const : "warning" as const
+    })),
+    ...quotesToFollow.slice(0, 3).map((quote) => ({
+      id: `quote-follow-${quote.id}`,
+      title: `${quote.clientName} · devis à relancer`,
+      detail: `${getQuoteStatusFrenchLabel(getQuoteStatus(quote.status))} · ${currency.format(getQuoteTotal(quote))}`,
+      badge: "Devis",
+      tone: "warning" as const
+    }))
+  ];
+
+  const planningItems: DashboardItem[] = [
+    activePlanning.length > 0 ? {
+      id: "planning-active",
+      title: `${activePlanning.length} intervention(s) en cours`,
+      detail: activePlanning.slice(0, 2).map((entry) => entry.title).join(" · "),
+      badge: "En cours",
+      tone: "warning" as const
+    } : null,
+    blockingPlanning.length > 0 ? {
+      id: "planning-blocking-count",
+      title: `${blockingPlanning.length} intervention(s) bloquante(s)`,
+      detail: "Contrôle des disponibilités à vérifier.",
+      badge: "Bloquant",
+      tone: "danger" as const
+    } : null,
+    planningWithoutContact.length > 0 ? {
+      id: "planning-no-contact",
+      title: `${planningWithoutContact.length} intervention(s) sans contact lié`,
+      detail: "À compléter pour éviter les pertes d’information.",
+      badge: "Données",
+      tone: "warning" as const
+    } : null
+  ].filter(Boolean) as DashboardItem[];
+
+  const availabilityItems: DashboardItem[] = [
+    {
+      id: "availability-properties",
+      title: `${availableProperties.length} villa(s) disponible(s)`,
+      detail: availableProperties.slice(0, 3).map((property) => property.name).join(" · ") || "Aucune villa disponible renseignée.",
+      badge: "Villas",
+      tone: availableProperties.length > 0 ? "success" : "neutral"
+    },
+    {
+      id: "availability-vehicles-boats",
+      title: `${availableVehicles.length + availableBoats.length} véhicule(s) / bateau(x) disponible(s)`,
+      detail: `${availableVehicles.length} voiture(s) · ${availableBoats.length} bateau(x)`,
+      badge: "Actifs",
+      tone: availableVehicles.length + availableBoats.length > 0 ? "success" : "neutral"
+    },
+    assetsInMaintenance.length > 0 ? {
+      id: "availability-maintenance",
+      title: `${assetsInMaintenance.length} actif(s) en maintenance`,
+      detail: assetsInMaintenance.slice(0, 3).join(" · "),
+      badge: "Maintenance",
+      tone: "warning" as const
+    } : null
+  ].filter(Boolean) as DashboardItem[];
+
+  const dataQualityItems: DashboardItem[] = [
+    contactsIncomplete.length > 0 ? {
+      id: "quality-contacts",
+      title: `${contactsIncomplete.length} contact(s) incomplet(s)`,
+      detail: "Email ou téléphone manquant.",
+      badge: "Contacts",
+      tone: "warning" as const
+    } : null,
+    leadsWithoutBudget.length > 0 ? {
+      id: "quality-leads-budget",
+      title: `${leadsWithoutBudget.length} lead(s) sans budget`,
+      detail: "Valeur commerciale à compléter.",
+      badge: "Leads",
+      tone: "warning" as const
+    } : null,
+    documentsToCheck.length > 0 ? {
+      id: "quality-documents",
+      title: `${documentsToCheck.length} document(s) à vérifier`,
+      detail: documentsToCheck.slice(0, 3).map((document) => document.title).join(" · "),
+      badge: "Docs",
+      tone: "warning" as const
+    } : null
+  ].filter(Boolean) as DashboardItem[];
 
   return (
-    <div className="stack dashboard-workspace">
+    <div className="stack dashboard-workspace dashboard-command-center">
+      <div className="dashboard-command-hero">
+        <section className="card dashboard-command-summary-card">
+          <p className="eyebrow">Vue rapide</p>
+          <h3>Centre de commandement</h3>
+          <p className="muted-line">Ce tableau affiche uniquement ce qui aide à décider, relancer, payer, préparer ou compléter.</p>
+        </section>
 
-      <div className="stats-grid dashboard-main-stats">
-        <StatCard label="Pipeline actif" value={currency.format(stats.pipeline)} caption="Valeur des opportunités non perdues" />
-        <StatCard label="CA gagné" value={currency.format(stats.won)} caption="Leads marqués comme gagnés" />
-        <StatCard label="Tâches ouvertes" value={String(stats.openTasks)} caption="Actions commerciales à traiter" />
-        <StatCard label="Biens disponibles" value={String(stats.availableProperties)} caption="Inventaire prêt à proposer" />
+        <div className="dashboard-command-kpis">
+          <StatCard label="À traiter" value={String(urgentItems.length)} caption="Alertes opérationnelles" />
+          <StatCard label="Aujourd’hui" value={String(todayPlanning.length)} caption="Interventions du jour" />
+          <StatCard label="À payer" value={currency.format(vendorAmountToPay + houseAmountToPay)} caption="Prestataires + maison" />
+          <StatCard label="À recevoir" value={currency.format(clientAmountToReceive)} caption="Paiements clients" />
+        </div>
       </div>
 
-      <section className="card dashboard-cockpit-card">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Cockpit</p>
-            <h3>Ce qui demande une action</h3>
+      <div className="dashboard-command-grid dashboard-command-grid-priority">
+        <DashboardCommandCard eyebrow="Urgent" title="À traiter maintenant" summary={`${urgentItems.length} action${urgentItems.length > 1 ? "s" : ""}`} tone={urgentItems.some((item) => item.tone === "danger") ? "danger" : urgentItems.length > 0 ? "warning" : "success"}>
+          {renderDashboardList(urgentItems, "Aucune alerte urgente pour le moment.", 6)}
+        </DashboardCommandCard>
+
+        <DashboardCommandCard eyebrow="Aujourd’hui" title="Planning du jour" summary={`${todayPlanning.length} élément${todayPlanning.length > 1 ? "s" : ""}`} tone={activePlanning.length > 0 ? "warning" : "neutral"}>
+          {renderDashboardList(todayItems, "Aucune intervention active aujourd’hui.", 6)}
+        </DashboardCommandCard>
+
+        <DashboardCommandCard eyebrow="Argent" title="Paiements à suivre" summary={currency.format(clientAmountToReceive - vendorAmountToPay - houseAmountToPay)} tone={clientPaymentsLate.length > 0 || overdueVendorInvoices.length > 0 ? "danger" : "neutral"}>
+          {renderDashboardList(moneyItems, "Aucun paiement urgent à suivre.", 5)}
+        </DashboardCommandCard>
+      </div>
+
+      <div className="dashboard-command-grid">
+        <DashboardCommandCard eyebrow="Réservations" title="À préparer" summary={`${upcomingBookings.length} proche${upcomingBookings.length > 1 ? "s" : ""}`}>
+          {renderDashboardList(bookingItems, "Aucune réservation confirmée à préparer dans les 14 prochains jours.", 5)}
+        </DashboardCommandCard>
+
+        <DashboardCommandCard eyebrow="Commercial" title="Leads et devis" summary={`${commercialItems.length} sujet${commercialItems.length > 1 ? "s" : ""}`}>
+          {renderDashboardList(commercialItems, "Aucun lead ou devis urgent à relancer.", 6)}
+          <div className="dashboard-command-actions">
+            <button className="secondary-button compact-button" type="button" onClick={onShowLeads}>Voir les leads</button>
+            <button className="secondary-button compact-button" type="button" onClick={onStartMessage}>Créer depuis message</button>
           </div>
-        </div>
+        </DashboardCommandCard>
+      </div>
 
-        <div className="stats-grid dashboard-cockpit-stats">
-          <StatCard label="CA confirmé" value={currency.format(confirmedRevenue)} caption="Total des devis gagnés" />
-          <StatCard label="Marge estimée" value={currency.format(estimatedMargin)} caption="Prix client - coût prestataire" />
-          <StatCard label="Paiements restants" value={currency.format(remainingPayments)} caption="Solde encore à recevoir" />
-          <StatCard label="Réservations à préparer" value={String(bookingsToPrepare.length)} caption="Services gagnés non terminés" />
-        </div>
+      <div className="dashboard-command-grid dashboard-command-grid-control">
+        <DashboardCommandCard eyebrow="Planning" title="Anomalies" summary={`${planningItems.length} point${planningItems.length > 1 ? "s" : ""}`} tone={blockingPlanning.length > 0 ? "danger" : planningItems.length > 0 ? "warning" : "success"}>
+          {renderDashboardList(planningItems, "Aucune anomalie planning détectée.", 5)}
+        </DashboardCommandCard>
 
-        <div className="three-columns" style={{ marginTop: 18 }}>
-          <div className="mini-panel dashboard-today-planning-panel">
-            <p className="eyebrow">Aujourd’hui</p>
-            <h4>Planning du jour</h4>
+        <DashboardCommandCard eyebrow="Disponibilités" title="Biens proposables" summary={`${availableProperties.length + availableVehicles.length + availableBoats.length} actif${availableProperties.length + availableVehicles.length + availableBoats.length > 1 ? "s" : ""}`}>
+          {renderDashboardList(availabilityItems, "Aucun actif disponible renseigné.", 5)}
+        </DashboardCommandCard>
 
-            <div className="list-stack oar-contact-list-stack">
-              {dashboardPlanningToday.length === 0 ? (
-                <p className="muted-line">Aucune intervention active aujourd’hui.</p>
-              ) : (
-                dashboardPlanningToday.map((entry) => (
-                  <article className="mini-row" key={`dashboard-planning-${entry.id}`}>
-                    <div>
-                      <strong>{entry.startTime || "Heure à compléter"} · {entry.title}</strong>
-                      <span>{entry.contactName || "Aucun contact lié"} · {entry.priority || "Normal"}</span>
-                    </div>
-                    <Badge>{getPlanningEntryStatus(entry)}</Badge>
-                  </article>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="mini-panel">
-            <p className="eyebrow">Devis</p>
-            <h4>À relancer</h4>
-
-            <div className="list-stack oar-contact-list-stack">
-              {quotesToFollow.length === 0 ? (
-                <p className="muted-line">Aucun devis urgent à relancer.</p>
-              ) : (
-                quotesToFollow.map((quote) => (
-                  <article className="mini-row" key={quote.id}>
-                    <div>
-                      <strong>{quote.clientName}</strong>
-                      <span>{getQuoteStatusFrenchLabel(getQuoteStatus(quote.status))} · {currency.format(getQuoteSubtotal(quote))}</span>
-                    </div>
-                  </article>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="mini-panel">
-            <p className="eyebrow">Réservations</p>
-            <h4>À préparer</h4>
-
-            <div className="list-stack oar-contact-list-stack">
-              {bookingsToPrepare.length === 0 ? (
-                <p className="muted-line">Aucune réservation à préparer.</p>
-              ) : (
-                bookingsToPrepare.map((quote) => (
-                  <article className="mini-row" key={quote.id}>
-                    <div>
-                      <strong>{quote.clientName}</strong>
-                      <span>{quote.bookingStatus || "À préparer"} · {quote.startDate || "Date à compléter"}</span>
-                    </div>
-                  </article>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="mini-panel">
-            <p className="eyebrow">Paiements</p>
-            <h4>À suivre</h4>
-
-            <div className="list-stack oar-contact-list-stack">
-              {paymentsToFollow.length === 0 ? (
-                <p className="muted-line">Aucun paiement urgent à suivre.</p>
-              ) : (
-                paymentsToFollow.map((quote) => (
-                  <article className="mini-row" key={quote.id}>
-                    <div>
-                      <strong>{quote.clientName}</strong>
-                      <span>{currency.format(getDashboardPaymentRemaining(quote))} restant · {quote.paymentDueDate ? formatQuoteDate(quote.paymentDueDate) : "Sans limite"}</span>
-                    </div>
-                  </article>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="two-columns">
-        <section className="card">
-          <div className="section-heading">
-            <div>
-
-      <p className="eyebrow">Priorité</p>
-              <h3>Leads chauds</h3>
-            </div>
-          </div>
-          <div className="list-stack oar-contact-list-stack">
-            {hotLeads.map((lead) => (
-              <article className="mini-row" key={lead.id}>
-                <div>
-                  <strong>{lead.category}</strong>
-                  <span>{lead.contactName} · {currency.format(lead.value)}</span>
-                </div>
-                <select value={lead.status} onChange={(event) => onLeadStatusChange(lead.id, event.target.value as LeadStatus)}>
-                  {leadStatuses.map((status) => <option key={status}>{status}</option>)}
-                </select>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="card">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">À faire</p>
-              <h3>Prochaines actions</h3>
-            </div>
-          </div>
-          <div className="list-stack oar-contact-list-stack">
-            {nextTasks.map((task) => (
-              <article className="mini-row" key={task.id}>
-                <div>
-                  <strong>{task.title}</strong>
-                  <span>{task.dueDate || "Sans date"} · {task.linkedTo}</span>
-                </div>
-                <select value={task.status} onChange={(event) => onTaskStatusChange(task.id, event.target.value as TaskStatus)}>
-                  {taskStatuses.map((status) => <option key={status}>{status}</option>)}
-                </select>
-              </article>
-            ))}
-          </div>
-        </section>
+        <DashboardCommandCard eyebrow="Données" title="À compléter" summary={`${dataQualityItems.length} sujet${dataQualityItems.length > 1 ? "s" : ""}`} tone={dataQualityItems.length > 0 ? "warning" : "success"}>
+          {renderDashboardList(dataQualityItems, "Les données essentielles sont propres.", 5)}
+        </DashboardCommandCard>
       </div>
     </div>
   );
 }
+
 
 function StatCard({ label, value, caption }: { label: string; value: string; caption: string }) {
   return (
