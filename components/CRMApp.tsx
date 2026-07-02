@@ -10739,7 +10739,7 @@ const todayItems: DashboardItem[] = todayPlanning.map((entry) => ({
             else onDashboardAction("vendorInvoices" as Tab);
           }} />
           <DashboardQuickTile label="Aujourd’hui" value={String(todayPlanning.length)} caption="Interventions du jour" onClick={() => onDashboardAction("planning" as Tab)} />
-          <DashboardQuickTile label="À payer" value={currency.format(vendorAmountToPay + houseAmountToPay)} caption="Prestataires + maison" onClick={() => onDashboardAction(vendorAmountToPay > 0 ? "vendorInvoices" : "houseTracking")} />
+          <DashboardQuickTile label="Maison à payer" value={currency.format(houseAmountToPay)} caption="Suivi maison" onClick={() => onDashboardAction("houseTracking" as Tab)} />
           <DashboardQuickTile label="À recevoir" value={currency.format(clientAmountToReceive)} caption="Paiements clients" onClick={() => onDashboardAction("bookings" as Tab)} />
         </div>
       </div>
