@@ -7419,6 +7419,30 @@ function addContact(event: React.FormEvent<HTMLFormElement>) {
     notify("Planning mis à jour.");
   }
 
+
+  function patchLeadReservationDates(id: string, startDate: string, endDate: string) {
+    if (!isValidPlanningDate(startDate) || !isValidPlanningDate(endDate)) {
+      notify("Dates invalides pour déplacer la réservation.", "warning");
+      return;
+    }
+
+    if (planningDateValue(endDate) < planningDateValue(startDate)) {
+      notify("La date de fin ne peut pas être avant la date de début.", "warning");
+      return;
+    }
+
+    setData((current) => ({
+      ...current,
+      leads: current.leads.map((lead) =>
+        lead.id === id
+          ? stampUpdated({ ...lead, rentalStartDate: startDate, rentalEndDate: endDate }, activeActor) as Lead
+          : lead
+      )
+    }));
+
+    notify("Réservation déplacée dans le planning.");
+  }
+
   function updatePlanningEntry(id: string, event: React.FormEvent<HTMLFormElement>): boolean {
     event.preventDefault();
 
@@ -8057,6 +8081,7 @@ function createQuoteDraftFromLead(lead: Lead) {
             onUpdatePlanningEntry={updatePlanningEntry}
             onDeletePlanningEntry={deletePlanningEntry}
             onPatchPlanningEntry={patchPlanningEntry}
+            onPatchLeadReservationDates={patchLeadReservationDates}
           />
         )}
 
@@ -8619,7 +8644,8 @@ function PlanningView({
   onAddPlanningEntry,
   onUpdatePlanningEntry,
   onDeletePlanningEntry,
-  onPatchPlanningEntry
+  onPatchPlanningEntry,
+  onPatchLeadReservationDates
 }: {
   leads: Lead[];
   properties: Property[];
@@ -8631,6 +8657,7 @@ function PlanningView({
   onUpdatePlanningEntry: (id: string, event: React.FormEvent<HTMLFormElement>) => boolean;
   onDeletePlanningEntry: (id: string) => void;
   onPatchPlanningEntry: (id: string, patch: Partial<PlanningEntry>) => void;
+  onPatchLeadReservationDates: (id: string, startDate: string, endDate: string) => void;
 }) {
   const [categoryFilter, setCategoryFilter] = useState("Tous");
   const [assetFilter, setAssetFilter] = useState("Tous");
@@ -8642,6 +8669,76 @@ function PlanningView({
   const [planningWeekStart, setPlanningWeekStart] = useState(() => formatPlanningDateValue(new Date()));
   const [showAllUpcomingPlanningEntries, setShowAllUpcomingPlanningEntries] = useState(false);
   const [showCompletedPlanningEntries, setShowCompletedPlanningEntries] = useState(false);
+
+  const planningDragDataType = "application/x-oar-planning-event";
+
+  function getPlanningDragDurationDays(event: any) {
+    const start = String(event?.startDate || "");
+    const end = String(event?.endDate || event?.startDate || "");
+
+    if (!isValidPlanningDate(start) || !isValidPlanningDate(end)) return 1;
+
+    const diff = Math.floor((planningDateValue(end) - planningDateValue(start)) / 86400000) + 1;
+    return Math.max(1, diff);
+  }
+
+  function getPlanningDraggedNewDates(event: any, targetDayIso: string) {
+    const durationDays = getPlanningDragDurationDays(event);
+    const startDate = targetDayIso;
+    const endDate = formatPlanningDateValue(addPlanningDays(new Date(`${targetDayIso}T00:00:00`), durationDays - 1));
+
+    return { startDate, endDate };
+  }
+
+  function handlePlanningCalendarDragStart(dragEvent: React.DragEvent<HTMLElement>, event: any) {
+    dragEvent.dataTransfer.effectAllowed = "move";
+    dragEvent.dataTransfer.setData(planningDragDataType, JSON.stringify({
+      id: event.id,
+      source: event.source,
+      startDate: event.startDate,
+      endDate: event.endDate || event.startDate
+    }));
+  }
+
+  function handlePlanningCalendarDragOver(dragEvent: React.DragEvent<HTMLElement>) {
+    dragEvent.preventDefault();
+    dragEvent.dataTransfer.dropEffect = "move";
+  }
+
+  function handlePlanningCalendarDrop(dropEvent: React.DragEvent<HTMLElement>, targetDayIso: string) {
+    dropEvent.preventDefault();
+
+    if (!isValidPlanningDate(targetDayIso)) return;
+
+    const raw = dropEvent.dataTransfer.getData(planningDragDataType);
+    if (!raw) return;
+
+    let payload: any = null;
+
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      return;
+    }
+
+    const matchingEvent = calendarEvents.find((item: any) =>
+      String(item.source) === String(payload?.source) && String(item.id) === String(payload?.id)
+    ) || payload;
+
+    if (!matchingEvent?.id || !matchingEvent?.source) return;
+
+    const { startDate, endDate } = getPlanningDraggedNewDates(matchingEvent, targetDayIso);
+
+    if (matchingEvent.source === "planning") {
+      onPatchPlanningEntry(String(matchingEvent.id), { startDate, endDate });
+      return;
+    }
+
+    if (matchingEvent.source === "lead") {
+      onPatchLeadReservationDates(String(matchingEvent.id), startDate, endDate);
+    }
+  }
+
   const [planningClockTick, setPlanningClockTick] = useState(() => Date.now());
 
   useEffect(() => {
@@ -9736,7 +9833,12 @@ function PlanningView({
                     ].filter(Boolean).join(" ");
 
                     return (
-                      <td key={`${weekIndex}-${dayIndex}`} className={day ? dayClassName : "planning-day-empty"}>
+                      <td
+                        key={`${weekIndex}-${dayIndex}`}
+                        className={day ? dayClassName : "planning-day-empty"}
+                        onDragOver={day ? handlePlanningCalendarDragOver : undefined}
+                        onDrop={day ? (dragEvent) => handlePlanningCalendarDrop(dragEvent, day.iso) : undefined}
+                      >
                         {day ? (
                           <div>
                             <strong>{day.day}</strong>
@@ -9755,6 +9857,8 @@ function PlanningView({
                                     className={`planning-event-pill planning-event-button ${event.blocksAvailability ? "blocked" : "entry"} status-${getPlanningStatusClass(eventSegment.status)}`}
                                     key={`${event.source}-${event.id}`}
                                     type="button"
+                                    draggable
+                                    onDragStart={(dragEvent) => handlePlanningCalendarDragStart(dragEvent, event)}
                                     onClick={() => startPlanningEntryEdit(matchingPlanningEntry)}
                                     title={eventExplanation}
                                   >
@@ -9764,6 +9868,9 @@ function PlanningView({
                                   <span
                                     className={`planning-event-pill ${event.blocksAvailability ? "blocked" : "option"} status-${getPlanningStatusClass(eventSegment.status)}`}
                                     key={`${event.source}-${event.id}`}
+                                    draggable
+                                    data-planning-draggable-lead="true"
+                                    onDragStart={(dragEvent) => handlePlanningCalendarDragStart(dragEvent, event)}
                                     title={eventExplanation}
                                   >
                                     {cleanPlanningCalendarVisibleLabel(eventLabel)}
@@ -9797,7 +9904,12 @@ function PlanningView({
 
             <div className="planning-week-grid">
               {planningWeekDays.map((day) => (
-                <article className="planning-week-day" key={day.iso}>
+                <article
+                  className="planning-week-day"
+                  key={day.iso}
+                  onDragOver={handlePlanningCalendarDragOver}
+                  onDrop={(dropEvent) => handlePlanningCalendarDrop(dropEvent, day.iso)}
+                >
                   <div className="planning-week-day-heading">
                     <span>{day.dayLabel}</span>
                     <strong>{day.dateLabel}</strong>
@@ -9820,6 +9932,8 @@ function PlanningView({
                             className={`planning-week-event ${event.blocksAvailability ? "blocked" : "entry"} status-${getPlanningStatusClass(eventSegment.status)}`}
                             key={`${event.source}-${event.id}-${day.iso}`}
                             type="button"
+                            draggable
+                            onDragStart={(dragEvent) => handlePlanningCalendarDragStart(dragEvent, event)}
                             onClick={() => startPlanningEntryEdit(matchingPlanningEntry)}
                             title={eventExplanation}
                           >
@@ -9829,6 +9943,9 @@ function PlanningView({
                           <span
                             className={`planning-week-event ${event.blocksAvailability ? "blocked" : "option"} status-${getPlanningStatusClass(eventSegment.status)}`}
                             key={`${event.source}-${event.id}-${day.iso}`}
+                            draggable
+                            data-planning-draggable-lead="true"
+                            onDragStart={(dragEvent) => handlePlanningCalendarDragStart(dragEvent, event)}
                             title={eventExplanation}
                           >
                             {cleanPlanningCalendarVisibleLabel(eventLabel)}

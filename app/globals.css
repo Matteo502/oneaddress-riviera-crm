@@ -8784,3 +8784,31 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
 
 /* === PLANNING CLEAN CALENDAR LABELS END === */
 
+/* === PLANNING DRAG DROP RESCHEDULE START === */
+
+/* Planning desktop uniquement : les cartes peuvent être déplacées à la souris. */
+.planning-event-pill[draggable="true"],
+.planning-week-event[draggable="true"] {
+  cursor: grab !important;
+  user-select: none !important;
+}
+
+.planning-event-pill[draggable="true"]:active,
+.planning-week-event[draggable="true"]:active {
+  cursor: grabbing !important;
+  opacity: 0.82 !important;
+}
+
+.planning-day:not(.planning-day-empty),
+.planning-week-day {
+  transition: background-color 120ms ease, box-shadow 120ms ease, outline-color 120ms ease !important;
+}
+
+.planning-day:not(.planning-day-empty):hover,
+.planning-week-day:hover {
+  outline: 1px dashed rgba(187, 149, 81, 0.55) !important;
+  outline-offset: -4px !important;
+}
+
+/* === PLANNING DRAG DROP RESCHEDULE END === */
+
