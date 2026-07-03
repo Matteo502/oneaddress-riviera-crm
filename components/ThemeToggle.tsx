@@ -48,42 +48,84 @@ export default function ThemeToggle() {
 
       <style jsx global>{`
         [data-crm-theme="dark"] {
-          --bg: #06131b;
-          --bg-2: #0a1c25;
-          --panel: #0d222b;
-          --panel-soft: rgba(14, 34, 43, 0.94);
-          --text: #f3eee4;
-          --muted: #aab6b8;
-          --border: rgba(211, 177, 110, 0.26);
-          --green: #8dc1b2;
-          --green-2: #173f36;
-          --green-3: #24594c;
-          --gold: #d3b16e;
-          --gold-2: #ead4a4;
-          --danger: #ef8f80;
-          --success: #7fc49e;
-          --shadow: 0 22px 70px rgba(0, 0, 0, 0.36);
+          --bg: #090a0c;
+          --bg-2: #0d0f12;
+          --panel: #121417;
+          --panel-soft: rgba(18, 20, 23, 0.97);
+          --text: #d2d1cc;
+          --muted: #8d9194;
+          --border: #2b2e32;
+          --green: #202327;
+          --green-2: #191c20;
+          --green-3: #24282d;
+          --gold: #a99a78;
+          --gold-2: #b8aa8b;
+          --danger: #a58f8c;
+          --success: #909993;
+          --shadow: 0 16px 46px rgba(0, 0, 0, 0.32);
+        }
+
+        [data-crm-theme="dark"],
+        [data-crm-theme="dark"] body {
+          color-scheme: dark;
+          color: var(--text);
+          background: #090a0c !important;
         }
 
         [data-crm-theme="dark"] body {
-          color: var(--text);
-          background:
-            radial-gradient(circle at 18% 0%, rgba(211, 177, 110, 0.13), transparent 34rem),
-            radial-gradient(circle at 82% 10%, rgba(47, 105, 111, 0.18), transparent 32rem),
-            linear-gradient(135deg, #041019 0%, var(--bg) 48%, var(--bg-2) 100%);
+          scrollbar-color: #35383c #0b0c0e;
+        }
+
+        [data-crm-theme="dark"] .crm-shell {
+          background: #090a0c !important;
+        }
+
+        [data-crm-theme="dark"] .sidebar {
+          color: #c4c3be !important;
+          border-color: #272a2e !important;
+          background: #0b0c0e !important;
+          box-shadow: 12px 0 36px rgba(0, 0, 0, 0.28) !important;
+        }
+
+        [data-crm-theme="dark"] .sidebar :is(h1, h2, h3, strong) {
+          color: #d2d1cc !important;
+        }
+
+        [data-crm-theme="dark"] .sidebar :is(.nav-button, .sidebar-card, .sidebar-card span) {
+          color: #96999b !important;
+        }
+
+        [data-crm-theme="dark"] .sidebar .nav-button:hover,
+        [data-crm-theme="dark"] .sidebar .nav-button.active {
+          color: #d2d1cc !important;
+          border-color: #34373b !important;
+          background: #17191c !important;
+        }
+
+        [data-crm-theme="dark"] .sidebar .nav-button span,
+        [data-crm-theme="dark"] .eyebrow {
+          color: #a99a78 !important;
         }
 
         [data-crm-theme="dark"] .content-panel {
           color: var(--text);
+          background: #0d0f12 !important;
         }
 
-        [data-crm-theme="dark"] :is(h1, h2, h3, h4, label),
+        [data-crm-theme="dark"] :is(h1, h2, h3, h4, h5, label),
         [data-crm-theme="dark"] .content-panel strong {
-          color: var(--text);
+          color: #d2d1cc !important;
         }
 
-        [data-crm-theme="dark"] :is(.muted-line, .card p, .item-card p, .content-panel small) {
-          color: var(--muted);
+        [data-crm-theme="dark"] :is(
+          p,
+          small,
+          .muted-line,
+          .card p,
+          .item-card p,
+          .content-panel span
+        ) {
+          color: #8d9194;
         }
 
         [data-crm-theme="dark"] :is(
@@ -103,48 +145,60 @@ export default function ThemeToggle() {
           .planning-entry-card,
           .document-file-card,
           .document-folder-card,
+          .house-card,
+          .worker-card,
+          .payment-card,
           .shared-db-status-panel,
           .crm-notification-panel,
+          .notification-card,
+          .mini-stat,
           .confirm-dialog,
-          .dashboard-command-card
+          .quote-preview,
+          .dashboard-command-card,
+          .dashboard-command-row,
+          .dashboard-command-kpi-tile,
+          .planning-week-day,
+          .planning-day
         ) {
-          color: var(--text);
-          border-color: var(--border) !important;
-          background: linear-gradient(180deg, rgba(15, 36, 46, 0.98), rgba(9, 27, 36, 0.96)) !important;
+          color: var(--text) !important;
+          border-color: #2b2e32 !important;
+          background: #121417 !important;
+          background-image: none !important;
           box-shadow: var(--shadow);
         }
 
         [data-crm-theme="dark"] :is(
+          .dashboard-command-card,
           .dashboard-command-row,
           .dashboard-command-kpi-tile,
           .notification-card,
-          .mini-stat,
-          .planning-week-day,
-          .planning-day,
-          .quote-preview,
-          .sidebar-card
-        ) {
-          color: var(--text) !important;
-          border-color: var(--border) !important;
-          background: rgba(18, 42, 52, 0.92) !important;
+          .mini-stat
+        ) :is(strong, span, p, small) {
+          color: inherit !important;
         }
 
-        [data-crm-theme="dark"] .dashboard-command-center :is(
-          .dashboard-command-row,
-          .dashboard-command-kpi-tile
-        ) :is(strong, span) {
-          color: var(--text) !important;
+        [data-crm-theme="dark"] :is(
+          .dashboard-command-card.tone-danger,
+          .dashboard-command-card.tone-warning,
+          .dashboard-command-card.tone-success,
+          .dashboard-command-row.tone-danger,
+          .dashboard-command-row.tone-warning,
+          .dashboard-command-row.tone-success
+        ) {
+          border-color: #36393d !important;
+          background: #141619 !important;
         }
 
         [data-crm-theme="dark"] :is(input, select, textarea, .search-input) {
-          color: var(--text);
-          border-color: var(--border);
-          background: #0b2029 !important;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          color: #cfcec9 !important;
+          border-color: #303338 !important;
+          background: #0d0f12 !important;
+          background-image: none !important;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
         }
 
         [data-crm-theme="dark"] :is(input, textarea, .search-input)::placeholder {
-          color: rgba(214, 222, 222, 0.48);
+          color: #656a6e !important;
         }
 
         [data-crm-theme="dark"] select {
@@ -152,87 +206,122 @@ export default function ThemeToggle() {
         }
 
         [data-crm-theme="dark"] :is(table, th, td) {
-          color: var(--text);
-          border-color: var(--border) !important;
+          color: #c6c6c1 !important;
+          border-color: #292c30 !important;
         }
 
-        [data-crm-theme="dark"] thead,
-        [data-crm-theme="dark"] th {
-          background: rgba(211, 177, 110, 0.10) !important;
+        [data-crm-theme="dark"] :is(thead, th) {
+          background: #17191c !important;
+          background-image: none !important;
         }
 
         [data-crm-theme="dark"] tbody tr {
-          background: rgba(10, 29, 38, 0.72);
+          background: #111316 !important;
+        }
+
+        [data-crm-theme="dark"] tbody tr:nth-child(even) {
+          background: #131518 !important;
         }
 
         [data-crm-theme="dark"] tbody tr:hover {
-          background: rgba(211, 177, 110, 0.08) !important;
-        }
-
-        [data-crm-theme="dark"] :is(.ghost-button, .icon-button) {
-          color: var(--gold-2);
-          background: rgba(211, 177, 110, 0.12);
-        }
-
-        [data-crm-theme="dark"] .secondary-button {
-          color: #122027;
-        }
-
-        [data-crm-theme="dark"] :is(.crm-topbar-menu-panel, .dropdown-menu, [role="menu"]) {
-          color: var(--text);
-          border-color: var(--border) !important;
-          background: #0b2029 !important;
-          box-shadow: 0 24px 58px rgba(0, 0, 0, 0.46) !important;
-        }
-
-        [data-crm-theme="dark"] .crm-topbar-menu-panel button {
-          color: var(--text);
+          background: #1a1d20 !important;
         }
 
         [data-crm-theme="dark"] :is(
-          .dashboard-command-card.tone-danger,
-          .dashboard-command-row.tone-danger
+          button,
+          .primary-button,
+          .secondary-button,
+          .ghost-button,
+          .icon-button,
+          .compact-button
+        ):not(.nav-button):not(.crm-theme-toggle):not(.danger-link) {
+          color: #c9c8c3 !important;
+          border-color: #36393e !important;
+          background: #1a1d20 !important;
+          background-image: none !important;
+          box-shadow: none !important;
+        }
+
+        [data-crm-theme="dark"] :is(
+          button,
+          .primary-button,
+          .secondary-button,
+          .ghost-button,
+          .icon-button,
+          .compact-button
+        ):not(.nav-button):not(.crm-theme-toggle):not(.danger-link):hover {
+          color: #dcdbd6 !important;
+          border-color: #484c51 !important;
+          background: #23262a !important;
+        }
+
+        [data-crm-theme="dark"] :is(
+          .badge,
+          .status-pill,
+          .lead-status,
+          .quote-status,
+          [class*="status-"],
+          [class*="semantic-"]
         ) {
-          border-color: rgba(239, 143, 128, 0.34) !important;
-          background: rgba(92, 35, 35, 0.42) !important;
+          color: #b8b8b3 !important;
+          border-color: #34373b !important;
+          background: #181a1d !important;
+          background-image: none !important;
+          box-shadow: none !important;
         }
 
         [data-crm-theme="dark"] :is(
-          .dashboard-command-card.tone-warning,
-          .dashboard-command-row.tone-warning
-        ) {
-          border-color: rgba(211, 177, 110, 0.38) !important;
-          background: rgba(88, 68, 29, 0.38) !important;
-        }
-
-        [data-crm-theme="dark"] :is(
-          .dashboard-command-card.tone-success,
-          .dashboard-command-row.tone-success
-        ) {
-          border-color: rgba(127, 196, 158, 0.30) !important;
-          background: rgba(31, 77, 57, 0.38) !important;
-        }
-
-        [data-crm-theme="dark"] .planning-event-pill.status-termine {
-          color: #a9e2bd !important;
-          background: rgba(47, 125, 74, 0.28) !important;
-        }
-
-        [data-crm-theme="dark"] .planning-event-pill.status-prevu {
-          color: #ffb1a8 !important;
-          background: rgba(157, 59, 59, 0.26) !important;
-        }
-
-        [data-crm-theme="dark"] :is(
+          .planning-event-pill,
+          .planning-week-event,
+          .planning-event-pill.status-termine,
+          .planning-event-pill.status-prevu,
           .planning-event-pill.status-en-cours,
           .planning-event-pill.status-a-confirmer
         ) {
-          color: #f1d895 !important;
-          background: rgba(214, 166, 61, 0.24) !important;
+          color: #bfc0bc !important;
+          border-color: #383b40 !important;
+          background: #181a1d !important;
+        }
+
+        [data-crm-theme="dark"] :is(
+          .crm-topbar-menu-panel,
+          .dropdown-menu,
+          [role="menu"]
+        ) {
+          color: #c9c8c3 !important;
+          border-color: #303338 !important;
+          background: #111316 !important;
+          background-image: none !important;
+          box-shadow: 0 20px 46px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        [data-crm-theme="dark"] .crm-topbar-menu-panel button {
+          color: #c9c8c3 !important;
+        }
+
+        [data-crm-theme="dark"] :is(a, .link-button) {
+          color: #afa17f;
+        }
+
+        [data-crm-theme="dark"] .danger-link {
+          color: #a58f8c !important;
         }
 
         [data-crm-theme="dark"] .confirm-backdrop {
-          background: rgba(1, 8, 12, 0.78);
+          background: rgba(0, 0, 0, 0.82) !important;
+        }
+
+        [data-crm-theme="dark"] :is(
+          .recharts-wrapper,
+          .recharts-surface,
+          .chart-container
+        ) {
+          filter: grayscale(0.9) saturate(0.25) brightness(0.82);
+        }
+
+        [data-crm-theme="dark"] ::selection {
+          color: #d2d1cc;
+          background: #3b3932;
         }
 
         .crm-theme-toggle {
@@ -245,28 +334,29 @@ export default function ThemeToggle() {
           gap: 9px;
           min-height: 44px;
           padding: 10px 15px;
-          border: 1px solid rgba(211, 177, 110, 0.46);
+          border: 1px solid #3a3d41;
           border-radius: 999px;
-          color: #fffaf2;
-          background: linear-gradient(135deg, #173f36, #09271f);
-          box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
-          transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+          color: #c9c8c3;
+          background: #181a1d;
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.38);
+          transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
         }
 
         .crm-theme-toggle:hover {
-          transform: translateY(-2px);
-          filter: brightness(1.08);
-          box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+          transform: translateY(-1px);
+          color: #d8d7d2;
+          border-color: #50545a;
+          background: #222529;
         }
 
         .crm-theme-toggle:focus-visible {
-          outline: 3px solid rgba(211, 177, 110, 0.48);
+          outline: 2px solid #84795f;
           outline-offset: 3px;
         }
 
         .crm-theme-toggle span {
-          color: var(--gold-2);
-          font-size: 1.1rem;
+          color: #a99a78;
+          font-size: 1.05rem;
           line-height: 1;
         }
 
@@ -278,6 +368,8 @@ export default function ThemeToggle() {
 
         [data-crm-theme="light"] .crm-theme-toggle {
           color: #fffaf2;
+          border-color: rgba(211, 177, 110, 0.46);
+          background: linear-gradient(135deg, #173f36, #09271f);
         }
 
         @media (max-width: 720px) {
