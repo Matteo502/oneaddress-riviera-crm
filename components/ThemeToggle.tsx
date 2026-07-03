@@ -372,6 +372,58 @@ export default function ThemeToggle() {
           background: linear-gradient(135deg, #173f36, #09271f);
         }
 
+        [data-crm-theme="dark"] .crm-shell.crm-readable-redesign .sidebar {
+          background: #0b0c0e !important;
+          background-color: #0b0c0e !important;
+          background-image: none !important;
+        }
+
+        [data-crm-theme="dark"] .crm-sidebar-logo {
+          filter: grayscale(1) brightness(1.12) contrast(0.92);
+        }
+
+        [data-crm-theme="dark"] .crm-shell.crm-readable-redesign .topbar.crm-topbar-compact {
+          color: #d2d1cc !important;
+          border-color: #2b2e32 !important;
+          background: #121417 !important;
+          background-color: #121417 !important;
+          background-image: none !important;
+          box-shadow: 0 16px 42px rgba(0, 0, 0, 0.28) !important;
+        }
+
+        [data-crm-theme="dark"] .crm-shell.crm-readable-redesign .topbar.crm-topbar-compact :is(
+          h1,
+          h2,
+          h3,
+          span,
+          label
+        ) {
+          color: #bfc0bc !important;
+        }
+
+        [data-crm-theme="dark"] .dashboard-command-kpi-tile::before,
+        [data-crm-theme="dark"] .dashboard-command-kpi-tile::after,
+        [data-crm-theme="dark"] .stat-card::before,
+        [data-crm-theme="dark"] .stat-card::after {
+          display: none !important;
+          content: none !important;
+          background: none !important;
+        }
+
+        [data-crm-theme="dark"] :is(
+          .dashboard-command-card-heading > span,
+          .dashboard-command-row .badge,
+          .dashboard-command-kpi-tile .badge,
+          .dashboard-command-card > span,
+          .notification-card .badge
+        ) {
+          color: #aeb0ad !important;
+          border-color: #36393d !important;
+          background: #1d2023 !important;
+          background-image: none !important;
+          box-shadow: none !important;
+        }
+
         @media (max-width: 720px) {
           .crm-theme-toggle {
             right: 14px;
