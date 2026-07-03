@@ -424,6 +424,81 @@ export default function ThemeToggle() {
           box-shadow: none !important;
         }
 
+        [data-crm-theme="dark"] :is(
+          .mini-row,
+          .task-row,
+          .empty-state,
+          .crm-notification-item,
+          .contact-row,
+          .vendor-invoice,
+          .document-card,
+          .house-mini-panel,
+          .mini-panel,
+          .calendar-day,
+          .planning-calendar-day,
+          .month-day,
+          .planning-agenda-column,
+          .planning-agenda-item,
+          .planning-scope-notice,
+          .planning-list-summary,
+          .planning-entry-more summary,
+          .planning-entry-more-clean summary,
+          .planning-entry-more-menu,
+          .drive-documents-view .document-drop-zone,
+          .drive-documents-view .document-current-folder-note
+        ) {
+          color: #bfc0bc !important;
+          border-color: #303338 !important;
+          background: #121417 !important;
+          background-color: #121417 !important;
+          background-image: none !important;
+          box-shadow: none !important;
+        }
+
+        [data-crm-theme="dark"] :is(
+          .mini-row,
+          .task-row,
+          .crm-notification-item,
+          .planning-agenda-item,
+          .planning-entry-more summary,
+          .planning-entry-more-clean summary
+        ):hover {
+          background: #1a1d20 !important;
+          border-color: #41454a !important;
+        }
+
+        [data-crm-theme="dark"] .crm-readable-redesign .actor-select-label {
+          color: #aeb0ad !important;
+          border-color: #303338 !important;
+          background: #17191c !important;
+        }
+
+        [data-crm-theme="dark"] .property-visual {
+          color: #c6c6c1 !important;
+          background: #17191c !important;
+          background-image: none !important;
+        }
+
+        [data-crm-theme="dark"] .property-visual span {
+          color: #bfc0bc !important;
+          background: #222529 !important;
+        }
+
+        [data-crm-theme="dark"] :is(
+          .document-preview-frame,
+          .vendor-invoice-preview-frame
+        ) {
+          border-color: #303338 !important;
+          background: #0b0c0e !important;
+          filter: grayscale(0.45) brightness(0.72) contrast(0.94);
+        }
+
+        [data-crm-theme="dark"] input[type="file"] {
+          color: #aeb0ad !important;
+          border-color: #3a3d41 !important;
+          background: #111316 !important;
+        }
+
         @media (max-width: 720px) {
           .crm-theme-toggle {
             right: 14px;
