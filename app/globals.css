@@ -8972,3 +8972,54 @@ html {
 
 /* === DASHBOARD PRECISE VENDOR ACTIONS END === */
 
+/* === PLANNING CLICK DAY QUICK ADD START === */
+
+/* Planning desktop : cliquer dans une case vide permet de créer rapidement une entrée. */
+.planning-month-table .planning-day:not(.planning-day-empty),
+.planning-week-day {
+  cursor: cell !important;
+}
+
+.planning-month-table .planning-day:not(.planning-day-empty):hover,
+.planning-week-day:hover {
+  outline: 1px dashed rgba(187, 149, 81, 0.48) !important;
+  outline-offset: -5px !important;
+}
+
+.planning-event-pill,
+.planning-week-event,
+.planning-event-button {
+  cursor: pointer !important;
+}
+
+.planning-event-pill[draggable="true"],
+.planning-week-event[draggable="true"] {
+  cursor: grab !important;
+}
+
+.planning-quick-add-banner {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+  margin: 0 0 14px 0 !important;
+  padding: 12px 14px !important;
+  border: 1px solid rgba(187, 149, 81, 0.34) !important;
+  border-radius: 16px !important;
+  background: rgba(212, 177, 106, 0.10) !important;
+}
+
+.planning-quick-add-banner strong {
+  color: #041432 !important;
+  font-size: 0.78rem !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+}
+
+.planning-quick-add-banner span {
+  color: rgba(4, 20, 50, 0.68) !important;
+  font-size: 0.86rem !important;
+}
+
+/* === PLANNING CLICK DAY QUICK ADD END === */
+

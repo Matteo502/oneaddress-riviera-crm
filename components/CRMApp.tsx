@@ -8704,6 +8704,7 @@ function PlanningView({
   const [planningWeekStart, setPlanningWeekStart] = useState(() => formatPlanningDateValue(new Date()));
   const [showAllUpcomingPlanningEntries, setShowAllUpcomingPlanningEntries] = useState(false);
   const [showCompletedPlanningEntries, setShowCompletedPlanningEntries] = useState(false);
+  const [quickPlanningDate, setQuickPlanningDate] = useState("");
 
   const planningDragDataType = "application/x-oar-planning-event";
 
@@ -9384,7 +9385,72 @@ function PlanningView({
     setCalendarMonth(formatPlanningMonthValue(new Date(year, month - 1 + offset, 1)));
   }
 
+
+  function shouldIgnorePlanningQuickAddClick(clickEvent: React.MouseEvent<HTMLElement>) {
+    const target = clickEvent.target as HTMLElement | null;
+
+    if (!target) return false;
+
+    return Boolean(target.closest([
+      "button",
+      "a",
+      "input",
+      "select",
+      "textarea",
+      "[draggable='true']",
+      ".planning-event-pill",
+      ".planning-week-event",
+      ".planning-event-button"
+    ].join(",")));
+  }
+
+  function scrollToPlanningEntryFormForQuickAdd() {
+    const target = document.querySelector<HTMLElement>('[data-planning-entry-form="true"]');
+
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: "auto", block: "start" });
+
+    const scrollContainers = [
+      document.querySelector<HTMLElement>(".content-panel"),
+      document.querySelector<HTMLElement>(".crm-readable-redesign"),
+      document.scrollingElement as HTMLElement | null
+    ].filter(Boolean) as HTMLElement[];
+
+    for (const container of scrollContainers) {
+      const targetRect = target.getBoundingClientRect();
+      const containerRect = container === document.scrollingElement
+        ? { top: 0 }
+        : container.getBoundingClientRect();
+      const nextTop = container.scrollTop + targetRect.top - containerRect.top - 110;
+
+      if (Number.isFinite(nextTop)) {
+        container.scrollTo({ top: Math.max(0, nextTop), behavior: "auto" });
+      }
+    }
+
+    window.setTimeout(() => {
+      const titleInput = target.querySelector<HTMLInputElement>('input[name="title"]');
+      titleInput?.focus({ preventScroll: true });
+      titleInput?.select();
+    }, 80);
+  }
+
+  function openPlanningQuickAddFromDay(clickEvent: React.MouseEvent<HTMLElement>, dayIso: string) {
+    if (!isValidPlanningDate(dayIso)) return;
+    if (shouldIgnorePlanningQuickAddClick(clickEvent)) return;
+
+    setEditingPlanningEntry(null);
+    setQuickPlanningDate(dayIso);
+    setCalendarMonth(formatPlanningMonthValue(new Date(`${dayIso}T00:00:00`)));
+    setPlanningWeekStart(dayIso);
+
+    window.setTimeout(scrollToPlanningEntryFormForQuickAdd, 30);
+    window.setTimeout(scrollToPlanningEntryFormForQuickAdd, 120);
+  }
+
   function startPlanningEntryEdit(entry: PlanningEntry) {
+    setQuickPlanningDate("");
     setEditingPlanningEntry(entry);
 
     const scrollToPlanningForm = () => {
@@ -9431,6 +9497,7 @@ function PlanningView({
 
   function cancelPlanningEntryEdit() {
     setEditingPlanningEntry(null);
+    setQuickPlanningDate("");
   }
 
   const editingPlanningAssetKey = editingPlanningEntry?.assetType && editingPlanningEntry?.assetId
@@ -9607,12 +9674,20 @@ function PlanningView({
           </div>
         </div>
 
+        {quickPlanningDate && !editingPlanningEntry && (
+          <div className="planning-quick-add-banner">
+            <strong>Création rapide</strong>
+            <span>{formatDateFR(quickPlanningDate)} · complétez le titre, l’heure et l’actif si nécessaire.</span>
+          </div>
+        )}
+
         <form
           className="form-grid compact planning-entry-form"
-          key={editingPlanningEntry?.id ?? `new-planning-entry-${categoryFilter}`}
+          key={editingPlanningEntry?.id ?? `new-planning-entry-${quickPlanningDate || categoryFilter}`}
           onSubmit={(event) => {
             if (!editingPlanningEntry) {
               onAddPlanningEntry(event);
+              setQuickPlanningDate("");
               return;
             }
 
@@ -9624,11 +9699,11 @@ function PlanningView({
           }}
         >
           <label>Titre
-            <input name="title" defaultValue={editingPlanningEntry?.title ?? ""} placeholder="Gardens Jardinier · entretien jardin" required />
+            <input name="title" defaultValue={editingPlanningEntry?.title ?? (quickPlanningDate ? "Rendez-vous" : "")} placeholder="Gardens Jardinier · entretien jardin" required />
           </label>
 
           <label>Type
-            <select name="type" defaultValue={editingPlanningEntry?.type ?? "Intervention prestataire"}>
+            <select name="type" defaultValue={editingPlanningEntry?.type ?? (quickPlanningDate ? "Autre" : "Intervention prestataire")}>
               {planningEntryTypes.map((type) => (
                 <option key={type}>{type}</option>
               ))}
@@ -9676,11 +9751,11 @@ function PlanningView({
           </label>
 
           <label>Date début
-            <input type="date" name="startDate" defaultValue={editingPlanningEntry?.startDate ?? ""} required />
+            <input type="date" name="startDate" defaultValue={editingPlanningEntry?.startDate ?? quickPlanningDate} required />
           </label>
 
           <label>Date fin
-            <input type="date" name="endDate" defaultValue={editingPlanningEntry?.endDate ?? ""} />
+            <input type="date" name="endDate" defaultValue={editingPlanningEntry?.endDate ?? quickPlanningDate} />
           </label>
 
           <label>Heure arrivée
@@ -9873,6 +9948,7 @@ function PlanningView({
                         className={day ? dayClassName : "planning-day-empty"}
                         onDragOver={day ? handlePlanningCalendarDragOver : undefined}
                         onDrop={day ? (dragEvent) => handlePlanningCalendarDrop(dragEvent, day.iso) : undefined}
+                        onClick={day ? (clickEvent) => openPlanningQuickAddFromDay(clickEvent, day.iso) : undefined}
                       >
                         {day ? (
                           <div>
@@ -9944,6 +10020,7 @@ function PlanningView({
                   key={day.iso}
                   onDragOver={handlePlanningCalendarDragOver}
                   onDrop={(dropEvent) => handlePlanningCalendarDrop(dropEvent, day.iso)}
+                  onClick={(clickEvent) => openPlanningQuickAddFromDay(clickEvent, day.iso)}
                 >
                   <div className="planning-week-day-heading">
                     <span>{day.dayLabel}</span>
