@@ -316,7 +316,7 @@ function readLocalCRMDataSafely() {
   }
 }
 
-type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "bookings" | "vendorInvoices" | "houseTracking" | "quickReplies" | "planning" | "properties" | "vehicles" | "boats" | "documents";
+type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "bookings" | "vendorInvoices" | "houseTracking" | "planning" | "properties" | "vehicles" | "boats" | "documents";
 
 type Toast = {
   message: string;
@@ -7864,16 +7864,6 @@ function createQuoteDraftFromLead(lead: Lead) {
         </div>
 
         <nav className="nav-list" aria-label="Navigation principale">
-        <NavButton label="Dashboard" icon="⌂" active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} />
-        <NavButton label="Contacts" icon="👤" active={activeTab === "contacts"} onClick={() => setActiveTab("contacts")} />
-        <NavButton label="Leads" icon="🎯" active={activeTab === "leads"} onClick={() => setActiveTab("leads")} />
-        <NavButton label="Tâches" icon="✓" active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} />
-        <NavButton label="Devis" icon="🧾" active={activeTab === "quotes"} onClick={() => setActiveTab("quotes")} />
-        <NavButton label="Réservations" icon="✓" active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} />
-        <NavButton label="Factures prestataires" icon="€" active={activeTab === "vendorInvoices"} onClick={() => setActiveTab("vendorInvoices")} />
-        <NavButton label="Suivi maison" icon="⏱" active={activeTab === "houseTracking"} onClick={() => setActiveTab("houseTracking")} />
-        <NavButton label="Documents" icon="📁" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} />
-        <NavButton label="Réponses rapides" icon="💬" active={activeTab === "quickReplies"} onClick={() => setActiveTab("quickReplies")} />
         <NavButton label="Planning" icon="🗓" active={activeTab === "planning"} onClick={() => setActiveTab("planning")} />
         <NavButton label="Biens" icon="🏠" active={activeTab === "properties"} onClick={() => setActiveTab("properties")} />
         <NavButton label="Voitures" icon="🚗" active={activeTab === "vehicles"} onClick={() => setActiveTab("vehicles")} />
@@ -8050,11 +8040,6 @@ function createQuoteDraftFromLead(lead: Lead) {
             onDelete={deleteCRMDocument}
           />
         )}
-
-        {activeTab === "quickReplies" && (
-          <QuickRepliesView />
-        )}
-
 {activeTab === "quotes" && (
           <QuotesView
             contacts={data.contacts}
@@ -8179,7 +8164,6 @@ function titleForTab(tab: Tab) {
     vendorInvoices: "Factures prestataires",
     houseTracking: "Suivi maison",
     documents: "Documents",
-    quickReplies: "Réponses rapides",
     planning: "Planning",
     properties: "Biens",
     vehicles: "Voitures",
