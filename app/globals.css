@@ -9156,3 +9156,45 @@ html {
 
 /* === SIDEBAR BADGE LEFT OF LABEL END === */
 
+/* === SIDEBAR BADGE BEFORE ICON START === */
+
+/*
+  Ordre visuel sidebar :
+  badge → icône → texte.
+  Scope limité à la sidebar.
+*/
+
+.sidebar .nav-list .nav-button {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: 100% !important;
+}
+
+.sidebar .nav-list .nav-button .nav-badge {
+  order: 1 !important;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+
+.sidebar .nav-list .nav-button .nav-button-icon {
+  order: 2 !important;
+  flex: 0 0 22px !important;
+  width: 22px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+}
+
+.sidebar .nav-list .nav-button .nav-button-label {
+  order: 3 !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  white-space: normal !important;
+}
+
+/* === SIDEBAR BADGE BEFORE ICON END === */
+
