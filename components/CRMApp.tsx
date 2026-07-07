@@ -7856,6 +7856,60 @@ function createQuoteDraftFromLead(lead: Lead) {
     reader.readAsText(file);
   }
 
+  // === SMART SIDEBAR BADGES START ===
+  const sidebarTodayIso = new Date().toISOString().slice(0, 10);
+
+  const sidebarLeadCount = (data.leads ?? []).filter((lead) => {
+    const status = String(lead.status || "");
+    return status !== "Gagné" && status !== "Perdu";
+  }).length;
+
+  const sidebarTaskCount = (data.tasks ?? []).filter((task) => {
+    return !isCompletedTaskStatus(task.status);
+  }).length;
+
+  const sidebarBookingCount = ((((data as any).quotes ?? []) as Array<{ status?: string; bookingStatus?: string }>)).filter((quote) => {
+    const quoteStatus = String(quote.status || "");
+    const bookingStatus = String(quote.bookingStatus || "À préparer");
+    const isConfirmed = quoteStatus === "Accepted" || quoteStatus === "Gagné" || quoteStatus === "Confirmé";
+    const isClosed = bookingStatus === "Terminé" || bookingStatus === "Annulé" || bookingStatus === "Perdu";
+    return isConfirmed && !isClosed;
+  }).length;
+
+  const sidebarVendorInvoiceCount = ((((data as any).vendorInvoices ?? []) as VendorInvoice[])).filter((invoice) => {
+    const status = String(invoice.status || "");
+    return status !== "Payé" && status !== "Annulé";
+  }).length;
+
+  const sidebarPlanningCount = ((((data as any).planningEntries ?? []) as PlanningEntry[])).filter((entry) => {
+    const status = String(entry.status || "Prévu");
+    if (status === "Terminé" || status === "Annulé") return false;
+
+    const startDate = String(entry.startDate || "");
+    const endDate = String(entry.endDate || startDate);
+
+    if (!startDate) return false;
+
+    return startDate <= sidebarTodayIso && sidebarTodayIso <= endDate;
+  }).length;
+
+  const sidebarDocumentCount = ((((data as any).documents ?? []) as Array<{ status?: string; isFolder?: boolean }>)).filter((document) => {
+    if (document.isFolder) return false;
+    return String(document.status || "À jour") !== "À jour";
+  }).length;
+
+  const sidebarBadgeCounts: Partial<Record<Tab, number>> = {
+    leads: sidebarLeadCount,
+    tasks: sidebarTaskCount,
+    bookings: sidebarBookingCount,
+    vendorInvoices: sidebarVendorInvoiceCount,
+    planning: sidebarPlanningCount,
+    documents: sidebarDocumentCount
+  };
+  // === SMART SIDEBAR BADGES END ===
+
+
+
   return (
     <main className="crm-shell crm-readable-redesign">
       <aside className="sidebar">
@@ -7866,14 +7920,14 @@ function createQuoteDraftFromLead(lead: Lead) {
         <nav className="nav-list" aria-label="Navigation principale">
         <NavButton label="Dashboard" icon="⌂" active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} />
         <NavButton label="Contacts" icon="👤" active={activeTab === "contacts"} onClick={() => setActiveTab("contacts")} />
-        <NavButton label="Leads" icon="🎯" active={activeTab === "leads"} onClick={() => setActiveTab("leads")} />
-        <NavButton label="Tâches" icon="✓" active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} />
+        <NavButton label="Leads" icon="🎯" active={activeTab === "leads"} onClick={() => setActiveTab("leads")} badge={sidebarBadgeCounts.leads} />
+        <NavButton label="Tâches" icon="✓" active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} badge={sidebarBadgeCounts.tasks} />
         <NavButton label="Devis" icon="🧾" active={activeTab === "quotes"} onClick={() => setActiveTab("quotes")} />
-        <NavButton label="Réservations" icon="✓" active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} />
-        <NavButton label="Factures prestataires" icon="€" active={activeTab === "vendorInvoices"} onClick={() => setActiveTab("vendorInvoices")} />
+        <NavButton label="Réservations" icon="✓" active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} badge={sidebarBadgeCounts.bookings} />
+        <NavButton label="Factures prestataires" icon="€" active={activeTab === "vendorInvoices"} onClick={() => setActiveTab("vendorInvoices")} badge={sidebarBadgeCounts.vendorInvoices} />
         <NavButton label="Suivi maison" icon="⏱" active={activeTab === "houseTracking"} onClick={() => setActiveTab("houseTracking")} />
-        <NavButton label="Documents" icon="📁" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} />
-        <NavButton label="Planning" icon="🗓" active={activeTab === "planning"} onClick={() => setActiveTab("planning")} />
+        <NavButton label="Documents" icon="📁" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} badge={sidebarBadgeCounts.documents} />
+        <NavButton label="Planning" icon="🗓" active={activeTab === "planning"} onClick={() => setActiveTab("planning")} badge={sidebarBadgeCounts.planning} />
         <NavButton label="Biens" icon="🏠" active={activeTab === "properties"} onClick={() => setActiveTab("properties")} />
         <NavButton label="Voitures" icon="🚗" active={activeTab === "vehicles"} onClick={() => setActiveTab("vehicles")} />
         <NavButton label="Bateaux" icon="🛥" active={activeTab === "boats"} onClick={() => setActiveTab("boats")} />
@@ -8153,11 +8207,26 @@ function createQuoteDraftFromLead(lead: Lead) {
   );
 }
 
-function NavButton({ label, icon, active, onClick }: { label: string; icon: string; active: boolean; onClick: () => void }) {
+function NavButton({
+  label,
+  icon,
+  active,
+  onClick,
+  badge
+}: {
+  label: string;
+  icon: string;
+  active: boolean;
+  onClick: () => void;
+  badge?: number | string;
+}) {
+  const badgeText = typeof badge === "number" ? (badge > 0 ? String(badge) : "") : String(badge || "");
+
   return (
     <button className={`nav-button ${active ? "active" : ""}`} onClick={onClick}>
-      <span>{icon}</span>
-      {label}
+      <span className="nav-button-icon">{icon}</span>
+      <span className="nav-button-label">{label}</span>
+      {badgeText ? <span className="nav-badge" aria-label={`${badgeText} élément(s) à traiter`}>{badgeText}</span> : null}
     </button>
   );
 }
