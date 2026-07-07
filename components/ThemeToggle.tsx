@@ -34,7 +34,7 @@ export default function ThemeToggle() {
 
   return (
     <>
-      
+
 
       <style jsx global>{`
         [data-crm-theme="dark"] {
