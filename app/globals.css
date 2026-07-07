@@ -9115,3 +9115,44 @@ html {
 
 /* === SIDEBAR BADGE POSITION FIX END === */
 
+/* === SIDEBAR BADGE LEFT OF LABEL START === */
+
+/*
+  Correction ciblée sidebar OAR.
+  Badge placé entre l’icône et le texte :
+  icône → badge → label.
+*/
+
+.sidebar .nav-list .nav-button {
+  display: flex !important;
+  align-items: center !important;
+  gap: 13px !important;
+  width: 100% !important;
+}
+
+.sidebar .nav-list .nav-button .nav-button-icon {
+  flex: 0 0 24px !important;
+  width: 24px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+}
+
+.sidebar .nav-list .nav-button .nav-badge {
+  order: 2 !important;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+
+.sidebar .nav-list .nav-button .nav-button-label {
+  order: 3 !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  white-space: normal !important;
+}
+
+/* === SIDEBAR BADGE LEFT OF LABEL END === */
+

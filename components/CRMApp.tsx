@@ -8225,8 +8225,8 @@ function NavButton({
   return (
     <button className={`nav-button ${active ? "active" : ""}`} onClick={onClick}>
       <span className="nav-button-icon">{icon}</span>
-      <span className="nav-button-label">{label}</span>
       {badgeText ? <span className="nav-badge" aria-label={`${badgeText} élément(s) à traiter`}>{badgeText}</span> : null}
+      <span className="nav-button-label">{label}</span>
     </button>
   );
 }
