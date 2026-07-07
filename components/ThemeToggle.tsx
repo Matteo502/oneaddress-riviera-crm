@@ -34,17 +34,7 @@ export default function ThemeToggle() {
 
   return (
     <>
-      <button
-        type="button"
-        className="crm-theme-toggle"
-        onClick={toggleTheme}
-        aria-pressed={darkModeEnabled}
-        aria-label={darkModeEnabled ? "Activer le mode clair" : "Activer le mode nuit"}
-        title={darkModeEnabled ? "Passer en mode clair" : "Passer en mode nuit"}
-      >
-        <span aria-hidden="true">{darkModeEnabled ? "☀" : "☾"}</span>
-        <strong>{darkModeEnabled ? "Mode clair" : "Mode nuit"}</strong>
-      </button>
+      
 
       <style jsx global>{`
         [data-crm-theme="dark"] {

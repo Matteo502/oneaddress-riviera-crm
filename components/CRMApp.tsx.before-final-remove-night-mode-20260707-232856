@@ -2168,24 +2168,14 @@ function QuotesView({
         <form className="form-grid" data-quote-form="true" onSubmit={addQuote}>
           <input type="hidden" name="leadId" />
           <label>Client
-            <input
-              name="clientName"
-              list="quote-client-options"
-              required
-              placeholder="Rechercher un client"
-              autoComplete="off"
-            />
-            <datalist id="quote-client-options">
-              {contacts.filter((contact) => !isSupplierContact(contact)).map((contact) => (
-                <option
-                  key={contact.id}
-                  value={[contact.civility, contact.firstName, contact.name].filter(Boolean).join(" ") || contact.companyName || contact.email || contact.phone || "Client sans nom"}
-                >
-                  {[contact.companyName, contact.email, contact.phone, contact.city].filter(Boolean).join(" · ")}
+            <select name="clientName" required>
+              <option value="">Sélectionner un client</option>
+              {contacts.map((contact) => (
+                <option key={contact.id} value={contact.name}>
+                  {contact.name}
                 </option>
               ))}
-            </datalist>
-            <small className="quote-client-helper">Clients uniquement. Les prestataires sont exclus des devis.</small>
+            </select>
           </label>
 
           <label>Titre du devis
