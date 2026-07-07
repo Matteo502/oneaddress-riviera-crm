@@ -9066,135 +9066,110 @@ html {
 
 /* === SMART SIDEBAR BADGES END === */
 
-/* === SIDEBAR BADGE POSITION FIX START === */
+/* === OAR SIDEBAR CLEAN NAV START === */
 
 /*
-  Correction ciblée sidebar OAR.
-  Objectif : les badges restent à droite de chaque ligne de navigation,
-  pas sous l’icône ou sous le texte.
+  Sidebar OAR inspirée de la logique Villa Palace :
+  icône → texte → badge.
+  On garde l'identité OAR : fond bleu nuit, accent gold, style premium.
+  Scope limité à la sidebar.
 */
 
+.sidebar .nav-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
 .sidebar .nav-list .nav-button {
+  width: 100% !important;
+  min-height: 48px !important;
   display: grid !important;
   grid-template-columns: 24px minmax(0, 1fr) auto !important;
   column-gap: 14px !important;
-  row-gap: 0 !important;
   align-items: center !important;
-  width: 100% !important;
+
+  padding: 12px 16px !important;
+  border-radius: 14px !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+
+  text-align: left !important;
+  color: rgba(255, 250, 242, 0.74) !important;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease !important;
+}
+
+.sidebar .nav-list .nav-button:hover {
+  background: rgba(255, 250, 242, 0.06) !important;
+  border-color: rgba(212, 177, 106, 0.22) !important;
+  color: rgba(255, 250, 242, 0.92) !important;
+}
+
+.sidebar .nav-list .nav-button.active {
+  background: rgba(255, 250, 242, 0.10) !important;
+  border-color: rgba(212, 177, 106, 0.72) !important;
+  color: #fffaf2 !important;
+  box-shadow: inset 3px 0 0 rgba(212, 177, 106, 0.95) !important;
 }
 
 .sidebar .nav-list .nav-button .nav-button-icon {
   grid-column: 1 !important;
-  grid-row: 1 !important;
-  justify-self: center !important;
-  align-self: center !important;
+  width: 24px !important;
+  height: 24px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   margin: 0 !important;
+
+  color: rgba(212, 177, 106, 0.90) !important;
+  font-size: 0.95rem !important;
+  line-height: 1 !important;
 }
 
 .sidebar .nav-list .nav-button .nav-button-label {
   grid-column: 2 !important;
-  grid-row: 1 !important;
   min-width: 0 !important;
   margin: 0 !important;
-  align-self: center !important;
+
+  color: inherit !important;
+  font-size: 0.92rem !important;
+  font-weight: 650 !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+  line-height: 1.15 !important;
+  white-space: normal !important;
 }
 
 .sidebar .nav-list .nav-button .nav-badge {
   grid-column: 3 !important;
-  grid-row: 1 !important;
   justify-self: end !important;
   align-self: center !important;
+
+  min-width: 24px !important;
+  height: 24px !important;
+  padding: 0 8px !important;
   margin: 0 !important;
-  transform: none !important;
-}
 
-/* Factures prestataires peut rester sur 2 lignes, mais le badge reste à droite */
-.sidebar .nav-list .nav-button .nav-button-label {
-  white-space: normal !important;
-}
-
-/* === SIDEBAR BADGE POSITION FIX END === */
-
-/* === SIDEBAR BADGE LEFT OF LABEL START === */
-
-/*
-  Correction ciblée sidebar OAR.
-  Badge placé entre l’icône et le texte :
-  icône → badge → label.
-*/
-
-.sidebar .nav-list .nav-button {
-  display: flex !important;
-  align-items: center !important;
-  gap: 13px !important;
-  width: 100% !important;
-}
-
-.sidebar .nav-list .nav-button .nav-button-icon {
-  flex: 0 0 24px !important;
-  width: 24px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  margin: 0 !important;
-}
 
-.sidebar .nav-list .nav-button .nav-badge {
-  order: 2 !important;
-  flex: 0 0 auto !important;
-  margin: 0 !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(212, 177, 106, 0.50) !important;
+  background: rgba(212, 177, 106, 0.18) !important;
+  color: #fffaf2 !important;
+
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.02em !important;
+  line-height: 1 !important;
   transform: none !important;
 }
 
-.sidebar .nav-list .nav-button .nav-button-label {
-  order: 3 !important;
-  flex: 1 1 auto !important;
-  min-width: 0 !important;
-  margin: 0 !important;
-  white-space: normal !important;
+.sidebar .nav-list .nav-button.active .nav-badge {
+  background: rgba(212, 177, 106, 0.28) !important;
+  border-color: rgba(212, 177, 106, 0.85) !important;
 }
 
-/* === SIDEBAR BADGE LEFT OF LABEL END === */
-
-/* === SIDEBAR BADGE BEFORE ICON START === */
-
-/*
-  Ordre visuel sidebar :
-  badge → icône → texte.
-  Scope limité à la sidebar.
-*/
-
-.sidebar .nav-list .nav-button {
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
-  width: 100% !important;
-}
-
-.sidebar .nav-list .nav-button .nav-badge {
-  order: 1 !important;
-  flex: 0 0 auto !important;
-  margin: 0 !important;
-  transform: none !important;
-}
-
-.sidebar .nav-list .nav-button .nav-button-icon {
-  order: 2 !important;
-  flex: 0 0 22px !important;
-  width: 22px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  margin: 0 !important;
-}
-
-.sidebar .nav-list .nav-button .nav-button-label {
-  order: 3 !important;
-  flex: 1 1 auto !important;
-  min-width: 0 !important;
-  margin: 0 !important;
-  white-space: normal !important;
-}
-
-/* === SIDEBAR BADGE BEFORE ICON END === */
+/* === OAR SIDEBAR CLEAN NAV END === */
 
