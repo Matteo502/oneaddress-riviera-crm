@@ -9158,3 +9158,28 @@ html {
 
 /* === OAR SIDEBAR FINAL STABLE END === */
 
+/* === REMOVE NIGHT MODE BUTTON START === */
+
+/*
+  Suppression visuelle du bouton Mode nuit.
+  Scope limité aux toggles de thème éventuels.
+*/
+
+.theme-toggle,
+.theme-switch,
+.dark-mode-toggle,
+.night-mode-toggle,
+.mode-toggle,
+.color-mode-toggle,
+[data-theme-toggle],
+button[aria-label*="Mode nuit"],
+button[aria-label*="Mode jour"],
+button[title*="Mode nuit"],
+button[title*="Mode jour"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* === REMOVE NIGHT MODE BUTTON END === */
+
