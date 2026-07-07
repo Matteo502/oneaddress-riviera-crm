@@ -7864,6 +7864,15 @@ function createQuoteDraftFromLead(lead: Lead) {
         </div>
 
         <nav className="nav-list" aria-label="Navigation principale">
+        <NavButton label="Dashboard" icon="⌂" active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} />
+        <NavButton label="Contacts" icon="👤" active={activeTab === "contacts"} onClick={() => setActiveTab("contacts")} />
+        <NavButton label="Leads" icon="🎯" active={activeTab === "leads"} onClick={() => setActiveTab("leads")} />
+        <NavButton label="Tâches" icon="✓" active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} />
+        <NavButton label="Devis" icon="🧾" active={activeTab === "quotes"} onClick={() => setActiveTab("quotes")} />
+        <NavButton label="Réservations" icon="✓" active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} />
+        <NavButton label="Factures prestataires" icon="€" active={activeTab === "vendorInvoices"} onClick={() => setActiveTab("vendorInvoices")} />
+        <NavButton label="Suivi maison" icon="⏱" active={activeTab === "houseTracking"} onClick={() => setActiveTab("houseTracking")} />
+        <NavButton label="Documents" icon="📁" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} />
         <NavButton label="Planning" icon="🗓" active={activeTab === "planning"} onClick={() => setActiveTab("planning")} />
         <NavButton label="Biens" icon="🏠" active={activeTab === "properties"} onClick={() => setActiveTab("properties")} />
         <NavButton label="Voitures" icon="🚗" active={activeTab === "vehicles"} onClick={() => setActiveTab("vehicles")} />
