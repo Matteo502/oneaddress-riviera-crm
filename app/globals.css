@@ -1112,7 +1112,6 @@ td:last-child {
 /* === ONE ADDRESS RIVIERA VISUAL IDENTITY END === */
 
 
-
 /* Action discrète pour supprimer un contact */
 .contact-delete-button {
   display: inline-flex !important;
@@ -1506,8 +1505,6 @@ td:last-child {
     grid-template-columns: 1fr;
   }
 }
-
-
 
 
 /* === UX CLEANUP / RESPIRATION CRM === */
@@ -2114,7 +2111,6 @@ td small,
     justify-content: flex-start;
   }
 }
-
 
 
 /* Filtres rapides Leads : garder Réinitialiser dans le cadre */
@@ -2782,7 +2778,6 @@ textarea {
 }
 
 
-
 /* SIDEBAR ICON POLISH */
 .nav-button {
   display: flex;
@@ -2821,7 +2816,6 @@ textarea {
 .nav-button {
   letter-spacing: 0.18em;
 }
-
 
 
 /* SIDEBAR ICONS CLEAN */
@@ -4267,7 +4261,6 @@ select.actor-select-hard-locked {
 .task-column .pipeline-title strong {
   white-space: nowrap !important;
 }
-
 
 
 /* DOCUMENTS_INTERNAL_STORAGE_20260616 */
@@ -8006,7 +7999,6 @@ main:has(input[placeholder="Nom"]):has(input[placeholder="email@example.com"]) f
 /* === CONTACTS DESKTOP STABLE LAYOUT END === */
 
 
-
 /* === DASHBOARD START CARD REMOVED START === */
 /* Sécurité desktop: l'ancienne case Démarrer ici ne doit plus occuper d'espace si elle réapparaît. */
 .dashboard-workspace .dashboard-start-card {
@@ -9160,75 +9152,8 @@ html {
 
 /* === REMOVE NIGHT MODE BUTTON START === */
 
-/*
-  Suppression visuelle du bouton Mode nuit.
-  Scope limité aux toggles de thème éventuels.
-*/
-
-.theme-toggle,
-.theme-switch,
-.dark-mode-toggle,
-.night-mode-toggle,
-.mode-toggle,
-.color-mode-toggle,
-[data-theme-toggle],
-button[aria-label*="Mode nuit"],
-button[aria-label*="Mode jour"],
-button[title*="Mode nuit"],
-button[title*="Mode jour"] {
-  display: none !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-}
 
 /* === REMOVE NIGHT MODE BUTTON END === */
-
-/* === FINAL REMOVE NIGHT MODE BUTTON START === */
-
-/*
-  Suppression définitive du bouton Mode nuit / Mode jour.
-  Le bouton avait un tooltip du type "Passer en mode nuit".
-  Sélecteurs insensibles à la casse pour éviter le problème majuscule/minuscule.
-*/
-
-button[title*="mode nuit" i],
-button[title*="mode jour" i],
-button[title*="passer en mode" i],
-button[aria-label*="mode nuit" i],
-button[aria-label*="mode jour" i],
-button[aria-label*="passer en mode" i],
-.theme-toggle,
-.theme-switch,
-.theme-mode-toggle,
-.theme-toggle-button,
-.dark-mode-toggle,
-.night-mode-toggle,
-.mode-toggle,
-.color-mode-toggle,
-[data-theme-toggle],
-[data-color-mode],
-[data-mode-toggle] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-/* Sécurité ciblée pour le bouton flottant en bas à droite s'il utilise une classe différente */
-button.fixed[title*="mode" i],
-button[class*="theme" i],
-button[class*="dark" i],
-button[class*="night" i] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-/* === FINAL REMOVE NIGHT MODE BUTTON END === */
-
-
-
 /* === OAR quote client helper START === */
 .quote-client-helper {
   display: block;
