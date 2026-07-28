@@ -3,6 +3,7 @@ export type SupplierCategory = string;
 export type SupplierQuality = "Standard" | "Premium" | "Très premium";
 export type SupplierReliability = "À tester" | "Fiable" | "Très fiable" | "À éviter";
 export type SupplierStatus = "Actif" | "À vérifier" | "Inactif";
+export type VendorQuoteStatus = "À valider" | "Validé" | "Refusé";
 export type ContactLevel = "Standard" | "VIP" | "Ultra VIP";
 export type ContactLanguage = "Français" | "Anglais" | "Italien" | "Autre";
 export type ContactRelationshipStatus = "Prospect" | "Actif" | "Dormant" | "Prestataire";
@@ -243,6 +244,30 @@ export type HousePayment = {
   updatedAt?: string;
 };
 
+
+export type VendorQuote = {
+  id: string;
+  contactId: string;
+  contactName: string;
+  category: string;
+  title: string;
+  quoteReference: string;
+  quoteDate: string;
+  validUntil: string;
+  amount: number;
+  status: VendorQuoteStatus;
+  quoteDocumentUrl?: string;
+  quoteDocumentStoragePath?: string;
+  quoteDocumentName?: string;
+  linkedInvoiceId?: string;
+  notes?: string;
+  createdAt: string;
+  validatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  updatedAt?: string;
+};
+
 export type VendorInvoice = {
   id: string;
   contactId: string;
@@ -253,7 +278,10 @@ export type VendorInvoice = {
   dueDate: string;
   amount: number;
   paidAmount: number;
-  status: "À payer" | "Partiellement payé" | "Payé" | "En retard" | "Annulé";
+  status: "En attente de facture" | "À payer" | "Partiellement payé" | "Payé" | "En retard" | "Annulé";
+  sourceQuoteId?: string;
+  sourceQuoteReference?: string;
+  invoiceReceivedAt?: string;
   linkedDocumentId?: string;
   invoiceDocumentUrl?: string;
   invoiceDocumentStoragePath?: string;
@@ -273,6 +301,7 @@ export type CRMData = {
   suppliers?: Supplier[];
   planningEntries?: PlanningEntry[];
   quotes?: any[];
+  vendorQuotes?: VendorQuote[];
   vendorInvoices?: VendorInvoice[];
   houseTrackingHouses?: HouseTrackingHouse[];
   houseTrackingWorkers?: HouseTrackingWorker[];

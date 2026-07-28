@@ -1,6 +1,7 @@
 "use client";
 
 import QuickRepliesView from "./QuickRepliesView";
+import VendorQuotesView from "./VendorQuotesView";
 
 import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
@@ -26,6 +27,7 @@ import type {
   PlanningPriority,
   PlanningCategory,
   VendorInvoice,
+  VendorQuote,
   HouseTrackingHouse,
   HouseTrackingWorker,
   HouseTimeEntry,
@@ -81,6 +83,7 @@ const emptyData: CRMData = {
   planningEntries: [],
   quotes: [],
   documents: [],
+  vendorQuotes: [],
   vendorInvoices: [],
   houseTrackingHouses: [],
   houseTrackingWorkers: [],
@@ -268,6 +271,7 @@ function normalizeSharedCRMData(payload: any): CRMData {
     documents: Array.isArray(payload?.documents)
       ? payload.documents.map(normalizeCRMDocument).filter((document: CRMDocument | null): document is CRMDocument => Boolean(document))
       : [],
+    vendorQuotes: Array.isArray(payload?.vendorQuotes) ? payload.vendorQuotes as VendorQuote[] : [],
     vendorInvoices: Array.isArray(payload?.vendorInvoices)
       ? payload.vendorInvoices.map(normalizeVendorInvoice).filter((invoice: VendorInvoice | null): invoice is VendorInvoice => Boolean(invoice))
       : [],
@@ -297,6 +301,7 @@ function crmDataHasContent(value: CRMData) {
     (((value as any).planningEntries ?? []) as PlanningEntry[]).length > 0 ||
     (((value as any).quotes ?? []) as QuoteRequest[]).length > 0 ||
     (((value as any).documents ?? []) as CRMDocument[]).length > 0 ||
+    (((value as any).vendorQuotes ?? []) as VendorQuote[]).length > 0 ||
     (((value as any).vendorInvoices ?? []) as VendorInvoice[]).length > 0 ||
     (((value as any).houseTrackingHouses ?? []) as HouseTrackingHouse[]).length > 0 ||
     (((value as any).houseTrackingWorkers ?? []) as HouseTrackingWorker[]).length > 0 ||
@@ -316,7 +321,7 @@ function readLocalCRMDataSafely() {
   }
 }
 
-type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "bookings" | "vendorInvoices" | "houseTracking" | "planning" | "properties" | "vehicles" | "boats" | "documents";
+type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "bookings" | "vendorQuotes" | "vendorInvoices" | "houseTracking" | "planning" | "properties" | "vehicles" | "boats" | "documents";
 
 type Toast = {
   message: string;
@@ -357,6 +362,9 @@ function normalizeVendorInvoice(value: unknown): VendorInvoice | null {
     dueDate: String(raw.dueDate || ""),
     amount: Number.isFinite(amount) ? amount : 0,
     paidAmount: Number.isFinite(paidAmount) ? paidAmount : 0,
+    sourceQuoteId: String(raw.sourceQuoteId || ""),
+    sourceQuoteReference: String(raw.sourceQuoteReference || ""),
+    invoiceReceivedAt: String(raw.invoiceReceivedAt || ""),
     linkedDocumentId: String(raw.linkedDocumentId || ""),
     invoiceDocumentUrl: String(raw.invoiceDocumentUrl || raw.documentUrl || raw.url || ""),
     invoiceDocumentStoragePath: String(raw.invoiceDocumentStoragePath || raw.invoiceStoragePath || ""),
@@ -370,6 +378,7 @@ function normalizeVendorInvoice(value: unknown): VendorInvoice | null {
 
 function getVendorInvoiceStatusFromValue(value: unknown): VendorInvoice["status"] {
   if (
+    value === "En attente de facture" ||
     value === "À payer" ||
     value === "Partiellement payé" ||
     value === "Payé" ||
@@ -4146,7 +4155,8 @@ function VendorInvoicesView({
   invoices,
   onAdd,
   onUpdate,
-  onDelete
+  onDelete,
+  onOpenQuote
 }: {
   contacts: Contact[];
   documents: CRMDocument[];
@@ -4154,6 +4164,7 @@ function VendorInvoicesView({
   onAdd: (invoice: VendorInvoice) => void;
   onUpdate: (invoice: VendorInvoice) => void;
   onDelete: (id: string) => void;
+  onOpenQuote: (quoteId: string) => void;
 }) {
   const [statusFilter, setStatusFilter] = useState<VendorInvoice["status"] | "Tous">("Tous");
   const [editingInvoice, setEditingInvoice] = useState<VendorInvoice | null>(null);
@@ -4466,7 +4477,7 @@ function VendorInvoicesView({
     : invoices.filter((invoice) => invoice.status === statusFilter);
 
   const totalToPay = invoices
-    .filter((invoice) => invoice.status !== "Payé" && invoice.status !== "Annulé")
+    .filter((invoice) => invoice.status !== "En attente de facture" && invoice.status !== "Payé" && invoice.status !== "Annulé")
     .reduce((sum, invoice) => sum + getVendorInvoiceRemaining(invoice), 0);
 
   async function submitInvoice(event: React.FormEvent<HTMLFormElement>) {
@@ -4482,6 +4493,11 @@ function VendorInvoicesView({
     const automaticCategory = getContactProfessionForInvoice(contactId) || editingInvoice?.category || "Prestataire";
     const invoiceId = editingInvoice?.id || makeId("invoice");
     const invoiceFile = form.get("invoiceFile");
+    const existingInvoiceDocument = Boolean(
+      editingInvoice?.invoiceDocumentStoragePath ||
+      editingInvoice?.invoiceDocumentUrl ||
+      editingInvoice?.linkedDocumentId
+    );
 
     let uploadedInvoiceDocument: Partial<VendorInvoice> = {};
 
@@ -4498,6 +4514,17 @@ function VendorInvoicesView({
       }
     }
 
+    const hasInvoiceDocument = Boolean(
+      uploadedInvoiceDocument.invoiceDocumentStoragePath ||
+      uploadedInvoiceDocument.invoiceDocumentUrl ||
+      existingInvoiceDocument
+    );
+
+    if (paidAmount > 0 && !hasInvoiceDocument) {
+      window.alert("Importez la facture réelle avant d’enregistrer un paiement.");
+      return;
+    }
+
     const invoice: VendorInvoice = {
       id: invoiceId,
       contactId,
@@ -4508,11 +4535,18 @@ function VendorInvoicesView({
       dueDate,
       amount,
       paidAmount,
+      sourceQuoteId: editingInvoice?.sourceQuoteId || "",
+      sourceQuoteReference: editingInvoice?.sourceQuoteReference || "",
+      invoiceReceivedAt: hasInvoiceDocument ? editingInvoice?.invoiceReceivedAt || new Date().toISOString() : "",
       linkedDocumentId: editingInvoice?.linkedDocumentId || "",
       invoiceDocumentUrl: editingInvoice?.invoiceDocumentUrl || "",
       invoiceDocumentStoragePath: uploadedInvoiceDocument.invoiceDocumentStoragePath || editingInvoice?.invoiceDocumentStoragePath || "",
       invoiceDocumentName: uploadedInvoiceDocument.invoiceDocumentName || editingInvoice?.invoiceDocumentName || "",
-      status: getVendorInvoiceStatus(amount, paidAmount, dueDate),
+      status: hasInvoiceDocument
+        ? getVendorInvoiceStatus(amount, paidAmount, dueDate)
+        : editingInvoice?.sourceQuoteId
+          ? "En attente de facture"
+          : getVendorInvoiceStatus(amount, paidAmount, dueDate),
       paymentMethod: String(form.get("paymentMethod") ?? "").trim(),
       notes: String(form.get("notes") ?? "").trim(),
       createdAt: editingInvoice?.createdAt || new Date().toISOString()
@@ -4546,7 +4580,7 @@ function VendorInvoicesView({
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
-          {(["Tous", "À payer", "Partiellement payé", "En retard", "Payé"] as Array<VendorInvoice["status"] | "Tous">).map((status) => (
+          {(["Tous", "En attente de facture", "À payer", "Partiellement payé", "En retard", "Payé"] as Array<VendorInvoice["status"] | "Tous">).map((status) => (
             <button
               key={status}
               type="button"
@@ -4565,12 +4599,17 @@ function VendorInvoicesView({
             {visibleInvoices.map((invoice) => (
               <article className="item-card vendor-invoice-card" key={invoice.id} id={`vendor-invoice-${invoice.id}`} data-notification-target={`vendor-invoice-${invoice.id}`}>
                 <div>
-                  <p className={`eyebrow ${invoice.status === "Payé" ? "invoice-eyebrow-paid" : "invoice-eyebrow-danger"}`}>{invoice.category} · {invoice.status}</p>
+                  <p className={`eyebrow ${invoice.status === "Payé" ? "invoice-eyebrow-paid" : invoice.status === "En attente de facture" ? "" : "invoice-eyebrow-danger"}`}>{invoice.category} · {invoice.status}</p>
                   <h3>{invoice.contactName}</h3>
                   <p>{invoice.title}</p>
                   <p className="muted-line">
-                    Facture : {invoice.invoiceDate || "À compléter"} · Date : {invoice.dueDate || "À compléter"}
+                    {invoice.status === "En attente de facture"
+                      ? "Facture réelle attendue avant mise en paiement"
+                      : `Facture : ${invoice.invoiceDate || "À compléter"} · Date : ${invoice.dueDate || "À compléter"}`}
                   </p>
+                  {invoice.sourceQuoteReference && (
+                    <p className="muted-line">Devis d’origine : {invoice.sourceQuoteReference}</p>
+                  )}
 
                   <div className="stats-grid vendor-invoice-stats">
                     <div className="mini-stat">
@@ -4589,7 +4628,12 @@ function VendorInvoicesView({
                 </div>
 
                 <div className="item-actions contact-row-actions oar-contact-actions">
-                  <span className={`status-pill vendor-invoice-status ${invoice.status === "Payé" ? "semantic-success invoice-status-paid" : "semantic-danger invoice-status-danger"}`}>{invoice.status}</span>
+                  <span className={`status-pill vendor-invoice-status ${invoice.status === "Payé" ? "semantic-success invoice-status-paid" : invoice.status === "En attente de facture" ? "semantic-pending" : "semantic-danger invoice-status-danger"}`}>{invoice.status}</span>
+                  {invoice.sourceQuoteId && (
+                    <button className="secondary-button" type="button" onClick={() => onOpenQuote(invoice.sourceQuoteId || "")}>
+                      Voir devis
+                    </button>
+                  )}
                   {(invoice.invoiceDocumentStoragePath || invoice.invoiceDocumentUrl || documents.find((crmDocument) => crmDocument.id === invoice.linkedDocumentId)?.storagePath || documents.find((crmDocument) => crmDocument.id === invoice.linkedDocumentId)?.url) && (
                     <>
                       <button
@@ -4633,6 +4677,13 @@ function VendorInvoicesView({
       <section className="card form-card vendor-invoices-form-card">
         <p className="eyebrow">{editingInvoice ? "Modification" : "Nouvelle"}</p>
         <h3>{editingInvoice ? "Modifier facture" : "Ajouter une facture prestataire"}</h3>
+        {editingInvoice?.sourceQuoteReference && (
+          <div className="card" style={{ boxShadow: "none", marginBottom: 16, padding: 14 }}>
+            <p className="eyebrow">Créée depuis le devis</p>
+            <strong>{editingInvoice.sourceQuoteReference}</strong>
+            <p className="muted-line">Importez la facture réelle avant tout paiement.</p>
+          </div>
+        )}
 
         <form key={editingInvoice?.id || "new-vendor-invoice"} className="form-grid" onSubmit={submitInvoice}>
           <label>Contact référent
@@ -4667,6 +4718,7 @@ function VendorInvoicesView({
 
           <label>Montant payé
             <input name="paidAmount" type="text" inputMode="decimal" min="0" step="1" defaultValue={editingInvoice?.paidAmount ?? ""} placeholder="Ex : 0" />
+            <span className="field-help">Paiement impossible sans facture réelle importée.</span>
           </label>
 
           <label>Moyen de paiement
@@ -5527,12 +5579,41 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     });
 
     
+
+    const vendorQuotes = (((data as any).vendorQuotes ?? []) as VendorQuote[]);
+
+    vendorQuotes
+      .filter((quote) => quote.status === "À valider")
+      .forEach((quote) => {
+        items.push({
+          id: `vendor-quote-validation-${quote.id}`,
+          title: "Devis prestataire à valider",
+          detail: `${quote.contactName} · ${formatQuotePrice(Number(quote.amount || 0))}`,
+          tab: "vendorQuotes" as Tab,
+          tone: "warning",
+          targetId: `vendor-quote-${quote.id}`
+        });
+      });
+
+
     const vendorInvoices = (((data as any).vendorInvoices ?? []) as VendorInvoice[]);
 
     vendorInvoices.forEach((invoice) => {
       const remaining = getVendorInvoiceRemaining(invoice);
 
       if (invoice.status === "Payé" || invoice.status === "Annulé" || remaining <= 0) {
+        return;
+      }
+
+      if (invoice.status === "En attente de facture") {
+        items.push({
+          id: `vendor-invoice-awaiting-document-${invoice.id}`,
+          title: "Facture prestataire attendue",
+          detail: `${invoice.contactName} · ${invoice.sourceQuoteReference || invoice.title}`,
+          tab: "vendorInvoices" as Tab,
+          tone: "warning",
+          targetId: `vendor-invoice-${invoice.id}`
+        });
         return;
       }
 
@@ -7123,6 +7204,188 @@ const toneRank: Record<ActionNotification["tone"], number> = {
     notify("Document supprimé.");
   }
 
+
+  function addVendorQuote(quote: VendorQuote) {
+    const createdQuote = stampCreated(quote, activeActor) as VendorQuote;
+
+    setData((current) => ({
+      ...current,
+      vendorQuotes: [createdQuote, ...(((current as any).vendorQuotes ?? []) as VendorQuote[])]
+    }));
+
+    notify("Devis prestataire ajouté.");
+  }
+
+  function updateVendorQuote(updatedQuote: VendorQuote) {
+    setData((current) => {
+      const quotes = (((current as any).vendorQuotes ?? []) as VendorQuote[]);
+      const invoices = (((current as any).vendorInvoices ?? []) as VendorInvoice[]);
+      const savedQuote = stampUpdated(updatedQuote, activeActor) as VendorQuote;
+
+      const nextInvoices = invoices.map((invoice) => {
+        const isLinked = invoice.id === savedQuote.linkedInvoiceId || invoice.sourceQuoteId === savedQuote.id;
+        const canStillFollowQuote =
+          invoice.status === "En attente de facture" &&
+          !invoice.invoiceDocumentStoragePath &&
+          !invoice.invoiceDocumentUrl &&
+          Number(invoice.paidAmount || 0) === 0;
+
+        if (!isLinked || !canStillFollowQuote) return invoice;
+
+        return {
+          ...invoice,
+          contactId: savedQuote.contactId,
+          contactName: savedQuote.contactName,
+          category: savedQuote.category,
+          title: `Facture attendue · ${savedQuote.title}`,
+          amount: savedQuote.amount,
+          sourceQuoteReference: savedQuote.quoteReference,
+          notes: `Créée automatiquement depuis le devis ${savedQuote.quoteReference}.${savedQuote.notes ? `\n\n${savedQuote.notes}` : ""}`
+        };
+      });
+
+      return {
+        ...current,
+        vendorQuotes: quotes.map((quote) => quote.id === savedQuote.id ? savedQuote : quote),
+        vendorInvoices: nextInvoices
+      };
+    });
+
+    notify("Devis prestataire mis à jour.");
+  }
+
+  function validateVendorQuote(id: string) {
+    setData((current) => {
+      const quotes = (((current as any).vendorQuotes ?? []) as VendorQuote[]);
+      const invoices = (((current as any).vendorInvoices ?? []) as VendorInvoice[]);
+      const quote = quotes.find((item) => item.id === id);
+
+      if (!quote) return current;
+
+      const existingInvoice = invoices.find(
+        (invoice) => invoice.id === quote.linkedInvoiceId || invoice.sourceQuoteId === quote.id
+      );
+
+      const invoiceId = existingInvoice?.id || makeId("invoice");
+      const validatedQuote = stampUpdated({
+        ...quote,
+        status: "Validé",
+        validatedAt: quote.validatedAt || new Date().toISOString(),
+        linkedInvoiceId: invoiceId
+      }, activeActor) as VendorQuote;
+
+      const pendingInvoice: VendorInvoice = existingInvoice
+        ? {
+            ...existingInvoice,
+            contactId: quote.contactId,
+            contactName: quote.contactName,
+            category: quote.category,
+            title: existingInvoice.invoiceDocumentStoragePath || existingInvoice.invoiceDocumentUrl
+              ? existingInvoice.title
+              : `Facture attendue · ${quote.title}`,
+            amount: existingInvoice.invoiceDocumentStoragePath || existingInvoice.invoiceDocumentUrl
+              ? existingInvoice.amount
+              : quote.amount,
+            sourceQuoteId: quote.id,
+            sourceQuoteReference: quote.quoteReference,
+            status: existingInvoice.invoiceDocumentStoragePath || existingInvoice.invoiceDocumentUrl
+              ? getVendorInvoiceStatus(existingInvoice.amount, existingInvoice.paidAmount, existingInvoice.dueDate)
+              : "En attente de facture"
+          }
+        : {
+            id: invoiceId,
+            contactId: quote.contactId,
+            contactName: quote.contactName,
+            category: quote.category,
+            title: `Facture attendue · ${quote.title}`,
+            invoiceDate: "",
+            dueDate: "",
+            amount: quote.amount,
+            paidAmount: 0,
+            status: "En attente de facture",
+            sourceQuoteId: quote.id,
+            sourceQuoteReference: quote.quoteReference,
+            invoiceReceivedAt: "",
+            linkedDocumentId: "",
+            invoiceDocumentUrl: "",
+            invoiceDocumentStoragePath: "",
+            invoiceDocumentName: "",
+            paymentMethod: "",
+            notes: `Créée automatiquement depuis le devis ${quote.quoteReference}.${quote.notes ? `\n\n${quote.notes}` : ""}`,
+            createdAt: new Date().toISOString()
+          };
+
+      return {
+        ...current,
+        vendorQuotes: quotes.map((item) => item.id === id ? validatedQuote : item),
+        vendorInvoices: existingInvoice
+          ? invoices.map((invoice) => invoice.id === existingInvoice.id ? pendingInvoice : invoice)
+          : [pendingInvoice, ...invoices]
+      };
+    });
+
+    notify("Devis validé. Facture en attente créée automatiquement.");
+  }
+
+  function rejectVendorQuote(id: string) {
+    setData((current) => {
+      const quotes = (((current as any).vendorQuotes ?? []) as VendorQuote[]);
+      const invoices = (((current as any).vendorInvoices ?? []) as VendorInvoice[]);
+      const quote = quotes.find((item) => item.id === id);
+
+      if (!quote) return current;
+
+      const rejectedQuote = stampUpdated({
+        ...quote,
+        status: "Refusé"
+      }, activeActor) as VendorQuote;
+
+      const nextInvoices = invoices.map((invoice) => {
+        const isLinked = invoice.id === quote.linkedInvoiceId || invoice.sourceQuoteId === quote.id;
+        const isUntouchedPending =
+          invoice.status === "En attente de facture" &&
+          !invoice.invoiceDocumentStoragePath &&
+          !invoice.invoiceDocumentUrl &&
+          Number(invoice.paidAmount || 0) === 0;
+
+        return isLinked && isUntouchedPending
+          ? { ...invoice, status: "Annulé" as VendorInvoice["status"] }
+          : invoice;
+      });
+
+      return {
+        ...current,
+        vendorQuotes: quotes.map((item) => item.id === id ? rejectedQuote : item),
+        vendorInvoices: nextInvoices
+      };
+    });
+
+    notify("Devis prestataire refusé.");
+  }
+
+  function deleteVendorQuote(id: string) {
+    setData((current) => {
+      const quotes = (((current as any).vendorQuotes ?? []) as VendorQuote[]);
+      const invoices = (((current as any).vendorInvoices ?? []) as VendorInvoice[]);
+
+      return {
+        ...current,
+        vendorQuotes: quotes.filter((quote) => quote.id !== id),
+        vendorInvoices: invoices.map((invoice) =>
+          invoice.sourceQuoteId === id &&
+          invoice.status === "En attente de facture" &&
+          !invoice.invoiceDocumentStoragePath &&
+          !invoice.invoiceDocumentUrl &&
+          Number(invoice.paidAmount || 0) === 0
+            ? { ...invoice, status: "Annulé" as VendorInvoice["status"] }
+            : invoice
+        )
+      };
+    });
+
+    notify("Devis prestataire supprimé.");
+  }
+
   function addVendorInvoice(invoice: VendorInvoice) {
     setData((current) => ({
       ...current,
@@ -7833,7 +8096,7 @@ function createQuoteDraftFromLead(lead: Lead) {
           throw new Error("Format JSON invalide.");
         }
 
-        const knownKeys = ["contacts", "leads", "properties", "vehicles", "boats", "tasks", "suppliers", "quotes", "vendorInvoices", "houseTrackingHouses", "houseTrackingWorkers", "houseTimeEntries", "housePayments"];
+        const knownKeys = ["contacts", "leads", "properties", "vehicles", "boats", "tasks", "suppliers", "quotes", "vendorQuotes", "vendorInvoices", "houseTrackingHouses", "houseTrackingWorkers", "houseTimeEntries", "housePayments"];
         const hasKnownData = knownKeys.some((key) => Array.isArray((parsed as Record<string, unknown>)[key]));
 
         if (!hasKnownData) {
@@ -7886,6 +8149,10 @@ function createQuoteDraftFromLead(lead: Lead) {
     return isConfirmed && !isClosed;
   }).length;
 
+  const sidebarVendorQuoteCount = ((((data as any).vendorQuotes ?? []) as VendorQuote[])).filter((quote) => {
+    return quote.status === "À valider";
+  }).length;
+
   const sidebarVendorInvoiceCount = ((((data as any).vendorInvoices ?? []) as VendorInvoice[])).filter((invoice) => {
     const status = String(invoice.status || "");
     return status !== "Payé" && status !== "Annulé";
@@ -7912,6 +8179,7 @@ function createQuoteDraftFromLead(lead: Lead) {
     leads: sidebarLeadCount,
     tasks: sidebarTaskCount,
     bookings: sidebarBookingCount,
+    vendorQuotes: sidebarVendorQuoteCount,
     vendorInvoices: sidebarVendorInvoiceCount,
     planning: sidebarPlanningCount,
     documents: sidebarDocumentCount
@@ -7934,6 +8202,7 @@ function createQuoteDraftFromLead(lead: Lead) {
         <NavButton label="Tâches" icon="✓" active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} badge={sidebarBadgeCounts.tasks} />
         <NavButton label="Devis" icon="🧾" active={activeTab === "quotes"} onClick={() => setActiveTab("quotes")} />
         <NavButton label="Réservations" icon="✓" active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} badge={sidebarBadgeCounts.bookings} />
+        <NavButton label="Devis prestataires" icon="📝" active={activeTab === "vendorQuotes"} onClick={() => setActiveTab("vendorQuotes")} badge={sidebarBadgeCounts.vendorQuotes} />
         <NavButton label="Factures prestataires" icon="€" active={activeTab === "vendorInvoices"} onClick={() => setActiveTab("vendorInvoices")} badge={sidebarBadgeCounts.vendorInvoices} />
         <NavButton label="Suivi maison" icon="⏱" active={activeTab === "houseTracking"} onClick={() => setActiveTab("houseTracking")} />
         <NavButton label="Documents" icon="📁" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} badge={sidebarBadgeCounts.documents} />
@@ -8133,6 +8402,21 @@ function createQuoteDraftFromLead(lead: Lead) {
           />
         )}
 
+
+        {activeTab === "vendorQuotes" && (
+          <VendorQuotesView
+            contacts={data.contacts}
+            quotes={(((data as any).vendorQuotes ?? []) as VendorQuote[])}
+            invoices={(((data as any).vendorInvoices ?? []) as VendorInvoice[])}
+            onAdd={addVendorQuote}
+            onUpdate={updateVendorQuote}
+            onDelete={deleteVendorQuote}
+            onValidate={validateVendorQuote}
+            onReject={rejectVendorQuote}
+            onOpenInvoice={() => setActiveTab("vendorInvoices")}
+          />
+        )}
+
         {activeTab === "vendorInvoices" && (
           <VendorInvoicesView
             contacts={data.contacts}
@@ -8141,6 +8425,7 @@ function createQuoteDraftFromLead(lead: Lead) {
             onAdd={addVendorInvoice}
             onUpdate={updateVendorInvoice}
             onDelete={deleteVendorInvoice}
+            onOpenQuote={() => setActiveTab("vendorQuotes")}
           />
         )}
 
@@ -8249,6 +8534,7 @@ function titleForTab(tab: Tab) {
     tasks: "Tâches",
     quotes: "Devis",
     bookings: "Réservations",
+    vendorQuotes: "Devis prestataires",
     vendorInvoices: "Factures prestataires",
     houseTracking: "Suivi maison",
     documents: "Documents",
