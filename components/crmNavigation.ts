@@ -43,6 +43,23 @@ export const mobileMoreTabs: CRMTab[] = crmNavigationItems
   .map((item) => item.tab)
   .filter((tab) => !mobilePrimaryTabs.includes(tab));
 
+const crmTabSearchPlaceholders: Partial<Record<CRMTab, string>> = {
+  contacts: "Rechercher une personne, une entreprise, un téléphone…",
+  leads: "Rechercher un client, un statut, une prochaine action…",
+  tasks: "Rechercher une tâche, un responsable ou un lead…",
+  properties: "Rechercher un bien, une ville ou un propriétaire…",
+  vehicles: "Rechercher une voiture, une marque ou une ville…",
+  boats: "Rechercher un bateau, un port ou un propriétaire…"
+};
+
+export function isCRMTabSearchable(tab: CRMTab) {
+  return Boolean(crmTabSearchPlaceholders[tab]);
+}
+
+export function getCRMTabSearchPlaceholder(tab: CRMTab) {
+  return crmTabSearchPlaceholders[tab] ?? "";
+}
+
 export function getCRMNavigationItem(tab: CRMTab) {
   return crmNavigationItems.find((item) => item.tab === tab) ?? crmNavigationItems[0];
 }

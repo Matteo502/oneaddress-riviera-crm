@@ -7218,6 +7218,11 @@ iframe.vendor-invoice-preview-frame {
   flex: 0 1 360px !important;
 }
 
+.crm-topbar-search::placeholder {
+  color: var(--crm-muted) !important;
+  opacity: 1 !important;
+}
+
 .crm-session-email {
   max-width: 210px !important;
   white-space: nowrap !important;

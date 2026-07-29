@@ -8,7 +8,9 @@ import MobileCRMNavigation from "./MobileCRMNavigation";
 import MobileMoreMenu, { type MobileSecondaryAction } from "./MobileMoreMenu";
 import {
   crmNavigationItems,
+  getCRMTabSearchPlaceholder,
   getCRMTabTitle,
+  isCRMTabSearchable,
   type CRMTab
 } from "./crmNavigation";
 
@@ -4866,7 +4868,7 @@ function getSemanticToneFromText(text: string) {
 }
 
 function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLogout: () => void }) {
-  const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+  const [activeTab, setActiveTabState] = useState<Tab>("dashboard");
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
 
 
@@ -4947,6 +4949,11 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
   const [sharedWorkspaceMessage, setSharedWorkspaceMessage] = useState("Chargement de la base partagée...");
   const [sharedWorkspaceUpdatedAt, setSharedWorkspaceUpdatedAt] = useState("");
   const [toast, setToast] = useState<Toast | null>(null);
+
+  function setActiveTab(tab: Tab) {
+    setQuery("");
+    setActiveTabState(tab);
+  }
 
   useEffect(() => {
     const overlaySelector = [
@@ -8298,13 +8305,16 @@ function createQuoteDraftFromLead(lead: Lead) {
             <h2>{getCRMTabTitle(activeTab)}</h2>
           </div>
           <div className="topbar-actions crm-topbar-actions-compact">
-            <input
-              className="search-input crm-topbar-search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Rechercher client, bien, lead..."
-              aria-label="Recherche"
-            />
+            {isCRMTabSearchable(activeTab) ? (
+              <input
+                className="search-input crm-topbar-search"
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={getCRMTabSearchPlaceholder(activeTab)}
+                aria-label="Recherche"
+              />
+            ) : null}
             <span className="muted-line crm-session-email">Connecté : {sessionEmail}</span>
             <label className="actor-select-label crm-actor-select-label">
               <span>Actions par</span>

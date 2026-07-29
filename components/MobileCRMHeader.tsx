@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { getCRMTabTitle, type CRMTab } from "./crmNavigation";
+import {
+  getCRMTabSearchPlaceholder,
+  getCRMTabTitle,
+  isCRMTabSearchable,
+  type CRMTab
+} from "./crmNavigation";
 import type { MobileSecondaryAction } from "./MobileMoreMenu";
 
 type Props = {
@@ -30,6 +35,12 @@ export default function MobileCRMHeader({
   const [actionsOpen, setActionsOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const actionsCloseRef = useRef<HTMLButtonElement>(null);
+  const searchable = isCRMTabSearchable(activeTab);
+  const searchPlaceholder = getCRMTabSearchPlaceholder(activeTab);
+
+  useEffect(() => {
+    setSearchOpen(false);
+  }, [activeTab]);
 
   useEffect(() => {
     if (!searchOpen && !actionsOpen) return;
@@ -68,16 +79,18 @@ export default function MobileCRMHeader({
           <h1>{getCRMTabTitle(activeTab)}</h1>
         </div>
         <div className="mobile-crm-header-actions">
-          <button type="button" className="mobile-icon-button" aria-label="Ouvrir la recherche" onClick={() => setSearchOpen(true)}>
-            ⌕
-          </button>
+          {searchable ? (
+            <button type="button" className="mobile-icon-button" aria-label="Ouvrir la recherche" onClick={() => setSearchOpen(true)}>
+              ⌕
+            </button>
+          ) : null}
           <button type="button" className="mobile-action-button" aria-label="Ouvrir les actions" onClick={() => setActionsOpen(true)}>
             Actions
           </button>
         </div>
       </header>
 
-      {searchOpen ? (
+      {searchable && searchOpen ? (
         <div className="mobile-sheet-backdrop" onMouseDown={() => setSearchOpen(false)}>
           <section className="mobile-search-sheet" role="dialog" aria-modal="true" aria-labelledby="mobile-search-title" onMouseDown={(event) => event.stopPropagation()}>
             <header className="mobile-sheet-header">
@@ -94,7 +107,7 @@ export default function MobileCRMHeader({
                 type="search"
                 value={query}
                 onChange={(event) => onQueryChange(event.target.value)}
-                placeholder="Saisir votre recherche…"
+                placeholder={searchPlaceholder}
               />
             </label>
             <p>La liste du module actif est filtrée au fil de la saisie.</p>
