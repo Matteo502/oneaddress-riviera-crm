@@ -68,7 +68,7 @@ const contactKinds: ContactKind[] = ["Client", "Propriétaire", "Prestataire"];
 const contactLevels = ["Standard", "VIP", "Ultra VIP"] as const;
 const contactLanguages = ["Français", "Anglais", "Italien", "Autre"] as const;
 const contactRelationshipStatuses = ["Prospect", "Actif", "Dormant", "Prestataire"] as const;
-const supplierCategories = ["Chauffeur", "Chef", "Sécurité", "Conciergerie", "Paysagiste", "Gestion nuisibles", "Pisciniste", "Femme de ménage", "Nounou", "Artisan rénovation", "Technicien volets", "Lavage voiture", "Garage / mécanicien", "Jardinier", "Autre"] as const;
+const supplierCategories = ["Chauffeur", "Chef", "Sécurité", "Conciergerie", "Paysagiste", "Gestion nuisibles", "Pisciniste", "Femme de ménage", "Nounou", "Artisan rénovation", "Technicien volets", "Lavage voiture", "Garage / mécanicien", "Jardinier", "Peinture", "Électricité", "Plomberie", "Autre"] as const;
 const crmActors = ["Matteo", "Vincent"] as const;
 type CRMActor = typeof crmActors[number];
 
@@ -13495,4 +13495,3 @@ export default function CRMApp() {
 
   return <CRMAppContent sessionEmail={session.user.email ?? "utilisateur"} onLogout={logout} />;
 }
-
