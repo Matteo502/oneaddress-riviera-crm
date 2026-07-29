@@ -3,6 +3,14 @@
 import QuickRepliesView from "./QuickRepliesView";
 import SearchableBusinessContactPicker from "./SearchableBusinessContactPicker";
 import VendorQuotesView from "./VendorQuotesView";
+import MobileCRMHeader from "./MobileCRMHeader";
+import MobileCRMNavigation from "./MobileCRMNavigation";
+import MobileMoreMenu, { type MobileSecondaryAction } from "./MobileMoreMenu";
+import {
+  crmNavigationItems,
+  getCRMTabTitle,
+  type CRMTab
+} from "./crmNavigation";
 
 import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
@@ -329,7 +337,7 @@ function readLocalCRMDataSafely() {
   }
 }
 
-type Tab = "dashboard" | "contacts" | "leads" | "tasks" | "quotes" | "bookings" | "vendorQuotes" | "vendorInvoices" | "houseTracking" | "planning" | "properties" | "vehicles" | "boats" | "documents";
+type Tab = CRMTab;
 
 type Toast = {
   message: string;
@@ -4127,7 +4135,7 @@ function HouseTrackingView({
               <p className="muted-line">Aucun delta sur la période sélectionnée.</p>
             ) : (
               <div className="table-wrapper">
-                <table>
+                <table className="mobile-card-table house-balance-table">
                   <thead>
                     <tr>
                       <th>Intervenant</th>
@@ -4140,11 +4148,11 @@ function HouseTrackingView({
                   <tbody>
                     {balanceRows.map((row) => (
                       <tr key={row.worker.id}>
-                        <td><strong>{row.worker.contactName}</strong><br /><span className="muted-line">{row.worker.role}</span></td>
-                        <td>{formatHours(row.hours)}</td>
-                        <td>{currency.format(row.due)}</td>
-                        <td>{currency.format(row.paid)}</td>
-                        <td><strong className={row.balance > 0 ? "house-balance-positive" : row.balance < 0 ? "house-balance-negative" : "house-balance-zero"}>{formatHouseBalanceLabel(row.balance)}</strong></td>
+                        <td data-label="Intervenant"><strong>{row.worker.contactName}</strong><br /><span className="muted-line">{row.worker.role}</span></td>
+                        <td data-label="Heures">{formatHours(row.hours)}</td>
+                        <td data-label="Dette créée">{currency.format(row.due)}</td>
+                        <td data-label="Payé">{currency.format(row.paid)}</td>
+                        <td data-label="Delta"><strong className={row.balance > 0 ? "house-balance-positive" : row.balance < 0 ? "house-balance-negative" : "house-balance-zero"}>{formatHouseBalanceLabel(row.balance)}</strong></td>
                       </tr>
                     ))}
                   </tbody>
@@ -4725,15 +4733,16 @@ function VendorInvoicesView({
             <textarea name="notes" defaultValue={editingInvoice?.notes || ""} placeholder="Détails, facture reçue, IBAN, remarque..." />
           </label>
 
-          <button className="primary-button planning-entry-submit" type="submit" disabled={uploadingInvoiceDocument}>
-            {uploadingInvoiceDocument ? "Import en cours..." : editingInvoice ? "Enregistrer" : "Ajouter facture"}
-          </button>
-
-          {editingInvoice && (
-            <button className="secondary-button" type="button" onClick={() => setEditingInvoice(null)}>
-              Annuler
+          <div className="mobile-form-actions">
+            <button className="primary-button planning-entry-submit" type="submit" disabled={uploadingInvoiceDocument}>
+              {uploadingInvoiceDocument ? "Import en cours..." : editingInvoice ? "Enregistrer" : "Ajouter facture"}
             </button>
-          )}
+            {editingInvoice && (
+              <button className="secondary-button" type="button" onClick={() => setEditingInvoice(null)}>
+                Annuler
+              </button>
+            )}
+          </div>
         </form>
       </section>
 
@@ -4858,6 +4867,7 @@ function getSemanticToneFromText(text: string) {
 
 function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
 
 
   const [quickEntryText, setQuickEntryText] = useState("");
@@ -4937,6 +4947,47 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
   const [sharedWorkspaceMessage, setSharedWorkspaceMessage] = useState("Chargement de la base partagée...");
   const [sharedWorkspaceUpdatedAt, setSharedWorkspaceUpdatedAt] = useState("");
   const [toast, setToast] = useState<Toast | null>(null);
+
+  useEffect(() => {
+    const overlaySelector = [
+      ".confirm-backdrop",
+      ".document-preview-overlay",
+      ".vendor-invoice-preview-backdrop"
+    ].join(",");
+
+    function dismissTopDialog() {
+      const overlays = Array.from(document.querySelectorAll<HTMLElement>(overlaySelector))
+        .filter((overlay) => overlay.getClientRects().length > 0);
+      const overlay = overlays.at(-1);
+      if (!overlay) return false;
+
+      const dismissButton = Array.from(overlay.querySelectorAll<HTMLButtonElement>("button"))
+        .find((button) => /^(fermer|annuler)$/i.test(button.textContent?.trim() ?? ""));
+
+      dismissButton?.click();
+      return Boolean(dismissButton);
+    }
+
+    function handleDialogEscape(event: KeyboardEvent) {
+      if (event.key === "Escape" && dismissTopDialog()) {
+        event.preventDefault();
+      }
+    }
+
+    function handleDialogBackdrop(event: MouseEvent) {
+      const target = event.target;
+      if (!(target instanceof HTMLElement) || !target.matches(overlaySelector)) return;
+      dismissTopDialog();
+    }
+
+    document.addEventListener("keydown", handleDialogEscape);
+    document.addEventListener("mousedown", handleDialogBackdrop);
+
+    return () => {
+      document.removeEventListener("keydown", handleDialogEscape);
+      document.removeEventListener("mousedown", handleDialogBackdrop);
+    };
+  }, []);
 
   // TASK_COMPLETED_COMPACT_THEN_PURGE_20260614
   useEffect(() => {
@@ -8176,6 +8227,28 @@ function createQuoteDraftFromLead(lead: Lead) {
     planning: sidebarPlanningCount,
     documents: sidebarDocumentCount
   };
+
+  const mobileSecondaryActions: MobileSecondaryAction[] = [
+    { label: "Import sécurisé", onClick: openSafeCsvImportPrompt },
+    { label: "Backup fichier", onClick: exportJson },
+    { label: "Sauvegarde cloud", onClick: saveCrmBackupToSupabase },
+    { label: "Recharger cloud", onClick: reloadSharedWorkspaceFromCloud },
+    { label: "Forcer synchro", onClick: forceSaveSharedWorkspaceNow },
+    {
+      label: "Export CSV",
+      onClick: () => {
+        exportCRMAsCsv(data);
+        notify("Export CSV téléchargé.");
+      }
+    },
+    { label: "Déconnexion", onClick: onLogout, tone: "danger" }
+  ];
+
+  function navigateToTab(tab: Tab) {
+    setActiveTab(tab);
+    setMobileMoreOpen(false);
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
+  }
   // === SMART SIDEBAR BADGES END ===
 
 
@@ -8188,20 +8261,16 @@ function createQuoteDraftFromLead(lead: Lead) {
         </div>
 
         <nav className="nav-list" aria-label="Navigation principale">
-        <NavButton label="Dashboard" icon="⌂" active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} />
-        <NavButton label="Contacts" icon="👤" active={activeTab === "contacts"} onClick={() => setActiveTab("contacts")} />
-        <NavButton label="Leads" icon="🎯" active={activeTab === "leads"} onClick={() => setActiveTab("leads")} badge={sidebarBadgeCounts.leads} />
-        <NavButton label="Tâches" icon="✓" active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} badge={sidebarBadgeCounts.tasks} />
-        <NavButton label="Devis" icon="🧾" active={activeTab === "quotes"} onClick={() => setActiveTab("quotes")} />
-        <NavButton label="Réservations" icon="✓" active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} badge={sidebarBadgeCounts.bookings} />
-        <NavButton label="Devis prestataires" icon="📝" active={activeTab === "vendorQuotes"} onClick={() => setActiveTab("vendorQuotes")} badge={sidebarBadgeCounts.vendorQuotes} />
-        <NavButton label="Factures prestataires" icon="€" active={activeTab === "vendorInvoices"} onClick={() => setActiveTab("vendorInvoices")} badge={sidebarBadgeCounts.vendorInvoices} />
-        <NavButton label="Suivi maison" icon="⏱" active={activeTab === "houseTracking"} onClick={() => setActiveTab("houseTracking")} />
-        <NavButton label="Documents" icon="📁" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} badge={sidebarBadgeCounts.documents} />
-        <NavButton label="Planning" icon="🗓" active={activeTab === "planning"} onClick={() => setActiveTab("planning")} badge={sidebarBadgeCounts.planning} />
-        <NavButton label="Biens" icon="🏠" active={activeTab === "properties"} onClick={() => setActiveTab("properties")} />
-        <NavButton label="Voitures" icon="🚗" active={activeTab === "vehicles"} onClick={() => setActiveTab("vehicles")} />
-        <NavButton label="Bateaux" icon="🛥" active={activeTab === "boats"} onClick={() => setActiveTab("boats")} />
+          {crmNavigationItems.map((item) => (
+            <NavButton
+              key={item.tab}
+              label={item.label}
+              icon={item.icon}
+              active={activeTab === item.tab}
+              onClick={() => setActiveTab(item.tab)}
+              badge={sidebarBadgeCounts[item.tab]}
+            />
+          ))}
         </nav>
 
         <div className="sidebar-card">
@@ -8212,10 +8281,21 @@ function createQuoteDraftFromLead(lead: Lead) {
       </aside>
 
       <section className="content-panel">
+        <MobileCRMHeader
+          activeActor={activeActor}
+          activeTab={activeTab}
+          actors={crmActors}
+          query={query}
+          sessionEmail={sessionEmail}
+          actions={mobileSecondaryActions}
+          onActorChange={(actor) => setActiveActor(actor as CRMActor)}
+          onQueryChange={setQuery}
+        />
+
         <header className="topbar crm-topbar-compact">
           <div className="crm-topbar-title">
             <p className="eyebrow">CRM interne</p>
-            <h2>{titleForTab(activeTab)}</h2>
+            <h2>{getCRMTabTitle(activeTab)}</h2>
           </div>
           <div className="topbar-actions crm-topbar-actions-compact">
             <input
@@ -8250,7 +8330,7 @@ function createQuoteDraftFromLead(lead: Lead) {
           </div>
         </header>
 
-        <section className={`shared-db-status-panel ${sharedWorkspaceStatus}`}>
+        <section className={`shared-db-status-panel shared-db-status-desktop ${sharedWorkspaceStatus}`}>
           <div>
             <p className="eyebrow">Base partagée</p>
             <strong>
@@ -8271,6 +8351,27 @@ function createQuoteDraftFromLead(lead: Lead) {
             </button>
           </div>
         </section>
+
+        <details className={`mobile-shared-db-status ${sharedWorkspaceStatus}`}>
+          <summary>
+            <span className="mobile-status-dot" aria-hidden="true" />
+            <span>Base partagée</span>
+            <strong>
+              {sharedWorkspaceStatus === "connected" ? "Connectée" : sharedWorkspaceStatus === "loading" ? "Synchronisation…" : sharedWorkspaceStatus === "local" ? "Mode local" : "Erreur"}
+            </strong>
+            <span className="mobile-status-chevron" aria-hidden="true">⌄</span>
+          </summary>
+          <div className="mobile-shared-db-details">
+            <p>{sharedWorkspaceMessage}</p>
+            {sharedWorkspaceUpdatedAt ? (
+              <small>Dernière mise à jour cloud : {new Date(sharedWorkspaceUpdatedAt).toLocaleString("fr-FR")}</small>
+            ) : null}
+            <div>
+              <button className="secondary-button" type="button" onClick={reloadSharedWorkspaceFromCloud}>Recharger cloud</button>
+              <button className="primary-button" type="button" onClick={forceSaveSharedWorkspaceNow}>Forcer synchro</button>
+            </div>
+          </div>
+        </details>
 
         {activeTab === "dashboard" && actionNotifications.length > 0 && (
           <section className="crm-notification-panel">
@@ -8489,6 +8590,24 @@ function createQuoteDraftFromLead(lead: Lead) {
         )}
       </section>
 
+      <MobileCRMNavigation
+        activeTab={activeTab}
+        badgeCounts={sidebarBadgeCounts}
+        moreOpen={mobileMoreOpen}
+        onNavigate={navigateToTab}
+        onOpenMore={() => setMobileMoreOpen(true)}
+      />
+
+      <MobileMoreMenu
+        activeTab={activeTab}
+        badgeCounts={sidebarBadgeCounts}
+        open={mobileMoreOpen}
+        sessionEmail={sessionEmail}
+        secondaryActions={mobileSecondaryActions}
+        onClose={() => setMobileMoreOpen(false)}
+        onNavigate={navigateToTab}
+      />
+
       {toast && <div className={`toast ${toast.tone}`}>{toast.message}</div>}
     </main>
   );
@@ -8516,26 +8635,6 @@ function NavButton({
       {badgeText ? <span className="nav-badge" aria-label={`${badgeText} élément(s) à traiter`}>{badgeText}</span> : null}
     </button>
   );
-}
-
-function titleForTab(tab: Tab) {
-  const titles: Record<Tab, string> = {
-    dashboard: "Vue d'ensemble",
-    contacts: "Contacts",
-    leads: "Pipeline leads",
-    tasks: "Tâches",
-    quotes: "Devis",
-    bookings: "Réservations",
-    vendorQuotes: "Devis prestataires",
-    vendorInvoices: "Factures prestataires",
-    houseTracking: "Suivi maison",
-    documents: "Documents",
-    planning: "Planning",
-    properties: "Biens",
-    vehicles: "Voitures",
-    boats: "Bateaux"
-  };
-  return titles[tab];
 }
 
 function searchMatch(query: string, fields: Array<string | number>) {
@@ -10432,7 +10531,7 @@ function PlanningView({
         </div>
 
         <div className="table-wrap">
-          <table>
+          <table className="mobile-card-table planning-availability-table">
             <thead>
               <tr>
                 <th>Actif</th>
@@ -10450,18 +10549,18 @@ function PlanningView({
 
                 return (
                   <tr key={`${asset.type}-${asset.id}`}>
-                    <td>
+                    <td data-label="Actif">
                       <strong>{asset.label}</strong>
                       <small>
                         {bookings.length} confirmée{bookings.length > 1 ? "s" : ""} · {options.length} option{options.length > 1 ? "s" : ""}
                       </small>
                     </td>
-                    <td>{asset.category}</td>
-                    <td>{asset.location}</td>
-                    <td>
+                    <td data-label="Catégorie">{asset.category}</td>
+                    <td data-label="Lieu">{asset.location}</td>
+                    <td data-label="Statut période">
                       <Badge>{getAvailabilityLabel(asset)}</Badge>
                     </td>
-                    <td>
+                    <td data-label="Prochaines locations">
                       {bookings.length === 0 ? (
                         <span className="muted-line">Aucune location confirmée</span>
                       ) : (

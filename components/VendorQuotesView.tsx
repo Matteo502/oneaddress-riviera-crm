@@ -503,15 +503,16 @@ export default function VendorQuotesView({
             <textarea name="notes" defaultValue={editingQuote?.notes || ""} placeholder="Conditions, acompte, réserve, détail technique..." />
           </label>
 
-          <button className="primary-button planning-entry-submit" type="submit" disabled={uploading}>
-            {uploading ? "Import en cours..." : editingQuote ? "Enregistrer" : "Ajouter le devis"}
-          </button>
-
-          {editingQuote && (
-            <button className="secondary-button" type="button" onClick={() => setEditingQuote(null)}>
-              Annuler
+          <div className="mobile-form-actions">
+            <button className="primary-button planning-entry-submit" type="submit" disabled={uploading}>
+              {uploading ? "Import en cours..." : editingQuote ? "Enregistrer" : "Ajouter le devis"}
             </button>
-          )}
+            {editingQuote && (
+              <button className="secondary-button" type="button" onClick={() => setEditingQuote(null)}>
+                Annuler
+              </button>
+            )}
+          </div>
         </form>
       </section>
     </div>
