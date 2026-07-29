@@ -249,6 +249,7 @@ export type VendorQuote = {
   id: string;
   contactId: string;
   contactName: string;
+  contactPersonName?: string;
   category: string;
   title: string;
   quoteReference: string;
@@ -272,6 +273,7 @@ export type VendorInvoice = {
   id: string;
   contactId: string;
   contactName: string;
+  contactPersonName?: string;
   category: string;
   title: string;
   invoiceDate: string;

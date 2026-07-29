@@ -2,12 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import SearchableBusinessContactPicker from "./SearchableBusinessContactPicker";
 import type {
   Contact,
   VendorInvoice,
   VendorQuote,
   VendorQuoteStatus
 } from "@/lib/types";
+import {
+  getVendorBusinessName,
+  getVendorContactPersonName,
+  getVendorContactProfession,
+  isEligibleVendorContact
+} from "@/lib/vendorContacts";
 
 const SHARED_WORKSPACE_ID = "oneaddress-riviera";
 const CRM_DOCUMENTS_BUCKET = "crm-documents";
@@ -41,24 +48,6 @@ function formatDate(value?: string) {
     month: "2-digit",
     year: "numeric"
   }).format(date);
-}
-
-function getContactLabel(contact: Contact) {
-  return [contact.civility, contact.firstName, contact.name]
-    .filter(Boolean)
-    .join(" ")
-    .trim() || contact.companyName || contact.email || contact.phone || "Contact sans nom";
-}
-
-function getContactCategory(contact?: Contact) {
-  if (!contact) return "Prestataire";
-
-  return String(
-    (contact as Contact & { profession?: string; supplierService?: string }).profession ||
-    contact.supplierCategory ||
-    (contact as Contact & { supplierService?: string }).supplierService ||
-    "Prestataire"
-  ).trim();
 }
 
 function sanitizeFileName(fileName: string) {
@@ -106,8 +95,14 @@ export default function VendorQuotesView({
   const selectableContacts = useMemo(
     () =>
       contacts
-        .filter((contact) => getContactLabel(contact) !== "Contact sans nom")
-        .sort((a, b) => getContactLabel(a).localeCompare(getContactLabel(b), "fr")),
+        .filter(
+          (contact) =>
+            isEligibleVendorContact(contact) &&
+            getVendorBusinessName(contact) !== "Contact sans nom"
+        )
+        .sort((a, b) =>
+          getVendorBusinessName(a).localeCompare(getVendorBusinessName(b), "fr")
+        ),
     [contacts]
   );
 
@@ -216,11 +211,12 @@ export default function VendorQuotesView({
     const form = new FormData(formElement);
     const contactId = String(form.get("contactId") || "");
     const contact = contacts.find((item) => item.id === contactId);
+    const preserveLegacyContact = form.get("preserveLegacyContact") === "true";
     const amount = parseAmount(form.get("amount"));
     const quoteId = editingQuote?.id || makeId("vendor-quote");
     const quoteFile = form.get("quoteFile");
 
-    if (!contact) {
+    if (!contact && !preserveLegacyContact) {
       window.alert("Choisissez le prestataire concerné.");
       return;
     }
@@ -251,8 +247,15 @@ export default function VendorQuotesView({
       ...(editingQuote || {}),
       id: quoteId,
       contactId,
-      contactName: getContactLabel(contact),
-      category: getContactCategory(contact),
+      contactName: contact
+        ? getVendorBusinessName(contact)
+        : String(editingQuote?.contactName || "").trim(),
+      contactPersonName: contact
+        ? getVendorContactPersonName(contact)
+        : String(editingQuote?.contactPersonName || "").trim(),
+      category: contact
+        ? getVendorContactProfession(contact) || "Prestataire"
+        : String(editingQuote?.category || "Prestataire").trim(),
       title: String(form.get("title") || "").trim() || "Devis prestataire",
       quoteReference: referenceInput || editingQuote?.quoteReference || generatedReference,
       quoteDate: String(form.get("quoteDate") || ""),
@@ -345,6 +348,16 @@ export default function VendorQuotesView({
               const linkedInvoice = invoices.find(
                 (invoice) => invoice.id === quote.linkedInvoiceId || invoice.sourceQuoteId === quote.id
               );
+              const linkedContact = contacts.find((contact) => contact.id === quote.contactId);
+              const businessName = linkedContact
+                ? getVendorBusinessName(linkedContact)
+                : quote.contactName || "Prestataire non défini";
+              const contactPersonName = linkedContact
+                ? getVendorContactPersonName(linkedContact)
+                : quote.contactPersonName || "";
+              const profession = linkedContact
+                ? getVendorContactProfession(linkedContact) || quote.category
+                : quote.category;
 
               return (
                 <article
@@ -355,9 +368,12 @@ export default function VendorQuotesView({
                 >
                   <div>
                     <p className="eyebrow">
-                      {quote.category} · {quote.quoteReference || "Référence à compléter"}
+                      {profession} · {quote.quoteReference || "Référence à compléter"}
                     </p>
-                    <h3>{quote.contactName}</h3>
+                    <h3>{businessName}</h3>
+                    {contactPersonName && contactPersonName !== businessName ? (
+                      <p className="muted-line">Référent : {contactPersonName}</p>
+                    ) : null}
                     <p>{quote.title}</p>
                     <p className="muted-line">
                       Devis : {formatDate(quote.quoteDate)} · Validité : {formatDate(quote.validUntil)}
@@ -444,16 +460,15 @@ export default function VendorQuotesView({
         </p>
 
         <form key={editingQuote?.id || "new-vendor-quote"} className="form-grid" onSubmit={submitQuote}>
-          <label>Prestataire
-            <select name="contactId" defaultValue={editingQuote?.contactId || ""} required>
-              <option value="">Choisir un contact</option>
-              {selectableContacts.map((contact) => (
-                <option key={contact.id} value={contact.id}>
-                  {getContactLabel(contact)} · {getContactCategory(contact)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SearchableBusinessContactPicker
+            contacts={selectableContacts}
+            defaultContact={contacts.find((contact) => contact.id === editingQuote?.contactId)}
+            defaultContactId={editingQuote?.contactId || ""}
+            fallbackContactName={editingQuote?.contactName || ""}
+            fallbackContactPersonName={editingQuote?.contactPersonName || ""}
+            fallbackProfession={editingQuote?.category || ""}
+            required
+          />
 
           <label>Objet du devis
             <input name="title" defaultValue={editingQuote?.title || ""} placeholder="Ex : Entretien jardin juillet" required />

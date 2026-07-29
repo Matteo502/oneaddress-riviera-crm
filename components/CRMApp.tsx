@@ -1,6 +1,7 @@
 "use client";
 
 import QuickRepliesView from "./QuickRepliesView";
+import SearchableBusinessContactPicker from "./SearchableBusinessContactPicker";
 import VendorQuotesView from "./VendorQuotesView";
 
 import { useEffect, useMemo, useState } from "react";
@@ -33,6 +34,13 @@ import type {
   HouseTimeEntry,
   HousePayment,
 } from "@/lib/types";
+import {
+  getVendorBusinessName,
+  getVendorContactPersonName,
+  getVendorContactProfession,
+  isEligibleVendorContact,
+  normalizeVendorContactSearch
+} from "@/lib/vendorContacts";
 
 const STORAGE_KEY = "oneaddress-riviera-crm-v1";
 const QUOTES_STORAGE_KEY = "oneaddress-riviera-crm-quotes-v1";
@@ -356,6 +364,7 @@ function normalizeVendorInvoice(value: unknown): VendorInvoice | null {
     id: String(raw.id || makeId("invoice")),
     contactId: String(raw.contactId || ""),
     contactName: String(raw.contactName || ""),
+    contactPersonName: String(raw.contactPersonName || ""),
     category: String(raw.category || "Prestataire"),
     title: String(raw.title || "Facture prestataire"),
     invoiceDate: String(raw.invoiceDate || ""),
@@ -4194,39 +4203,28 @@ function VendorInvoicesView({
     setInvoicePreview(null);
   }
 
-  const supplierContacts = contacts.filter((contact) => {
-    const kind = String((contact as any).kind || "");
-    return kind === "Prestataire" || kind === "Partenaire" || kind === "Propriétaire";
-  });
-
-  const selectableContacts = contacts
-    .filter((contact) => getVendorInvoiceContactLabel(contact) !== "Contact sans nom")
-    .sort((a, b) => getVendorInvoiceContactLabel(a).localeCompare(getVendorInvoiceContactLabel(b), "fr"));
-
-  // CRM_VENDOR_INVOICE_CONTACT_FIX_20260620
-  function normalizeInvoiceLookupKey(value?: string | number | null) {
-    return String(value ?? "")
-      .trim()
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/\s+/g, " ");
-  }
-
-  function getVendorInvoiceContactLabel(contact: Contact) {
-    return [contact.civility, contact.firstName, contact.name]
-      .filter(Boolean)
-      .join(" ")
-      .trim() || contact.companyName || contact.email || contact.phone || "Contact sans nom";
-  }
+  const selectableContacts = useMemo(
+    () =>
+      contacts
+        .filter(
+          (contact) =>
+            isEligibleVendorContact(contact) &&
+            getVendorBusinessName(contact) !== "Contact sans nom"
+        )
+        .sort((a, b) =>
+          getVendorBusinessName(a).localeCompare(getVendorBusinessName(b), "fr")
+        ),
+    [contacts]
+  );
 
   function findContactForVendorInvoice(invoice?: VendorInvoice | null) {
     if (!invoice) return null;
 
     const byId = contacts.find((contact) => contact.id === invoice.contactId);
     if (byId) return byId;
+    if (invoice.contactId) return null;
 
-    const wanted = normalizeInvoiceLookupKey(invoice.contactName);
+    const wanted = normalizeVendorContactSearch(invoice.contactName);
     if (!wanted) return null;
 
     const wantedWords = wanted.split(" ").filter((word) => word.length > 1);
@@ -4234,14 +4232,15 @@ function VendorInvoicesView({
     return contacts.find((contact) => {
       const labels = [
         contact.name,
-        getVendorInvoiceContactLabel(contact),
+        getVendorBusinessName(contact),
         contact.companyName,
         contact.email,
         contact.phone,
+        getVendorContactPersonName(contact),
         [contact.firstName, contact.name].filter(Boolean).join(" "),
         [contact.companyName, contact.name].filter(Boolean).join(" ")
       ]
-        .map((value) => normalizeInvoiceLookupKey(value))
+        .map((value) => normalizeVendorContactSearch(value))
         .filter(Boolean);
 
       if (labels.includes(wanted)) return true;
@@ -4250,7 +4249,7 @@ function VendorInvoicesView({
       // ou ancienne donnée légèrement différente.
       if (labels.some((label) => label.includes(wanted) || wanted.includes(label))) return true;
 
-      const identity = normalizeInvoiceLookupKey(
+      const identity = normalizeVendorContactSearch(
         [contact.firstName, contact.name, contact.companyName].filter(Boolean).join(" ")
       );
 
@@ -4260,34 +4259,30 @@ function VendorInvoicesView({
 
   // CRM_VENDOR_INVOICE_AUTO_LINK_EXISTING_CONTACT_20260620
   function getResolvedVendorInvoiceContactId(invoice?: VendorInvoice | null) {
-    return invoice?.contactId || findContactForVendorInvoice(invoice)?.id || "";
-  }
-
-  function getResolvedVendorInvoiceCategory(invoice?: VendorInvoice | null) {
-    const resolvedContactId = getResolvedVendorInvoiceContactId(invoice);
-    return invoice?.category || getContactProfessionForInvoice(resolvedContactId) || "Prestataire";
+    return findContactForVendorInvoice(invoice)?.id || invoice?.contactId || "";
   }
 
   // CRM_VENDOR_INVOICE_HISTORICAL_CONTACT_FIX_20260620
   function getHistoricalVendorInvoiceContactName(invoice?: VendorInvoice | null) {
     const resolvedContact = findContactForVendorInvoice(invoice);
     return resolvedContact
-      ? getVendorInvoiceContactLabel(resolvedContact)
+      ? getVendorBusinessName(resolvedContact)
       : String(invoice?.contactName || "").trim();
-  }
-
-  function shouldShowHistoricalVendorInvoiceContact(invoice?: VendorInvoice | null) {
-    return Boolean(invoice && !getResolvedVendorInvoiceContactId(invoice) && getHistoricalVendorInvoiceContactName(invoice));
   }
 
   function startEditInvoice(invoice: VendorInvoice) {
     const resolvedContact = findContactForVendorInvoice(invoice);
-    const resolvedContactId = resolvedContact?.id || "";
+    const resolvedContactId = resolvedContact?.id || invoice.contactId || "";
 
     setEditingInvoice({
       ...invoice,
       contactId: resolvedContactId,
-      contactName: resolvedContact ? getVendorInvoiceContactLabel(resolvedContact) : String(invoice.contactName || "").trim(),
+      contactName: resolvedContact
+        ? getVendorBusinessName(resolvedContact)
+        : String(invoice.contactName || "").trim(),
+      contactPersonName: resolvedContact
+        ? getVendorContactPersonName(resolvedContact)
+        : String(invoice.contactPersonName || "").trim(),
       category: resolvedContactId
         ? getContactProfessionForInvoice(resolvedContactId) || invoice.category || "Prestataire"
         : invoice.category || "Prestataire"
@@ -4305,34 +4300,7 @@ function VendorInvoicesView({
     const contact = contacts.find((item) => item.id === contactId);
 
     if (!contact) return "";
-
-    return String(
-      (contact as any).profession ||
-      (contact as any).supplierCategory ||
-      (contact as any).supplierService ||
-      ""
-    ).trim();
-  }
-
-  function fillInvoiceCategoryFromContact(select: HTMLSelectElement) {
-    const profession = getContactProfessionForInvoice(select.value);
-    const form = select.form;
-
-    if (!profession || !form) return;
-
-    const categorySelect = form.elements.namedItem("category") as HTMLSelectElement | null;
-
-    if (!categorySelect) return;
-
-    const existingOption = Array.from(categorySelect.options).some((option) =>
-      option.value === profession || option.textContent === profession
-    );
-
-    if (!existingOption) {
-      categorySelect.appendChild(new Option(profession, profession));
-    }
-
-    categorySelect.value = profession;
+    return getVendorContactProfession(contact);
   }
 
   // CRM_VENDOR_INVOICE_DIRECT_UPLOAD_20260622
@@ -4487,6 +4455,7 @@ function VendorInvoicesView({
     const form = new FormData(formElement);
     const contactId = String(form.get("contactId") ?? "");
     const contact = contacts.find((item) => item.id === contactId);
+    const preserveLegacyContact = form.get("preserveLegacyContact") === "true";
     const amount = safeNumber(form.get("amount"));
     const paidAmount = safeNumber(form.get("paidAmount"));
     const dueDate = String(form.get("dueDate") ?? "");
@@ -4528,7 +4497,16 @@ function VendorInvoicesView({
     const invoice: VendorInvoice = {
       id: invoiceId,
       contactId,
-      contactName: contact ? getVendorInvoiceContactLabel(contact) : getHistoricalVendorInvoiceContactName(editingInvoice),
+      contactName: contact
+        ? getVendorBusinessName(contact)
+        : preserveLegacyContact
+          ? getHistoricalVendorInvoiceContactName(editingInvoice)
+          : "",
+      contactPersonName: contact
+        ? getVendorContactPersonName(contact)
+        : preserveLegacyContact
+          ? String(editingInvoice?.contactPersonName || "").trim()
+          : "",
       category: automaticCategory,
       title: String(form.get("title") ?? "").trim() || "Facture prestataire",
       invoiceDate: String(form.get("invoiceDate") ?? ""),
@@ -4596,11 +4574,26 @@ function VendorInvoicesView({
           <p className="muted-line">Aucune facture prestataire pour ce filtre.</p>
         ) : (
           <div className="list-stack oar-contact-list-stack">
-            {visibleInvoices.map((invoice) => (
+            {visibleInvoices.map((invoice) => {
+              const linkedContact = findContactForVendorInvoice(invoice);
+              const businessName = linkedContact
+                ? getVendorBusinessName(linkedContact)
+                : invoice.contactName || "Prestataire non défini";
+              const contactPersonName = linkedContact
+                ? getVendorContactPersonName(linkedContact)
+                : invoice.contactPersonName || "";
+              const profession = linkedContact
+                ? getVendorContactProfession(linkedContact) || invoice.category
+                : invoice.category;
+
+              return (
               <article className="item-card vendor-invoice-card" key={invoice.id} id={`vendor-invoice-${invoice.id}`} data-notification-target={`vendor-invoice-${invoice.id}`}>
                 <div>
-                  <p className={`eyebrow ${invoice.status === "Payé" ? "invoice-eyebrow-paid" : invoice.status === "En attente de facture" ? "" : "invoice-eyebrow-danger"}`}>{invoice.category} · {invoice.status}</p>
-                  <h3>{invoice.contactName}</h3>
+                  <p className={`eyebrow ${invoice.status === "Payé" ? "invoice-eyebrow-paid" : invoice.status === "En attente de facture" ? "" : "invoice-eyebrow-danger"}`}>{profession} · {invoice.status}</p>
+                  <h3>{businessName}</h3>
+                  {contactPersonName && contactPersonName !== businessName ? (
+                    <p className="muted-line">Référent : {contactPersonName}</p>
+                  ) : null}
                   <p>{invoice.title}</p>
                   <p className="muted-line">
                     {invoice.status === "En attente de facture"
@@ -4669,7 +4662,8 @@ function VendorInvoicesView({
                   </button>
                 </div>
               </article>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
@@ -4686,19 +4680,14 @@ function VendorInvoicesView({
         )}
 
         <form key={editingInvoice?.id || "new-vendor-invoice"} className="form-grid" onSubmit={submitInvoice}>
-          <label>Contact référent
-            <select name="contactId" defaultValue={getResolvedVendorInvoiceContactId(editingInvoice)} onChange={() => undefined}>
-              <option value="">{shouldShowHistoricalVendorInvoiceContact(editingInvoice) ? getHistoricalVendorInvoiceContactName(editingInvoice) : "Choisir un contact"}</option>
-              {shouldShowHistoricalVendorInvoiceContact(editingInvoice) ? (
-                <option value="" disabled>{getHistoricalVendorInvoiceContactName(editingInvoice)} · non lié au CRM</option>
-              ) : null}
-              {selectableContacts.map((contact) => (
-                <option key={contact.id} value={contact.id}>
-                  {getVendorInvoiceContactLabel(contact)}{getContactProfessionForInvoice(contact.id) ? ` · ${getContactProfessionForInvoice(contact.id)}` : ` · ${String((contact as any).kind || "Contact")}`}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SearchableBusinessContactPicker
+            contacts={selectableContacts}
+            defaultContact={findContactForVendorInvoice(editingInvoice)}
+            defaultContactId={getResolvedVendorInvoiceContactId(editingInvoice)}
+            fallbackContactName={getHistoricalVendorInvoiceContactName(editingInvoice)}
+            fallbackContactPersonName={editingInvoice?.contactPersonName || ""}
+            fallbackProfession={editingInvoice?.category || ""}
+          />
 
           <label>Objet facture
             <input name="title" defaultValue={editingInvoice?.title || ""} placeholder="Ex : Entretien jardin juin" />
@@ -7236,6 +7225,7 @@ const toneRank: Record<ActionNotification["tone"], number> = {
           ...invoice,
           contactId: savedQuote.contactId,
           contactName: savedQuote.contactName,
+          contactPersonName: savedQuote.contactPersonName,
           category: savedQuote.category,
           title: `Facture attendue · ${savedQuote.title}`,
           amount: savedQuote.amount,
@@ -7279,6 +7269,7 @@ const toneRank: Record<ActionNotification["tone"], number> = {
             ...existingInvoice,
             contactId: quote.contactId,
             contactName: quote.contactName,
+            contactPersonName: quote.contactPersonName,
             category: quote.category,
             title: existingInvoice.invoiceDocumentStoragePath || existingInvoice.invoiceDocumentUrl
               ? existingInvoice.title
@@ -7296,6 +7287,7 @@ const toneRank: Record<ActionNotification["tone"], number> = {
             id: invoiceId,
             contactId: quote.contactId,
             contactName: quote.contactName,
+            contactPersonName: quote.contactPersonName,
             category: quote.category,
             title: `Facture attendue · ${quote.title}`,
             invoiceDate: "",
