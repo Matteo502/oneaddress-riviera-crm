@@ -7431,12 +7431,60 @@ iframe.vendor-invoice-preview-frame {
   white-space: nowrap !important;
 }
 
+.house-worker-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+.house-worker-actions .secondary-button,
+.house-worker-actions .danger-link {
+  min-height: 36px !important;
+  padding: 8px 12px !important;
+}
+
+.house-archived-workers {
+  margin-top: 18px !important;
+  padding-top: 14px !important;
+  border-top: 1px solid rgba(208, 174, 118, 0.28) !important;
+}
+
+.house-archived-workers > summary {
+  cursor: pointer !important;
+  font-weight: 700 !important;
+  color: var(--ink) !important;
+}
+
+.house-archived-worker-row {
+  background: rgba(0, 20, 53, 0.025) !important;
+}
+
+.house-archived-badge {
+  display: inline-flex !important;
+  width: fit-content !important;
+  margin-left: 7px !important;
+  padding: 3px 8px !important;
+  font-size: 0.68rem !important;
+  line-height: 1 !important;
+  vertical-align: middle !important;
+  color: rgba(0, 20, 53, 0.68) !important;
+  background: rgba(0, 20, 53, 0.07) !important;
+  border-color: rgba(0, 20, 53, 0.12) !important;
+}
+
 @media (max-width: 1180px) {
   .house-summary-grid,
   .house-filter-row,
   .house-today-grid,
   .house-two-columns {
     grid-template-columns: 1fr !important;
+  }
+
+  .house-worker-actions {
+    width: 100% !important;
+    justify-content: flex-start !important;
   }
 }
 

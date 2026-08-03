@@ -51,6 +51,15 @@ import {
   isEligibleVendorContact,
   normalizeVendorContactSearch
 } from "@/lib/vendorContacts";
+import {
+  getHouseTimeAmount,
+  getHouseTimeHours,
+  getHouseTrackingWorkerHistorySummary,
+  houseTrackingWorkerHasHistory,
+  isHouseTrackingWorkerActive,
+  permanentlyDeleteHouseTrackingWorker,
+  setHouseTrackingWorkerStatus
+} from "@/lib/houseTracking";
 
 const STORAGE_KEY = "oneaddress-riviera-crm-v1";
 const QUOTES_STORAGE_KEY = "oneaddress-riviera-crm-quotes-v1";
@@ -524,33 +533,6 @@ function normalizeHousePayment(value: unknown): HousePayment | null {
     updatedBy: raw.updatedBy ? String(raw.updatedBy) : undefined,
     updatedAt: raw.updatedAt ? String(raw.updatedAt) : undefined
   };
-}
-
-function getHouseTimeHours(entry: Pick<HouseTimeEntry, "startTime" | "endTime" | "breakMinutes">) {
-  if (!entry.startTime || !entry.endTime) return 0;
-
-  const [startHour, startMinute] = entry.startTime.split(":").map(Number);
-  const [endHour, endMinute] = entry.endTime.split(":").map(Number);
-
-  if (![startHour, startMinute, endHour, endMinute].every(Number.isFinite)) return 0;
-
-  const startTotal = startHour * 60 + startMinute;
-  let endTotal = endHour * 60 + endMinute;
-
-  // Si l'heure de fin est inférieure à l'heure de début, on considère que la fin est le lendemain.
-  // Exemple : 09:30 -> 00:00 = 14,5 h, pas 0 h.
-  if (endTotal < startTotal) {
-    endTotal += 24 * 60;
-  }
-
-  const breakMinutes = Math.max(parseEuroAmount(entry.breakMinutes), 0);
-  const rawMinutes = endTotal - startTotal - breakMinutes;
-
-  return Math.max(rawMinutes / 60, 0);
-}
-
-function getHouseTimeAmount(entry: Pick<HouseTimeEntry, "startTime" | "endTime" | "breakMinutes" | "hourlyRate">) {
-  return getHouseTimeHours(entry) * Number(entry.hourlyRate || 0);
 }
 
 function getCurrentMonthValue() {
@@ -3364,7 +3346,9 @@ function HouseTrackingView({
   onAddHouse,
   onDeleteHouse,
   onAddWorker,
-  onDeleteWorker,
+  onArchiveWorker,
+  onReactivateWorker,
+  onPermanentlyDeleteWorker,
   onAddTimeEntry,
   onDeleteTimeEntry,
   onAddPayment,
@@ -3378,30 +3362,47 @@ function HouseTrackingView({
   onAddHouse: (house: HouseTrackingHouse) => void;
   onDeleteHouse: (id: string) => void;
   onAddWorker: (worker: HouseTrackingWorker) => void;
-  onDeleteWorker: (id: string) => void;
+  onArchiveWorker: (id: string) => void;
+  onReactivateWorker: (id: string) => void;
+  onPermanentlyDeleteWorker: (id: string) => void;
   onAddTimeEntry: (entry: HouseTimeEntry) => void;
   onDeleteTimeEntry: (id: string) => void;
   onAddPayment: (payment: HousePayment) => void;
   onDeletePayment: (id: string) => void;
 }) {
   const today = new Date().toISOString().slice(0, 10);
+  const activeWorkers = useMemo(() => workers.filter(isHouseTrackingWorkerActive), [workers]);
+  const archivedWorkers = useMemo(() => workers.filter((worker) => !isHouseTrackingWorkerActive(worker)), [workers]);
+  const activeWorkerIds = useMemo(() => new Set(activeWorkers.map((worker) => worker.id)), [activeWorkers]);
+  const initialActiveWorker = activeWorkers[0];
   const [dateRange, setDateRange] = useState(() => ({ start: `${today.slice(0, 8)}01`, end: today }));
   const [houseFilter, setHouseFilter] = useState("Tous");
   const [workerFilter, setWorkerFilter] = useState("Tous");
   const [hourDraft, setHourDraft] = useState({
     date: today,
     houseId: houses[0]?.id || "",
-    workerId: workers[0]?.id || "",
+    workerId: initialActiveWorker?.id || "",
     startTime: "09:00",
     endTime: "13:00",
     breakMinutes: "0",
-    hourlyRate: workers[0]?.hourlyRate ? String(workers[0].hourlyRate) : "",
+    hourlyRate: initialActiveWorker?.hourlyRate ? String(initialActiveWorker.hourlyRate) : "",
     note: ""
   });
   const [showAllHoursHistory, setShowAllHoursHistory] = useState(false);
   const [showAllPaymentsHistory, setShowAllPaymentsHistory] = useState(false);
   const [uploadingWorkerDocument, setUploadingWorkerDocument] = useState(false);
   const [houseSection, setHouseSection] = useState<"today" | "hours" | "payments" | "settings">("today");
+
+  useEffect(() => {
+    if (activeWorkers.some((worker) => worker.id === hourDraft.workerId)) return;
+
+    const firstActiveWorker = activeWorkers[0];
+    setHourDraft((current) => ({
+      ...current,
+      workerId: firstActiveWorker?.id || "",
+      hourlyRate: firstActiveWorker?.hourlyRate ? String(firstActiveWorker.hourlyRate) : ""
+    }));
+  }, [activeWorkers, hourDraft.workerId]);
 
   function normalizeHouseDateValue(value: string) {
     if (!value) return "";
@@ -3567,7 +3568,7 @@ function HouseTrackingView({
   const totalPaid = getAutoAllocatedPaidForSelectedEntries(filteredEntries);
   const totalBalance = totalDue - totalPaid;
 
-  const selectedWorker = workers.find((worker) => worker.id === hourDraft.workerId);
+  const selectedWorker = activeWorkers.find((worker) => worker.id === hourDraft.workerId);
   const currentRate = parseEuroAmount(hourDraft.hourlyRate || selectedWorker?.hourlyRate || 0);
   const previewEntry = {
     startTime: hourDraft.startTime,
@@ -3596,6 +3597,11 @@ function HouseTrackingView({
       };
     })
     .filter((row) => row.hours > 0 || row.paid > 0 || row.balance !== 0);
+
+  function isArchivedWorker(workerId: string) {
+    const worker = workers.find((item) => item.id === workerId);
+    return Boolean(worker && !isHouseTrackingWorkerActive(worker));
+  }
 
   function submitHouse(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -3717,10 +3723,10 @@ function HouseTrackingView({
     event.preventDefault();
 
     const house = houses.find((item) => item.id === hourDraft.houseId);
-    const worker = workers.find((item) => item.id === hourDraft.workerId);
+    const worker = activeWorkers.find((item) => item.id === hourDraft.workerId);
 
     if (!house) return window.alert("Choisissez une maison.");
-    if (!worker) return window.alert("Choisissez un intervenant.");
+    if (!worker) return window.alert("Choisissez un intervenant actif.");
     if (previewHours <= 0) return window.alert("Vérifiez les heures de début et de fin.");
 
     onAddTimeEntry({
@@ -3745,11 +3751,11 @@ function HouseTrackingView({
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const house = houses.find((item) => item.id === String(form.get("houseId") ?? ""));
-    const worker = workers.find((item) => item.id === String(form.get("workerId") ?? ""));
+    const worker = activeWorkers.find((item) => item.id === String(form.get("workerId") ?? ""));
     const amount = safeNumber(form.get("amount"));
 
     if (!house) return window.alert("Choisissez une maison.");
-    if (!worker) return window.alert("Choisissez un intervenant.");
+    if (!worker) return window.alert("Choisissez un intervenant actif.");
     if (amount <= 0) return window.alert("Ajoutez un montant payé.");
 
     onAddPayment({
@@ -3866,7 +3872,11 @@ function HouseTrackingView({
           <label>Intervenant
             <select value={workerFilter} onChange={(event) => setWorkerFilter(event.target.value)}>
               <option value="Tous">Tous les intervenants</option>
-              {workers.map((worker) => <option key={worker.id} value={worker.id}>{worker.contactName}</option>)}
+              {workers.map((worker) => (
+                <option key={worker.id} value={worker.id}>
+                  {worker.contactName}{isHouseTrackingWorkerActive(worker) ? "" : " · Archivé"}
+                </option>
+              ))}
             </select>
           </label>
         </div>
@@ -3896,9 +3906,9 @@ function HouseTrackingView({
           <div className="house-today-grid">
             <div className="house-mini-panel">
               <p className="eyebrow">À payer</p>
-              {balanceRows.filter((row) => row.balance > 0).length === 0 ? (
+              {balanceRows.filter((row) => row.balance > 0 && activeWorkerIds.has(row.worker.id)).length === 0 ? (
                 <p className="muted-line">Aucun solde à payer sur la période.</p>
-              ) : balanceRows.filter((row) => row.balance > 0).slice(0, 6).map((row) => (
+              ) : balanceRows.filter((row) => row.balance > 0 && activeWorkerIds.has(row.worker.id)).slice(0, 6).map((row) => (
                 <article className="mini-row house-compact-row" key={row.worker.id} data-notification-target={`house-worker-${row.worker.id}`}>
                   <div>
                     <strong>{row.worker.contactName}</strong>
@@ -3911,9 +3921,9 @@ function HouseTrackingView({
 
             <div className="house-mini-panel">
               <p className="eyebrow">Heures du jour</p>
-              {filteredEntries.filter((entry) => normalizeHouseDateValue(entry.date) === today).length === 0 ? (
+              {filteredEntries.filter((entry) => normalizeHouseDateValue(entry.date) === today && activeWorkerIds.has(entry.workerId)).length === 0 ? (
                 <p className="muted-line">Aucune heure saisie aujourd’hui.</p>
-              ) : filteredEntries.filter((entry) => normalizeHouseDateValue(entry.date) === today).slice(0, 6).map((entry) => (
+              ) : filteredEntries.filter((entry) => normalizeHouseDateValue(entry.date) === today && activeWorkerIds.has(entry.workerId)).slice(0, 6).map((entry) => (
                 <article className="mini-row house-compact-row" key={entry.id}>
                   <div>
                     <strong>{entry.workerName}</strong>
@@ -3944,11 +3954,11 @@ function HouseTrackingView({
               </label>
               <label>Intervenant
                 <select value={hourDraft.workerId} onChange={(event) => {
-                  const worker = workers.find((item) => item.id === event.target.value);
+                  const worker = activeWorkers.find((item) => item.id === event.target.value);
                   setHourDraft((current) => ({ ...current, workerId: event.target.value, hourlyRate: worker?.hourlyRate ? String(worker.hourlyRate) : current.hourlyRate }));
                 }}>
                   <option value="">Choisir</option>
-                  {workers.map((worker) => <option key={worker.id} value={worker.id}>{worker.contactName}</option>)}
+                  {activeWorkers.map((worker) => <option key={worker.id} value={worker.id}>{worker.contactName}</option>)}
                 </select>
               </label>
               <label>Début
@@ -3981,6 +3991,7 @@ function HouseTrackingView({
                 <article className="mini-row house-compact-row" key={entry.id}>
                   <div>
                     <strong>{entry.workerName}</strong>
+                    {isArchivedWorker(entry.workerId) && <span className="status-pill house-archived-badge">Archivé</span>}
                     <span>{entry.date} · {entry.houseName} · {entry.startTime} à {entry.endTime} · {formatHours(getHouseTimeHours(entry))} · {currency.format(getHouseTimeAmount(entry))}</span>
                   </div>
                   <button className="danger-link" type="button" onClick={() => window.confirm("Supprimer ces heures ?") && onDeleteTimeEntry(entry.id)}>Suppr.</button>
@@ -4012,9 +4023,9 @@ function HouseTrackingView({
                 </select>
               </label>
               <label>Intervenant
-                <select name="workerId" defaultValue={workers[0]?.id || ""}>
+                <select name="workerId" defaultValue={initialActiveWorker?.id || ""}>
                   <option value="">Choisir</option>
-                  {workers.map((worker) => <option key={worker.id} value={worker.id}>{worker.contactName}</option>)}
+                  {activeWorkers.map((worker) => <option key={worker.id} value={worker.id}>{worker.contactName}</option>)}
                 </select>
               </label>
               <label>Montant
@@ -4044,6 +4055,7 @@ function HouseTrackingView({
                 <article className="mini-row house-compact-row" key={payment.id}>
                   <div>
                     <strong>{payment.workerName}</strong>
+                    {isArchivedWorker(payment.workerId) && <span className="status-pill house-archived-badge">Archivé</span>}
                     <span>{payment.date} · {payment.houseName} · {currency.format(payment.amount)} · {payment.method}</span>
                   </div>
                   <button className="danger-link" type="button" onClick={() => window.confirm("Supprimer ce paiement ?") && onDeletePayment(payment.id)}>Suppr.</button>
@@ -4091,7 +4103,7 @@ function HouseTrackingView({
 
           <section className="card house-tab-panel">
             <p className="eyebrow">Réglages</p>
-            <h3>Intervenants</h3>
+            <h3>Intervenants actifs</h3>
             <form className="form-grid house-compact-form" onSubmit={submitWorker}>
               <label>Contact CRM
                 <input name="contactSearch" list="house-contact-options" placeholder="Nom, société, email ou téléphone" autoComplete="off" />
@@ -4114,20 +4126,78 @@ function HouseTrackingView({
             </form>
 
             <div className="list-stack house-history-list">
-              {workers.length === 0 ? <p className="muted-line">Aucun intervenant.</p> : workers.map((worker) => (
-                <article className="mini-row house-compact-row" key={worker.id} data-notification-target={`house-worker-${worker.id}`}>
-                  <div>
-                    <strong>{worker.contactName}</strong>
-                    <span>{worker.role} · {currency.format(worker.hourlyRate)}/h</span>
-                    {worker.documentFileName && <span>Document : {worker.documentFileName}</span>}
-                    {worker.documentStoragePath && (
-                      <button className="secondary-link" type="button" onClick={() => void downloadHouseWorkerDocument(worker)}>Télécharger document</button>
-                    )}
-                  </div>
-                  <button className="danger-link" type="button" onClick={() => window.confirm("Supprimer cet intervenant ?") && onDeleteWorker(worker.id)}>Suppr.</button>
-                </article>
-              ))}
+              {activeWorkers.length === 0 ? <p className="muted-line">Aucun intervenant actif.</p> : activeWorkers.map((worker) => {
+                const hasHistory = houseTrackingWorkerHasHistory(worker.id, timeEntries, payments);
+
+                return (
+                  <article className="mini-row house-compact-row" key={worker.id} data-notification-target={`house-worker-${worker.id}`}>
+                    <div>
+                      <strong>{worker.contactName}</strong>
+                      <span>{worker.role} · {currency.format(worker.hourlyRate)}/h</span>
+                      {worker.documentFileName && <span>Document : {worker.documentFileName}</span>}
+                      {worker.documentStoragePath && (
+                        <button className="secondary-link" type="button" onClick={() => void downloadHouseWorkerDocument(worker)}>Télécharger document</button>
+                      )}
+                    </div>
+                    <div className="house-worker-actions">
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={() => window.confirm(`Archiver ${worker.contactName} ?\n\nSa fiche, ses documents, ses heures et ses paiements seront intégralement conservés.`) && onArchiveWorker(worker.id)}
+                      >
+                        Archiver
+                      </button>
+                      {!hasHistory && (
+                        <button
+                          className="danger-link"
+                          type="button"
+                          onClick={() => window.confirm(`Supprimer définitivement ${worker.contactName} ?\n\nCette action supprimera uniquement sa fiche d’intervenant et ne pourra pas être annulée.`) && onPermanentlyDeleteWorker(worker.id)}
+                        >
+                          Supprimer définitivement
+                        </button>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
             </div>
+
+            <details className="house-archived-workers">
+              <summary>Intervenants archivés ({archivedWorkers.length})</summary>
+              <div className="list-stack house-history-list">
+                {archivedWorkers.length === 0 ? <p className="muted-line">Aucun intervenant archivé.</p> : archivedWorkers.map((worker) => {
+                  const history = getHouseTrackingWorkerHistorySummary(worker.id, timeEntries, payments);
+                  const hasHistory = history.timeEntries > 0 || history.payments > 0;
+
+                  return (
+                    <article className="mini-row house-compact-row house-archived-worker-row" key={worker.id} data-notification-target={`house-worker-${worker.id}`}>
+                      <div>
+                        <strong>{worker.contactName} <span className="status-pill house-archived-badge">Archivé</span></strong>
+                        <span>{worker.role} · {currency.format(worker.hourlyRate)}/h</span>
+                        <span>{history.timeEntries} ligne(s) · {formatHours(history.hours)} · {history.payments} paiement(s) · {currency.format(history.paid)} payé</span>
+                        <span>Coût {currency.format(history.due)} · Delta {formatHouseBalanceLabel(history.balance)}</span>
+                        {worker.documentFileName && <span>Document : {worker.documentFileName}</span>}
+                        {worker.documentStoragePath && (
+                          <button className="secondary-link" type="button" onClick={() => void downloadHouseWorkerDocument(worker)}>Télécharger document</button>
+                        )}
+                      </div>
+                      <div className="house-worker-actions">
+                        <button className="secondary-button" type="button" onClick={() => onReactivateWorker(worker.id)}>Réactiver</button>
+                        {!hasHistory && (
+                          <button
+                            className="danger-link"
+                            type="button"
+                            onClick={() => window.confirm(`Supprimer définitivement ${worker.contactName} ?\n\nCette action supprimera uniquement sa fiche d’intervenant et ne pourra pas être annulée.`) && onPermanentlyDeleteWorker(worker.id)}
+                          >
+                            Supprimer définitivement
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </details>
           </section>
 
           <section className="card house-tab-panel full">
@@ -4150,7 +4220,10 @@ function HouseTrackingView({
                   <tbody>
                     {balanceRows.map((row) => (
                       <tr key={row.worker.id}>
-                        <td data-label="Intervenant"><strong>{row.worker.contactName}</strong><br /><span className="muted-line">{row.worker.role}</span></td>
+                        <td data-label="Intervenant">
+                          <strong>{row.worker.contactName}</strong>{!isHouseTrackingWorkerActive(row.worker) && <span className="status-pill house-archived-badge">Archivé</span>}
+                          <br /><span className="muted-line">{row.worker.role}</span>
+                        </td>
                         <td data-label="Heures">{formatHours(row.hours)}</td>
                         <td data-label="Dette créée">{currency.format(row.due)}</td>
                         <td data-label="Payé">{currency.format(row.paid)}</td>
@@ -5604,7 +5677,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
     const housePayments = (((data as any).housePayments ?? []) as HousePayment[]);
     const houseWorkers = (((data as any).houseTrackingWorkers ?? []) as HouseTrackingWorker[]);
 
-    houseWorkers.forEach((worker) => {
+    houseWorkers.filter(isHouseTrackingWorkerActive).forEach((worker) => {
       const due = houseEntries
         .filter((entry) => entry.workerId === worker.id)
         .reduce((sum, entry) => sum + getHouseTimeAmount(entry), 0);
@@ -7175,15 +7248,58 @@ const toneRank: Record<ActionNotification["tone"], number> = {
     notify("Intervenant ajouté.");
   }
 
-  function deleteHouseTrackingWorker(id: string) {
+  function archiveHouseTrackingWorker(id: string) {
     setData((current) => ({
       ...current,
-      houseTrackingWorkers: (((current as any).houseTrackingWorkers ?? []) as HouseTrackingWorker[]).filter((worker) => worker.id !== id),
-      houseTimeEntries: (((current as any).houseTimeEntries ?? []) as HouseTimeEntry[]).filter((entry) => entry.workerId !== id),
-      housePayments: (((current as any).housePayments ?? []) as HousePayment[]).filter((payment) => payment.workerId !== id)
+      houseTrackingWorkers: setHouseTrackingWorkerStatus(
+        (((current as any).houseTrackingWorkers ?? []) as HouseTrackingWorker[]),
+        id,
+        "Inactif"
+      ).map((worker) => worker.id === id ? stampUpdated(worker, activeActor) : worker)
     }));
 
-    notify("Intervenant supprimé.");
+    notify("Intervenant archivé. Son historique est conservé.");
+  }
+
+  function reactivateHouseTrackingWorker(id: string) {
+    setData((current) => ({
+      ...current,
+      houseTrackingWorkers: setHouseTrackingWorkerStatus(
+        (((current as any).houseTrackingWorkers ?? []) as HouseTrackingWorker[]),
+        id,
+        "Actif"
+      ).map((worker) => worker.id === id ? stampUpdated(worker, activeActor) : worker)
+    }));
+
+    notify("Intervenant réactivé.");
+  }
+
+  function permanentlyDeleteHouseTrackingWorkerSafely(id: string) {
+    const currentWorkers = (((data as any).houseTrackingWorkers ?? []) as HouseTrackingWorker[]);
+    const currentEntries = (((data as any).houseTimeEntries ?? []) as HouseTimeEntry[]);
+    const currentPayments = (((data as any).housePayments ?? []) as HousePayment[]);
+    const initialCheck = permanentlyDeleteHouseTrackingWorker(currentWorkers, currentEntries, currentPayments, id);
+
+    if (initialCheck.blocked) {
+      notify("Suppression bloquée : archivez cet intervenant pour conserver son historique.", "warning");
+      return;
+    }
+
+    setData((current) => {
+      const workers = (((current as any).houseTrackingWorkers ?? []) as HouseTrackingWorker[]);
+      const timeEntries = (((current as any).houseTimeEntries ?? []) as HouseTimeEntry[]);
+      const payments = (((current as any).housePayments ?? []) as HousePayment[]);
+      const result = permanentlyDeleteHouseTrackingWorker(workers, timeEntries, payments, id);
+
+      if (result.blocked) return current;
+
+      return {
+        ...current,
+        houseTrackingWorkers: result.workers
+      };
+    });
+
+    notify("Fiche d’intervenant supprimée définitivement.");
   }
 
   function addHouseTimeEntry(entry: HouseTimeEntry) {
@@ -8542,7 +8658,9 @@ function createQuoteDraftFromLead(lead: Lead) {
             onAddHouse={addHouseTrackingHouse}
             onDeleteHouse={deleteHouseTrackingHouse}
             onAddWorker={addHouseTrackingWorker}
-            onDeleteWorker={deleteHouseTrackingWorker}
+            onArchiveWorker={archiveHouseTrackingWorker}
+            onReactivateWorker={reactivateHouseTrackingWorker}
+            onPermanentlyDeleteWorker={permanentlyDeleteHouseTrackingWorkerSafely}
             onAddTimeEntry={addHouseTimeEntry}
             onDeleteTimeEntry={deleteHouseTimeEntry}
             onAddPayment={addHousePayment}
@@ -10955,6 +11073,8 @@ function Dashboard({
   const documents = (((data as any).documents ?? []) as CRMDocument[]);
   const houseTimeEntries = (((data as any).houseTimeEntries ?? []) as HouseTimeEntry[]);
   const housePayments = (((data as any).housePayments ?? []) as HousePayment[]);
+  const houseTrackingWorkers = (((data as any).houseTrackingWorkers ?? []) as HouseTrackingWorker[]);
+  const activeHouseWorkerIds = new Set(houseTrackingWorkers.filter(isHouseTrackingWorkerActive).map((worker) => worker.id));
 
   const unpaidVendorInvoices = vendorInvoices.filter((invoice) =>
     invoice.status !== "Payé" && invoice.status !== "Annulé" && getVendorInvoiceRemaining(invoice) > 0
@@ -10965,13 +11085,13 @@ function Dashboard({
   const vendorAmountToPay = unpaidVendorInvoices.reduce((sum, invoice) => sum + getVendorInvoiceRemaining(invoice), 0);
 
   const houseDueByWorker = new Map<string, { workerName: string; due: number }>();
-  houseTimeEntries.forEach((entry) => {
+  houseTimeEntries.filter((entry) => activeHouseWorkerIds.has(entry.workerId)).forEach((entry) => {
     const key = entry.workerId || entry.workerName || entry.id;
     const current = houseDueByWorker.get(key) || { workerName: entry.workerName || "Intervenant", due: 0 };
     current.due += getHouseTimeAmount(entry);
     houseDueByWorker.set(key, current);
   });
-  housePayments.forEach((payment) => {
+  housePayments.filter((payment) => activeHouseWorkerIds.has(payment.workerId)).forEach((payment) => {
     const key = payment.workerId || payment.workerName || payment.id;
     const current = houseDueByWorker.get(key) || { workerName: payment.workerName || "Intervenant", due: 0 };
     current.due -= Number(payment.amount || 0);
