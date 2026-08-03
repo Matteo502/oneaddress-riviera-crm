@@ -1190,6 +1190,90 @@
     padding-left: 16px !important;
   }
 
+  .crm-readable-redesign .house-worker-filter {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .crm-readable-redesign .house-worker-filter-controls {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    gap: 8px !important;
+    overflow: hidden !important;
+  }
+
+  .crm-readable-redesign .house-worker-filter-scroll {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding-bottom: 5px !important;
+    overflow-x: auto !important;
+  }
+
+  .crm-readable-redesign .house-worker-filter-button,
+  .crm-readable-redesign .house-archive-trigger {
+    width: auto !important;
+    min-width: max-content !important;
+    max-width: none !important;
+    min-height: 44px !important;
+    padding: 10px 14px !important;
+    overflow-wrap: normal !important;
+  }
+
+  .crm-readable-redesign .house-archive-trigger {
+    flex: 0 0 auto !important;
+  }
+
+  .crm-readable-redesign .house-archived-filter-banner {
+    display: grid !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    gap: 12px !important;
+    padding: 14px !important;
+  }
+
+  .crm-readable-redesign .house-archived-filter-title {
+    align-items: flex-start !important;
+    flex-wrap: wrap !important;
+  }
+
+  .crm-readable-redesign .house-archived-filter-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .crm-readable-redesign .house-archived-filter-actions > button {
+    width: 100% !important;
+    min-height: 44px !important;
+  }
+
+  .house-archive-picker-overlay {
+    place-items: end stretch !important;
+    padding: 0 !important;
+  }
+
+  .house-archive-picker {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: calc(100dvh - var(--crm-mobile-header-height) - env(safe-area-inset-top)) !important;
+    gap: 14px !important;
+    padding: 18px 16px calc(var(--crm-mobile-nav-height) + env(safe-area-inset-bottom) + 18px) !important;
+    border-right: 0 !important;
+    border-bottom: 0 !important;
+    border-left: 0 !important;
+    border-radius: 24px 24px 0 0 !important;
+  }
+
+  .house-archive-picker-list {
+    padding-bottom: 2px !important;
+  }
+
+  .house-archive-worker-button {
+    min-height: 76px !important;
+  }
+
   .crm-readable-redesign details > summary {
     min-height: 44px;
   }

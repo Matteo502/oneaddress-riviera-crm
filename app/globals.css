@@ -7326,7 +7326,7 @@ iframe.vendor-invoice-preview-frame {
 
 .house-filter-row {
   display: grid !important;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   gap: 12px !important;
   margin-top: 16px !important;
 }
@@ -7345,6 +7345,218 @@ iframe.vendor-invoice-preview-frame {
   min-height: 42px !important;
   padding: 10px 12px !important;
   font-size: 0.86rem !important;
+}
+
+.house-worker-filter {
+  display: grid !important;
+  min-width: 0 !important;
+  grid-column: 1 / -1 !important;
+  gap: 7px !important;
+}
+
+.house-worker-filter-label {
+  color: var(--ink) !important;
+  font-size: 0.86rem !important;
+  font-weight: 700 !important;
+}
+
+.house-worker-filter-controls {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.house-worker-filter-scroll {
+  display: flex !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+  gap: 8px !important;
+  padding: 2px 2px 5px !important;
+  overflow-x: auto !important;
+  overscroll-behavior-inline: contain !important;
+  scrollbar-width: thin !important;
+}
+
+.house-worker-filter-button,
+.crm-readable-redesign .house-archive-trigger {
+  display: inline-flex !important;
+  min-height: 44px !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 10px 16px !important;
+  border: 1px solid rgba(0, 29, 48, 0.16) !important;
+  border-radius: 999px !important;
+  color: var(--ink) !important;
+  background: rgba(255, 255, 255, 0.62) !important;
+  font: inherit !important;
+  font-size: 0.84rem !important;
+  font-weight: 750 !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+}
+
+.house-worker-filter-button:hover,
+.house-worker-filter-button:focus-visible {
+  border-color: rgba(194, 154, 84, 0.72) !important;
+  background: #fffaf1 !important;
+}
+
+.house-worker-filter-button.active {
+  border-color: #001d30 !important;
+  color: #fffaf2 !important;
+  background: #001d30 !important;
+  box-shadow: 0 6px 16px rgba(0, 29, 48, 0.16) !important;
+}
+
+.crm-readable-redesign .house-archive-trigger {
+  border-color: rgba(194, 154, 84, 0.55) !important;
+  color: #6c4f1d !important;
+  background: rgba(255, 250, 241, 0.94) !important;
+}
+
+.crm-readable-redesign .house-archive-trigger:disabled {
+  cursor: default !important;
+  opacity: 0.55 !important;
+}
+
+.house-archived-filter-banner {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  padding: 14px 16px !important;
+  border: 1px solid rgba(194, 154, 84, 0.38) !important;
+  border-radius: 18px !important;
+  background: rgba(255, 250, 241, 0.88) !important;
+  box-shadow: 0 8px 24px rgba(0, 29, 48, 0.07) !important;
+}
+
+.house-archived-filter-banner > div:first-child {
+  display: grid !important;
+  min-width: 0 !important;
+  gap: 4px !important;
+}
+
+.house-archived-filter-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+}
+
+.house-archived-filter-banner small {
+  color: rgba(0, 29, 48, 0.66) !important;
+  line-height: 1.35 !important;
+}
+
+.house-archived-filter-actions {
+  display: flex !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.house-archived-filter-actions button {
+  min-height: 44px !important;
+  white-space: nowrap !important;
+}
+
+.house-archive-picker-overlay {
+  position: fixed !important;
+  z-index: 1000 !important;
+  inset: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 24px !important;
+  background: rgba(0, 20, 53, 0.46) !important;
+  backdrop-filter: blur(5px) !important;
+}
+
+.house-archive-picker {
+  display: grid !important;
+  width: min(560px, 100%) !important;
+  max-height: min(720px, calc(100dvh - 48px)) !important;
+  gap: 16px !important;
+  padding: 22px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(208, 174, 118, 0.42) !important;
+  border-radius: 24px !important;
+  background: #fffaf1 !important;
+  box-shadow: 0 28px 80px rgba(0, 20, 53, 0.28) !important;
+}
+
+.house-archive-picker-heading {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+}
+
+.house-archive-picker-heading h3,
+.house-archive-picker-heading p {
+  margin: 0 !important;
+}
+
+.house-archive-picker-close {
+  width: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  font-size: 1.45rem !important;
+  line-height: 1 !important;
+}
+
+.house-archive-search {
+  display: grid !important;
+  gap: 7px !important;
+  font-weight: 700 !important;
+}
+
+.house-archive-search input {
+  min-height: 48px !important;
+  padding: 11px 13px !important;
+  font-size: 1rem !important;
+}
+
+.house-archive-picker-list {
+  display: grid !important;
+  gap: 10px !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+}
+
+.house-archive-worker-button {
+  display: grid !important;
+  width: 100% !important;
+  min-height: 72px !important;
+  gap: 5px !important;
+  padding: 14px !important;
+  border: 1px solid rgba(0, 29, 48, 0.12) !important;
+  border-radius: 16px !important;
+  color: var(--ink) !important;
+  background: rgba(255, 255, 255, 0.66) !important;
+  text-align: left !important;
+  cursor: pointer !important;
+}
+
+.house-archive-worker-button:hover,
+.house-archive-worker-button:focus-visible {
+  border-color: rgba(194, 154, 84, 0.75) !important;
+  background: #fff !important;
+}
+
+.house-archive-worker-name {
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+}
+
+.house-archive-worker-button small {
+  color: rgba(0, 29, 48, 0.62) !important;
+  line-height: 1.35 !important;
 }
 
 .house-tabs {
@@ -7485,6 +7697,16 @@ iframe.vendor-invoice-preview-frame {
   .house-worker-actions {
     width: 100% !important;
     justify-content: flex-start !important;
+  }
+
+  .house-archived-filter-banner {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+
+  .house-archived-filter-actions {
+    width: 100% !important;
+    flex-wrap: wrap !important;
   }
 }
 

@@ -369,6 +369,11 @@ const currency = new Intl.NumberFormat("fr-FR", {
   currency: "EUR",
   maximumFractionDigits: 0
 });
+const houseCurrency = new Intl.NumberFormat("fr-FR", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 2
+});
 
 
 function normalizeVendorInvoice(value: unknown): VendorInvoice | null {
@@ -544,13 +549,17 @@ function getMonthFromDate(value?: string) {
 }
 
 function formatHours(value: number) {
-  return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(value)} h`;
+  const totalMinutes = Math.max(Math.round(Number(value || 0) * 60), 0);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  return minutes === 0 ? `${hours} h` : `${hours} h ${String(minutes).padStart(2, "0")}`;
 }
 
 
 function formatHouseBalanceLabel(balance: number) {
-  if (balance > 0) return `${currency.format(balance)} à payer`;
-  if (balance < 0) return `${currency.format(Math.abs(balance))} d’avance`;
+  if (balance > 0) return `${houseCurrency.format(balance)} à payer`;
+  if (balance < 0) return `${houseCurrency.format(Math.abs(balance))} d’avance`;
   return "À jour";
 }
 
@@ -3392,6 +3401,8 @@ function HouseTrackingView({
   const [showAllPaymentsHistory, setShowAllPaymentsHistory] = useState(false);
   const [uploadingWorkerDocument, setUploadingWorkerDocument] = useState(false);
   const [houseSection, setHouseSection] = useState<"today" | "hours" | "payments" | "settings">("today");
+  const [showArchivedWorkerPicker, setShowArchivedWorkerPicker] = useState(false);
+  const [archivedWorkerSearch, setArchivedWorkerSearch] = useState("");
 
   useEffect(() => {
     if (activeWorkers.some((worker) => worker.id === hourDraft.workerId)) return;
@@ -3403,6 +3414,36 @@ function HouseTrackingView({
       hourlyRate: firstActiveWorker?.hourlyRate ? String(firstActiveWorker.hourlyRate) : ""
     }));
   }, [activeWorkers, hourDraft.workerId]);
+
+  useEffect(() => {
+    if (workerFilter === "Tous") return;
+
+    const selectedFilterWorker = workers.find((worker) => worker.id === workerFilter);
+
+    if (!selectedFilterWorker || (houseSection === "today" && !isHouseTrackingWorkerActive(selectedFilterWorker))) {
+      setWorkerFilter("Tous");
+    }
+  }, [houseSection, workerFilter, workers]);
+
+  useEffect(() => {
+    if (!showArchivedWorkerPicker) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowArchivedWorkerPicker(false);
+        setArchivedWorkerSearch("");
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [showArchivedWorkerPicker]);
 
   function normalizeHouseDateValue(value: string) {
     if (!value) return "";
@@ -3518,6 +3559,16 @@ function HouseTrackingView({
     return matchesDate && matchesHouse && matchesWorker;
   });
 
+  const selectedArchivedWorker = archivedWorkers.find((worker) => worker.id === workerFilter);
+  const selectedArchivedWorkerHistory = selectedArchivedWorker
+    ? getHouseTrackingWorkerHistorySummary(selectedArchivedWorker.id, timeEntries, payments)
+    : null;
+  const normalizedArchivedWorkerSearch = normalizeContactSearchValue(archivedWorkerSearch);
+  const visibleArchivedWorkers = archivedWorkers.filter((worker) => (
+    !normalizedArchivedWorkerSearch
+    || normalizeContactSearchValue(`${worker.contactName} ${worker.role}`).includes(normalizedArchivedWorkerSearch)
+  ));
+
   function getAutoAllocatedPaidForSelectedEntries(targetEntries: typeof filteredEntries) {
     const selectedIds = new Set(targetEntries.map((entry) => entry.id));
     const selectedWorkerIds = Array.from(new Set(targetEntries.map((entry) => entry.workerId)));
@@ -3601,6 +3652,26 @@ function HouseTrackingView({
   function isArchivedWorker(workerId: string) {
     const worker = workers.find((item) => item.id === workerId);
     return Boolean(worker && !isHouseTrackingWorkerActive(worker));
+  }
+
+  function closeArchivedWorkerPicker() {
+    setShowArchivedWorkerPicker(false);
+    setArchivedWorkerSearch("");
+  }
+
+  function selectArchivedWorker(workerId: string) {
+    setWorkerFilter(workerId);
+    setShowAllHoursHistory(false);
+    setShowAllPaymentsHistory(false);
+    closeArchivedWorkerPicker();
+  }
+
+  function changeHouseSection(section: "today" | "hours" | "payments" | "settings") {
+    if (section === "today" && isArchivedWorker(workerFilter)) {
+      setWorkerFilter("Tous");
+    }
+
+    setHouseSection(section);
   }
 
   function submitHouse(event: React.FormEvent<HTMLFormElement>) {
@@ -3869,25 +3940,73 @@ function HouseTrackingView({
             </select>
           </label>
 
-          <label>Intervenant
-            <select value={workerFilter} onChange={(event) => setWorkerFilter(event.target.value)}>
-              <option value="Tous">Tous les intervenants</option>
-              {workers.map((worker) => (
-                <option key={worker.id} value={worker.id}>
-                  {worker.contactName}{isHouseTrackingWorkerActive(worker) ? "" : " · Archivé"}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="house-worker-filter">
+            <span className="house-worker-filter-label">Intervenant</span>
+            <div className="house-worker-filter-controls">
+              <div className="house-worker-filter-scroll" role="group" aria-label="Filtrer par intervenant">
+                <button
+                  className={workerFilter === "Tous" ? "house-worker-filter-button active" : "house-worker-filter-button"}
+                  type="button"
+                  aria-pressed={workerFilter === "Tous"}
+                  onClick={() => setWorkerFilter("Tous")}
+                >
+                  Tous
+                </button>
+                {activeWorkers.map((worker) => (
+                  <button
+                    className={workerFilter === worker.id ? "house-worker-filter-button active" : "house-worker-filter-button"}
+                    key={worker.id}
+                    type="button"
+                    aria-pressed={workerFilter === worker.id}
+                    onClick={() => setWorkerFilter(worker.id)}
+                  >
+                    {worker.contactName}
+                  </button>
+                ))}
+              </div>
+              {houseSection !== "today" && (
+                <button
+                  className="secondary-button house-archive-trigger"
+                  type="button"
+                  disabled={archivedWorkers.length === 0}
+                  aria-haspopup="dialog"
+                  onClick={() => setShowArchivedWorkerPicker(true)}
+                >
+                  Archives ({archivedWorkers.length})
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </section>
 
       <nav className="house-tabs" aria-label="Navigation suivi maison">
-        <button className={houseSection === "today" ? "primary-button house-tab active" : "secondary-button house-tab"} type="button" onClick={() => setHouseSection("today")}>Aujourd’hui</button>
-        <button className={houseSection === "hours" ? "primary-button house-tab active" : "secondary-button house-tab"} type="button" onClick={() => setHouseSection("hours")}>Heures</button>
-        <button className={houseSection === "payments" ? "primary-button house-tab active" : "secondary-button house-tab"} type="button" onClick={() => setHouseSection("payments")}>Paiements</button>
-        <button className={houseSection === "settings" ? "primary-button house-tab active" : "secondary-button house-tab"} type="button" onClick={() => setHouseSection("settings")}>Réglages</button>
+        <button className={houseSection === "today" ? "primary-button house-tab active" : "secondary-button house-tab"} type="button" onClick={() => changeHouseSection("today")}>Aujourd’hui</button>
+        <button className={houseSection === "hours" ? "primary-button house-tab active" : "secondary-button house-tab"} type="button" onClick={() => changeHouseSection("hours")}>Heures</button>
+        <button className={houseSection === "payments" ? "primary-button house-tab active" : "secondary-button house-tab"} type="button" onClick={() => changeHouseSection("payments")}>Paiements</button>
+        <button className={houseSection === "settings" ? "primary-button house-tab active" : "secondary-button house-tab"} type="button" onClick={() => changeHouseSection("settings")}>Réglages</button>
       </nav>
+
+      {selectedArchivedWorker && selectedArchivedWorkerHistory && houseSection !== "today" && (
+        <section className="house-archived-filter-banner" aria-label={`Historique de ${selectedArchivedWorker.contactName}`}>
+          <div>
+            <div className="house-archived-filter-title">
+              <strong>Historique de {selectedArchivedWorker.contactName}</strong>
+              <span className="status-pill house-archived-badge">Archivé</span>
+            </div>
+            <span>Intervenant archivé · {selectedArchivedWorker.role}</span>
+            <small>
+              {selectedArchivedWorkerHistory.timeEntries} ligne(s) · {formatHours(selectedArchivedWorkerHistory.hours)} · {selectedArchivedWorkerHistory.payments} paiement(s) · {currency.format(selectedArchivedWorkerHistory.paid)} payé · Delta {formatHouseBalanceLabel(selectedArchivedWorkerHistory.balance)}
+            </small>
+          </div>
+          <div className="house-archived-filter-actions">
+            {houseSection !== "settings" && (
+              <button className="secondary-button" type="button" onClick={() => changeHouseSection("settings")}>Voir dans Réglages</button>
+            )}
+            <button className="secondary-button" type="button" onClick={() => setWorkerFilter("Tous")}>Effacer le filtre</button>
+          </div>
+        </section>
+      )}
 
       {houseSection === "today" && (
         <section className="card house-tab-panel">
@@ -3897,9 +4016,9 @@ function HouseTrackingView({
               <h3>Aujourd’hui</h3>
             </div>
             <div className="house-quick-actions">
-              <button className="primary-button" type="button" onClick={() => setHouseSection("hours")}>Ajouter heures</button>
-              <button className="secondary-button" type="button" onClick={() => setHouseSection("payments")}>Ajouter paiement</button>
-              <button className="secondary-button" type="button" onClick={() => setHouseSection("settings")}>Réglages</button>
+              <button className="primary-button" type="button" onClick={() => changeHouseSection("hours")}>Ajouter heures</button>
+              <button className="secondary-button" type="button" onClick={() => changeHouseSection("payments")}>Ajouter paiement</button>
+              <button className="secondary-button" type="button" onClick={() => changeHouseSection("settings")}>Réglages</button>
             </div>
           </div>
 
@@ -4234,6 +4353,57 @@ function HouseTrackingView({
                 </table>
               </div>
             )}
+          </section>
+        </div>
+      )}
+
+      {showArchivedWorkerPicker && (
+        <div className="house-archive-picker-overlay" role="presentation" onClick={closeArchivedWorkerPicker}>
+          <section
+            className="house-archive-picker"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="house-archive-picker-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="house-archive-picker-heading">
+              <div>
+                <p className="eyebrow">Archives</p>
+                <h3 id="house-archive-picker-title">Intervenants archivés</h3>
+              </div>
+              <button className="secondary-button house-archive-picker-close" type="button" aria-label="Fermer" onClick={closeArchivedWorkerPicker}>×</button>
+            </div>
+
+            {archivedWorkers.length > 1 && (
+              <label className="house-archive-search">Rechercher
+                <input
+                  autoFocus
+                  type="search"
+                  value={archivedWorkerSearch}
+                  placeholder="Nom ou rôle"
+                  onChange={(event) => setArchivedWorkerSearch(event.target.value)}
+                />
+              </label>
+            )}
+
+            <div className="house-archive-picker-list">
+              {visibleArchivedWorkers.length === 0 ? (
+                <p className="muted-line">Aucun intervenant archivé ne correspond à cette recherche.</p>
+              ) : visibleArchivedWorkers.map((worker) => {
+                const history = getHouseTrackingWorkerHistorySummary(worker.id, timeEntries, payments);
+
+                return (
+                  <button className="house-archive-worker-button" key={worker.id} type="button" onClick={() => selectArchivedWorker(worker.id)}>
+                    <span className="house-archive-worker-name">
+                      <strong>{worker.contactName}</strong>
+                      <span className="status-pill house-archived-badge">Archivé</span>
+                    </span>
+                    <span>{worker.role} · {formatHours(history.hours)} · {currency.format(history.paid)} payé</span>
+                    <small>{history.timeEntries} ligne(s) d’heures · {history.payments} paiement(s) · Delta {formatHouseBalanceLabel(history.balance)}</small>
+                  </button>
+                );
+              })}
+            </div>
           </section>
         </div>
       )}
