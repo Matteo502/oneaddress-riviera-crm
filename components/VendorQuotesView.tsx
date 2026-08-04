@@ -15,15 +15,15 @@ import {
   getVendorContactProfession,
   isEligibleVendorContact
 } from "@/lib/vendorContacts";
+import {
+  formatEuroAmount,
+  formatEuroInput,
+  parseEuroAmount,
+  sumEuroAmounts
+} from "@/lib/currency";
 
 const SHARED_WORKSPACE_ID = "oneaddress-riviera";
 const CRM_DOCUMENTS_BUCKET = "crm-documents";
-
-const currency = new Intl.NumberFormat("fr-FR", {
-  style: "currency",
-  currency: "EUR",
-  maximumFractionDigits: 2
-});
 
 function makeId(prefix: string) {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -31,11 +31,6 @@ function makeId(prefix: string) {
   }
 
   return `${prefix}-${Date.now()}`;
-}
-
-function parseAmount(value: FormDataEntryValue | null) {
-  const parsed = Number(String(value || "").trim().replace(/\s/g, "").replace(",", "."));
-  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function formatDate(value?: string) {
@@ -114,9 +109,11 @@ export default function VendorQuotesView({
     [quotes, statusFilter]
   );
 
-  const pendingAmount = quotes
-    .filter((quote) => quote.status === "À valider")
-    .reduce((sum, quote) => sum + Number(quote.amount || 0), 0);
+  const pendingAmount = sumEuroAmounts(
+    quotes
+      .filter((quote) => quote.status === "À valider")
+      .map((quote) => quote.amount)
+  );
 
   useEffect(() => {
     if (!editingQuote) return;
@@ -212,7 +209,7 @@ export default function VendorQuotesView({
     const contactId = String(form.get("contactId") || "");
     const contact = contacts.find((item) => item.id === contactId);
     const preserveLegacyContact = form.get("preserveLegacyContact") === "true";
-    const amount = parseAmount(form.get("amount"));
+    const amount = parseEuroAmount(form.get("amount"));
     const quoteId = editingQuote?.id || makeId("vendor-quote");
     const quoteFile = form.get("quoteFile");
 
@@ -296,7 +293,7 @@ export default function VendorQuotesView({
 
     if (
       window.confirm(
-        `Valider le devis ${quote.quoteReference || quote.title} pour ${currency.format(quote.amount)} ?\n\nUne facture en attente sera créée automatiquement.`
+        `Valider le devis ${quote.quoteReference || quote.title} pour ${formatEuroAmount(quote.amount)} ?\n\nUne facture en attente sera créée automatiquement.`
       )
     ) {
       onValidate(quote.id);
@@ -323,7 +320,7 @@ export default function VendorQuotesView({
           </div>
           <div>
             <p className="eyebrow">À valider</p>
-            <h3>{currency.format(pendingAmount)}</h3>
+            <h3>{formatEuroAmount(pendingAmount)}</h3>
           </div>
         </div>
 
@@ -382,7 +379,7 @@ export default function VendorQuotesView({
                     <div className="stats-grid vendor-invoice-stats" style={{ marginTop: 16 }}>
                       <div className="mini-stat">
                         <span>Montant</span>
-                        <strong>{currency.format(quote.amount)}</strong>
+                        <strong>{formatEuroAmount(quote.amount)}</strong>
                       </div>
                       <div className="mini-stat">
                         <span>Décision</span>
@@ -487,7 +484,14 @@ export default function VendorQuotesView({
           </label>
 
           <label>Montant du devis
-            <input name="amount" type="text" inputMode="decimal" defaultValue={editingQuote?.amount || ""} placeholder="Ex : 1 250" required />
+            <input
+              name="amount"
+              type="text"
+              inputMode="decimal"
+              defaultValue={editingQuote ? formatEuroInput(editingQuote.amount) : ""}
+              placeholder="Ex : 1 023,70"
+              required
+            />
           </label>
 
           <label className="vendor-invoice-file-field">Importer le devis

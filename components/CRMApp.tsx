@@ -60,6 +60,21 @@ import {
   permanentlyDeleteHouseTrackingWorker,
   setHouseTrackingWorkerStatus
 } from "@/lib/houseTracking";
+import {
+  formatEuroAmount,
+  formatEuroInput,
+  normalizeEuroAmount,
+  parseEuroAmount,
+  sumEuroAmounts
+} from "@/lib/currency";
+import {
+  createPendingVendorInvoiceFromQuote,
+  getVendorInvoiceRemaining,
+  getVendorInvoiceStatus,
+  getVendorInvoiceTotalRemaining,
+  normalizeVendorInvoiceFinancials,
+  normalizeVendorQuoteFinancials
+} from "@/lib/vendorFinance";
 
 const STORAGE_KEY = "oneaddress-riviera-crm-v1";
 const QUOTES_STORAGE_KEY = "oneaddress-riviera-crm-quotes-v1";
@@ -298,7 +313,9 @@ function normalizeSharedCRMData(payload: any): CRMData {
     documents: Array.isArray(payload?.documents)
       ? payload.documents.map(normalizeCRMDocument).filter((document: CRMDocument | null): document is CRMDocument => Boolean(document))
       : [],
-    vendorQuotes: Array.isArray(payload?.vendorQuotes) ? payload.vendorQuotes as VendorQuote[] : [],
+    vendorQuotes: Array.isArray(payload?.vendorQuotes)
+      ? payload.vendorQuotes.map((quote: VendorQuote) => normalizeVendorQuoteFinancials(quote))
+      : [],
     vendorInvoices: Array.isArray(payload?.vendorInvoices)
       ? payload.vendorInvoices.map(normalizeVendorInvoice).filter((invoice: VendorInvoice | null): invoice is VendorInvoice => Boolean(invoice))
       : [],
@@ -422,29 +439,6 @@ function getVendorInvoiceStatusFromValue(value: unknown): VendorInvoice["status"
   }
 
   return "À payer";
-}
-
-function getVendorInvoiceStatus(amount: number, paidAmount: number, dueDate?: string): VendorInvoice["status"] {
-  if (amount > 0 && paidAmount >= amount) return "Payé";
-  if (paidAmount > 0 && paidAmount < amount) return "Partiellement payé";
-
-  if (dueDate) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const due = new Date(`${dueDate}T00:00:00`);
-    due.setHours(0, 0, 0, 0);
-
-    if (!Number.isNaN(due.getTime()) && due.getTime() < today.getTime()) {
-      return "En retard";
-    }
-  }
-
-  return "À payer";
-}
-
-function getVendorInvoiceRemaining(invoice: VendorInvoice) {
-  return Math.max(Number(invoice.amount || 0) - Number(invoice.paidAmount || 0), 0);
 }
 
 function normalizeHouseTrackingHouse(value: unknown): HouseTrackingHouse | null {
@@ -1158,19 +1152,6 @@ function formatQuoteLongDate(value: string) {
     month: "long",
     year: "numeric"
   }).format(parsedDate);
-}
-
-function parseEuroAmount(value: unknown) {
-  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
-
-  const cleaned = String(value || "")
-    .trim()
-    .replace(/\s/g, "")
-    .replace(",", ".");
-
-  const parsed = Number(cleaned);
-
-  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function formatQuotePrice(value: number) {
@@ -4697,9 +4678,13 @@ function VendorInvoicesView({
     ? invoices
     : invoices.filter((invoice) => invoice.status === statusFilter);
 
-  const totalToPay = invoices
-    .filter((invoice) => invoice.status !== "En attente de facture" && invoice.status !== "Payé" && invoice.status !== "Annulé")
-    .reduce((sum, invoice) => sum + getVendorInvoiceRemaining(invoice), 0);
+  const totalToPay = getVendorInvoiceTotalRemaining(
+    invoices.filter((invoice) =>
+      invoice.status !== "En attente de facture" &&
+      invoice.status !== "Payé" &&
+      invoice.status !== "Annulé"
+    )
+  );
 
   async function submitInvoice(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -4709,8 +4694,8 @@ function VendorInvoicesView({
     const contactId = String(form.get("contactId") ?? "");
     const contact = contacts.find((item) => item.id === contactId);
     const preserveLegacyContact = form.get("preserveLegacyContact") === "true";
-    const amount = safeNumber(form.get("amount"));
-    const paidAmount = safeNumber(form.get("paidAmount"));
+    const amount = parseEuroAmount(form.get("amount"));
+    const paidAmount = parseEuroAmount(form.get("paidAmount"));
     const dueDate = String(form.get("dueDate") ?? "");
     const automaticCategory = getContactProfessionForInvoice(contactId) || editingInvoice?.category || "Prestataire";
     const invoiceId = editingInvoice?.id || makeId("invoice");
@@ -4806,7 +4791,7 @@ function VendorInvoicesView({
           </div>
           <div>
             <p className="eyebrow">Reste à payer</p>
-            <h3>{currency.format(totalToPay)}</h3>
+            <h3>{formatEuroAmount(totalToPay)}</h3>
           </div>
         </div>
 
@@ -4860,15 +4845,15 @@ function VendorInvoicesView({
                   <div className="stats-grid vendor-invoice-stats">
                     <div className="mini-stat">
                       <span>Montant</span>
-                      <strong>{currency.format(invoice.amount)}</strong>
+                      <strong>{formatEuroAmount(invoice.amount)}</strong>
                     </div>
                     <div className="mini-stat">
                       <span>Payé</span>
-                      <strong>{currency.format(invoice.paidAmount)}</strong>
+                      <strong>{formatEuroAmount(invoice.paidAmount)}</strong>
                     </div>
                     <div className="mini-stat">
                       <span>Reste</span>
-                      <strong>{currency.format(getVendorInvoiceRemaining(invoice))}</strong>
+                      <strong>{formatEuroAmount(getVendorInvoiceRemaining(invoice))}</strong>
                     </div>
                   </div>
                 </div>
@@ -4955,11 +4940,24 @@ function VendorInvoicesView({
           </label>
 
           <label>Montant facture
-            <input name="amount" type="text" inputMode="decimal" min="0" step="1" defaultValue={editingInvoice?.amount || ""} placeholder="Ex : 450" required />
+            <input
+              name="amount"
+              type="text"
+              inputMode="decimal"
+              defaultValue={editingInvoice ? formatEuroInput(editingInvoice.amount) : ""}
+              placeholder="Ex : 1 023,70"
+              required
+            />
           </label>
 
           <label>Montant payé
-            <input name="paidAmount" type="text" inputMode="decimal" min="0" step="1" defaultValue={editingInvoice?.paidAmount ?? ""} placeholder="Ex : 0" />
+            <input
+              name="paidAmount"
+              type="text"
+              inputMode="decimal"
+              defaultValue={editingInvoice ? formatEuroInput(editingInvoice.paidAmount) : ""}
+              placeholder="Ex : 0,00"
+            />
             <span className="field-help">Paiement impossible sans facture réelle importée.</span>
           </label>
 
@@ -5878,7 +5876,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
         items.push({
           id: `vendor-quote-validation-${quote.id}`,
           title: "Devis prestataire à valider",
-          detail: `${quote.contactName} · ${formatQuotePrice(Number(quote.amount || 0))}`,
+          detail: `${quote.contactName} · ${formatEuroAmount(quote.amount)}`,
           tab: "vendorQuotes" as Tab,
           tone: "warning",
           targetId: `vendor-quote-${quote.id}`
@@ -5912,7 +5910,7 @@ function CRMAppContent({ sessionEmail, onLogout }: { sessionEmail: string; onLog
       items.push({
         id: `vendor-invoice-payment-${invoice.id}`,
         title: days !== null && days < 0 ? "Facture prestataire en retard" : "Facture prestataire à payer",
-        detail: `${invoice.contactName} · ${formatQuotePrice(remaining)} restant`,
+        detail: `${invoice.contactName} · ${formatEuroAmount(remaining)} restant`,
         tab: "vendorInvoices" as Tab,
         tone: days !== null && days < 0 ? "danger" : "warning",
         targetId: `vendor-invoice-${invoice.id}`
@@ -7539,7 +7537,9 @@ const toneRank: Record<ActionNotification["tone"], number> = {
 
 
   function addVendorQuote(quote: VendorQuote) {
-    const createdQuote = stampCreated(quote, activeActor) as VendorQuote;
+    const createdQuote = normalizeVendorQuoteFinancials(
+      stampCreated(quote, activeActor) as VendorQuote
+    );
 
     setData((current) => ({
       ...current,
@@ -7553,7 +7553,9 @@ const toneRank: Record<ActionNotification["tone"], number> = {
     setData((current) => {
       const quotes = (((current as any).vendorQuotes ?? []) as VendorQuote[]);
       const invoices = (((current as any).vendorInvoices ?? []) as VendorInvoice[]);
-      const savedQuote = stampUpdated(updatedQuote, activeActor) as VendorQuote;
+      const savedQuote = normalizeVendorQuoteFinancials(
+        stampUpdated(updatedQuote, activeActor) as VendorQuote
+      );
 
       const nextInvoices = invoices.map((invoice) => {
         const isLinked = invoice.id === savedQuote.linkedInvoiceId || invoice.sourceQuoteId === savedQuote.id;
@@ -7572,7 +7574,7 @@ const toneRank: Record<ActionNotification["tone"], number> = {
           contactPersonName: savedQuote.contactPersonName,
           category: savedQuote.category,
           title: `Facture attendue · ${savedQuote.title}`,
-          amount: savedQuote.amount,
+          amount: normalizeEuroAmount(savedQuote.amount),
           sourceQuoteReference: savedQuote.quoteReference,
           notes: `Créée automatiquement depuis le devis ${savedQuote.quoteReference}.${savedQuote.notes ? `\n\n${savedQuote.notes}` : ""}`
         };
@@ -7608,48 +7610,11 @@ const toneRank: Record<ActionNotification["tone"], number> = {
         linkedInvoiceId: invoiceId
       }, activeActor) as VendorQuote;
 
-      const pendingInvoice: VendorInvoice = existingInvoice
-        ? {
-            ...existingInvoice,
-            contactId: quote.contactId,
-            contactName: quote.contactName,
-            contactPersonName: quote.contactPersonName,
-            category: quote.category,
-            title: existingInvoice.invoiceDocumentStoragePath || existingInvoice.invoiceDocumentUrl
-              ? existingInvoice.title
-              : `Facture attendue · ${quote.title}`,
-            amount: existingInvoice.invoiceDocumentStoragePath || existingInvoice.invoiceDocumentUrl
-              ? existingInvoice.amount
-              : quote.amount,
-            sourceQuoteId: quote.id,
-            sourceQuoteReference: quote.quoteReference,
-            status: existingInvoice.invoiceDocumentStoragePath || existingInvoice.invoiceDocumentUrl
-              ? getVendorInvoiceStatus(existingInvoice.amount, existingInvoice.paidAmount, existingInvoice.dueDate)
-              : "En attente de facture"
-          }
-        : {
-            id: invoiceId,
-            contactId: quote.contactId,
-            contactName: quote.contactName,
-            contactPersonName: quote.contactPersonName,
-            category: quote.category,
-            title: `Facture attendue · ${quote.title}`,
-            invoiceDate: "",
-            dueDate: "",
-            amount: quote.amount,
-            paidAmount: 0,
-            status: "En attente de facture",
-            sourceQuoteId: quote.id,
-            sourceQuoteReference: quote.quoteReference,
-            invoiceReceivedAt: "",
-            linkedDocumentId: "",
-            invoiceDocumentUrl: "",
-            invoiceDocumentStoragePath: "",
-            invoiceDocumentName: "",
-            paymentMethod: "",
-            notes: `Créée automatiquement depuis le devis ${quote.quoteReference}.${quote.notes ? `\n\n${quote.notes}` : ""}`,
-            createdAt: new Date().toISOString()
-          };
+      const pendingInvoice = createPendingVendorInvoiceFromQuote(
+        normalizeVendorQuoteFinancials(quote),
+        invoiceId,
+        existingInvoice
+      );
 
       return {
         ...current,
@@ -7723,19 +7688,23 @@ const toneRank: Record<ActionNotification["tone"], number> = {
   }
 
   function addVendorInvoice(invoice: VendorInvoice) {
+    const normalizedInvoice = normalizeVendorInvoiceFinancials(invoice);
+
     setData((current) => ({
       ...current,
-      vendorInvoices: [invoice, ...(((current as any).vendorInvoices ?? []) as VendorInvoice[])]
+      vendorInvoices: [normalizedInvoice, ...(((current as any).vendorInvoices ?? []) as VendorInvoice[])]
     }));
 
     notify("Facture prestataire ajoutée.");
   }
 
   function updateVendorInvoice(updatedInvoice: VendorInvoice) {
+    const normalizedInvoice = normalizeVendorInvoiceFinancials(updatedInvoice);
+
     setData((current) => ({
       ...current,
       vendorInvoices: (((current as any).vendorInvoices ?? []) as VendorInvoice[]).map((invoice) =>
-        invoice.id === updatedInvoice.id ? updatedInvoice : invoice
+        invoice.id === normalizedInvoice.id ? normalizedInvoice : invoice
       )
     }));
 
@@ -11252,7 +11221,7 @@ function Dashboard({
   const overdueVendorInvoices = unpaidVendorInvoices.filter((invoice) =>
     invoice.status === "En retard" || ((daysFromToday(invoice.dueDate) ?? 0) < 0)
   );
-  const vendorAmountToPay = unpaidVendorInvoices.reduce((sum, invoice) => sum + getVendorInvoiceRemaining(invoice), 0);
+  const vendorAmountToPay = getVendorInvoiceTotalRemaining(unpaidVendorInvoices);
 
   const houseDueByWorker = new Map<string, { workerName: string; due: number }>();
   houseTimeEntries.filter((entry) => activeHouseWorkerIds.has(entry.workerId)).forEach((entry) => {
@@ -11281,6 +11250,12 @@ function Dashboard({
     return diff !== null && diff < 0;
   });
   const clientAmountToReceive = clientPaymentsToFollow.reduce((sum, quote) => sum + paymentRemaining(quote), 0);
+  const supplierAmountToPay = sumEuroAmounts([vendorAmountToPay, houseAmountToPay]);
+  const paymentsBalance = sumEuroAmounts([
+    clientAmountToReceive,
+    -vendorAmountToPay,
+    -houseAmountToPay
+  ]);
 
   const confirmedRevenue = confirmedBookings.reduce((sum, quote) => sum + getQuoteTotal(quote), 0);
   const estimatedMargin = confirmedBookings.reduce((sum, quote) => sum + quoteMargin(quote), 0);
@@ -11343,7 +11318,7 @@ function Dashboard({
     ...overdueVendorInvoices.slice(0, 3).map((invoice) => ({
       id: `vendor-late-${invoice.id}`,
       title: "Facture prestataire en retard",
-      detail: `${invoice.contactName || invoice.title} · ${currency.format(getVendorInvoiceRemaining(invoice))} restant`,
+      detail: `${invoice.contactName || invoice.title} · ${formatEuroAmount(getVendorInvoiceRemaining(invoice))} restant`,
       badge: "Retard",
       tone: "danger" as const,
       tab: "vendorInvoices" as Tab,
@@ -11392,7 +11367,7 @@ function Dashboard({
       return {
         id: `vendor-alert-${invoice.id}`,
         title: isLate ? "Facture prestataire en retard" : "Facture prestataire à payer",
-        detail: `${invoice.contactName || invoice.title} · ${currency.format(getVendorInvoiceRemaining(invoice))} restant`,
+        detail: `${invoice.contactName || invoice.title} · ${formatEuroAmount(getVendorInvoiceRemaining(invoice))} restant`,
         badge: isLate ? "Retard" : "À payer",
         tone: isLate ? "danger" as const : "warning" as const,
         tab: "vendorInvoices" as Tab,
@@ -11410,12 +11385,12 @@ const todayItems: DashboardItem[] = todayPlanning.map((entry) => ({
   }));
 
   const moneyItems: DashboardItem[] = [
-    vendorAmountToPay + houseAmountToPay > 0 ? {
+    supplierAmountToPay > 0 ? {
       id: "money-supplier-payments",
-      title: `${currency.format(vendorAmountToPay + houseAmountToPay)} à payer`,
+      title: `${formatEuroAmount(supplierAmountToPay)} à payer`,
       detail: `${unpaidVendorInvoices.length} facture(s) prestataire · ${houseDueItems.length} intervenant(s) maison`,
       badge: "Sortie",
-      tone: vendorAmountToPay + houseAmountToPay > 0 ? "warning" as const : "neutral" as const,
+      tone: supplierAmountToPay > 0 ? "warning" as const : "neutral" as const,
       action: () => onDashboardAction(vendorAmountToPay > 0 ? "vendorInvoices" : "houseTracking")
     } : null,
     clientAmountToReceive > 0 ? {
@@ -11579,7 +11554,7 @@ const todayItems: DashboardItem[] = todayPlanning.map((entry) => ({
           {renderDashboardList(todayItems, "Aucune intervention active aujourd’hui.", 6)}
         </DashboardCommandCard>
 
-        <DashboardCommandCard eyebrow="Argent" title="Paiements à suivre" summary={currency.format(clientAmountToReceive - vendorAmountToPay - houseAmountToPay)} tone={clientPaymentsLate.length > 0 || overdueVendorInvoices.length > 0 ? "danger" : "neutral"}>
+        <DashboardCommandCard eyebrow="Argent" title="Paiements à suivre" summary={formatEuroAmount(paymentsBalance)} tone={clientPaymentsLate.length > 0 || overdueVendorInvoices.length > 0 ? "danger" : "neutral"}>
           {renderDashboardList(moneyItems, "Aucun paiement urgent à suivre.", 5)}
         </DashboardCommandCard>
       </div>
