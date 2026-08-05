@@ -1,17 +1,13 @@
-import { getGoogleAccessToken, jsonError } from "../_utils";
+import {
+  assertAllowedDriveResource,
+  createGoogleDriveFetch,
+  driveErrorResponse,
+  jsonError,
+  requireAuthenticatedCRMUser
+} from "../_utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-type DriveFileMetadata = {
-  id?: string;
-  name?: string;
-  mimeType?: string;
-  size?: string;
-  error?: {
-    message?: string;
-  };
-};
 
 function asciiFallbackFileName(value: unknown) {
   const raw = String(value || "document").trim() || "document";
@@ -49,6 +45,9 @@ function contentDispositionHeader(disposition: "inline" | "attachment", fileName
 
 export async function GET(request: Request) {
   try {
+    await requireAuthenticatedCRMUser(request);
+    const fetchDrive = createGoogleDriveFetch();
+
     const url = new URL(request.url);
     const fileId = url.searchParams.get("fileId");
     const download = url.searchParams.get("download") === "1";
@@ -57,26 +56,11 @@ export async function GET(request: Request) {
       return jsonError("fileId manquant.", 400);
     }
 
-    const accessToken = await getGoogleAccessToken();
+    const metadata = await assertAllowedDriveResource(fileId, { fetchDrive });
 
-    const metadataResponse = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?supportsAllDrives=true&fields=id,name,mimeType,size`,
-      {
-        headers: { authorization: `Bearer ${accessToken}` }
-      }
-    );
-
-    const metadata = (await metadataResponse.json().catch(() => ({}))) as DriveFileMetadata;
-
-    if (!metadataResponse.ok) {
-      return jsonError(metadata.error?.message || "Fichier Drive introuvable.", metadataResponse.status);
-    }
-
-    const mediaResponse = await fetch(
+    const mediaResponse = await fetchDrive(
       `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,
-      {
-        headers: { authorization: `Bearer ${accessToken}` }
-      }
+      { method: "GET" }
     );
 
     if (!mediaResponse.ok || !mediaResponse.body) {
@@ -91,6 +75,6 @@ export async function GET(request: Request) {
 
     return new Response(mediaResponse.body, { status: 200, headers });
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : "Erreur serveur Google Drive.");
+    return driveErrorResponse(error, "Erreur serveur Google Drive.");
   }
 }

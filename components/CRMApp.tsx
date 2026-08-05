@@ -17,6 +17,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { fetchDriveAPI } from "@/lib/driveClient";
 import type {
   CRMData,
   Contact,
@@ -2825,6 +2826,8 @@ function DocumentsView({
   const [folderName, setFolderName] = useState("");
   const [editingDocument, setEditingDocument] = useState<CRMDocument | null>(null);
   const [previewDocument, setPreviewDocument] = useState<CRMDocument | null>(null);
+  const [previewDocumentUrl, setPreviewDocumentUrl] = useState("");
+  const [previewingDocument, setPreviewingDocument] = useState(false);
   const [connectedEmail, setConnectedEmail] = useState("");
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [creatingFolder, setCreatingFolder] = useState(false);
@@ -2846,6 +2849,12 @@ function DocumentsView({
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (previewDocumentUrl) URL.revokeObjectURL(previewDocumentUrl);
+    };
+  }, [previewDocumentUrl]);
 
   const canManageDocuments =
     connectedEmail === "matteobuggianipro@gmail.com" ||
@@ -2883,14 +2892,61 @@ function DocumentsView({
     crmDocument.status === "Expiré" || crmDocument.status === "À vérifier"
   );
 
-  function getDrivePreviewUrl(crmDocument: CRMDocument) {
+  function getDriveFileApiUrl(crmDocument: CRMDocument, download = false) {
     if (!crmDocument.driveFileId) return "";
-    return `/api/drive/file?fileId=${encodeURIComponent(crmDocument.driveFileId)}`;
+    const suffix = download ? "&download=1" : "";
+    return `/api/drive/file?fileId=${encodeURIComponent(crmDocument.driveFileId)}${suffix}`;
   }
 
-  function getDriveDownloadUrl(crmDocument: CRMDocument) {
-    if (!crmDocument.driveFileId) return "";
-    return `/api/drive/file?fileId=${encodeURIComponent(crmDocument.driveFileId)}&download=1`;
+  async function openDrivePreview(crmDocument: CRMDocument) {
+    const url = getDriveFileApiUrl(crmDocument);
+    if (!url) return;
+
+    try {
+      setPreviewingDocument(true);
+      const response = await fetchDriveAPI(url);
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || "Aperçu Google Drive impossible.");
+      }
+
+      const blobUrl = URL.createObjectURL(await response.blob());
+      setPreviewDocument(crmDocument);
+      setPreviewDocumentUrl(blobUrl);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Aperçu Google Drive impossible.");
+    } finally {
+      setPreviewingDocument(false);
+    }
+  }
+
+  function closeDrivePreview() {
+    setPreviewDocument(null);
+    setPreviewDocumentUrl("");
+  }
+
+  async function downloadDriveDocument(crmDocument: CRMDocument) {
+    const url = getDriveFileApiUrl(crmDocument, true);
+    if (!url) return;
+
+    try {
+      const response = await fetchDriveAPI(url);
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || "Téléchargement Google Drive impossible.");
+      }
+
+      const blobUrl = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = crmDocument.fileName || crmDocument.title || "document";
+      link.click();
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Téléchargement Google Drive impossible.");
+    }
   }
 
   function formatDocumentSize(size?: number) {
@@ -2916,7 +2972,7 @@ function DocumentsView({
 
     try {
       setCreatingFolder(true);
-      const response = await fetch("/api/drive/folders", {
+      const response = await fetchDriveAPI("/api/drive/folders", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ name, parentDriveFolderId: currentDriveFolderId })
@@ -2989,7 +3045,7 @@ function DocumentsView({
         uploadForm.append("title", file.name);
         uploadForm.append("parentDriveFolderId", targetDriveFolderId);
 
-        const response = await fetch("/api/drive/upload", {
+        const response = await fetchDriveAPI("/api/drive/upload", {
           method: "POST",
           body: uploadForm
         });
@@ -3057,7 +3113,7 @@ function DocumentsView({
 
     if (driveId) {
       try {
-        const response = await fetch("/api/drive/delete", {
+        const response = await fetchDriveAPI("/api/drive/delete", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ fileId: driveId })
@@ -3068,8 +3124,8 @@ function DocumentsView({
           throw new Error(payload.error || "Suppression Drive impossible.");
         }
       } catch (error) {
-        const proceed = window.confirm(`Suppression Google Drive non confirmée : ${error instanceof Error ? error.message : "erreur inconnue"}. Supprimer seulement du CRM ?`);
-        if (!proceed) return;
+        window.alert(error instanceof Error ? error.message : "Suppression Google Drive impossible.");
+        return;
       }
     }
 
@@ -3179,8 +3235,7 @@ function DocumentsView({
 
             {visibleDocuments.map((crmDocument) => {
               const needsCheck = crmDocument.status !== "À jour";
-              const previewUrl = getDrivePreviewUrl(crmDocument);
-              const downloadUrl = getDriveDownloadUrl(crmDocument);
+              const hasDriveFile = Boolean(crmDocument.driveFileId);
 
               return (
                 <article className={`item-card document-card document-file-card ${needsCheck ? "document-card-warning" : ""}`} key={crmDocument.id} id={`document-${crmDocument.id}`}>
@@ -3200,16 +3255,16 @@ function DocumentsView({
                   </div>
 
                   <div className="item-actions contact-row-actions document-file-actions">
-                    {previewUrl && (
-                      <button className="secondary-button compact-button" type="button" onClick={() => setPreviewDocument(crmDocument)}>
-                        Voir
+                    {hasDriveFile && (
+                      <button className="secondary-button compact-button" type="button" disabled={previewingDocument} onClick={() => void openDrivePreview(crmDocument)}>
+                        {previewingDocument ? "Ouverture..." : "Voir"}
                       </button>
                     )}
 
-                    {downloadUrl && (
-                      <a className="secondary-button compact-button" href={downloadUrl}>
+                    {hasDriveFile && (
+                      <button className="secondary-button compact-button" type="button" onClick={() => void downloadDriveDocument(crmDocument)}>
                         Télécharger
-                      </a>
+                      </button>
                     )}
 
                     {crmDocument.driveWebViewLink && (
@@ -3309,16 +3364,16 @@ function DocumentsView({
                 <p className="eyebrow">Aperçu document</p>
                 <h3>{previewDocument.title}</h3>
               </div>
-              <button className="secondary-button" type="button" onClick={() => setPreviewDocument(null)}>Fermer</button>
+              <button className="secondary-button" type="button" onClick={closeDrivePreview}>Fermer</button>
             </div>
-            {previewDocument.driveFileId ? (
-              <iframe title={previewDocument.title} src={getDrivePreviewUrl(previewDocument)} className="document-preview-frame" />
+            {previewDocumentUrl ? (
+              <iframe title={previewDocument.title} src={previewDocumentUrl} className="document-preview-frame" />
             ) : (
               <p className="muted-line">Aucun aperçu disponible.</p>
             )}
             <div className="item-actions">
               {previewDocument.driveWebViewLink && <a className="secondary-button" href={previewDocument.driveWebViewLink} target="_blank" rel="noreferrer">Ouvrir dans Drive</a>}
-              {getDriveDownloadUrl(previewDocument) && <a className="primary-button" href={getDriveDownloadUrl(previewDocument)}>Télécharger</a>}
+              {previewDocument.driveFileId && <button className="primary-button" type="button" onClick={() => void downloadDriveDocument(previewDocument)}>Télécharger</button>}
             </div>
           </div>
         </div>

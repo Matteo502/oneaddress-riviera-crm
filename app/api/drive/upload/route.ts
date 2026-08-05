@@ -1,10 +1,22 @@
-import { getDriveDocumentsRootFolderId, getGoogleAccessToken, jsonError, sanitizeDriveName } from "../_utils";
+import {
+  assertAllowedDriveResource,
+  assertDriveFolder,
+  createGoogleDriveFetch,
+  driveErrorResponse,
+  getDocumentsRootFolderId,
+  jsonError,
+  requireAuthenticatedCRMUser,
+  sanitizeDriveName
+} from "../_utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
+    await requireAuthenticatedCRMUser(request);
+    const fetchDrive = createGoogleDriveFetch();
+
     const form = await request.formData();
     const file = form.get("file");
 
@@ -12,8 +24,10 @@ export async function POST(request: Request) {
       return jsonError("Aucun fichier reçu.", 400);
     }
 
-    const accessToken = await getGoogleAccessToken();
-    const parentDriveFolderId = sanitizeDriveName(form.get("parentDriveFolderId") || getDriveDocumentsRootFolderId(), getDriveDocumentsRootFolderId());
+    const documentsRootFolderId = getDocumentsRootFolderId();
+    const parentDriveFolderId = String(form.get("parentDriveFolderId") || documentsRootFolderId).trim();
+    const parentFolder = await assertAllowedDriveResource(parentDriveFolderId, { fetchDrive });
+    assertDriveFolder(parentFolder);
     const requestedName = sanitizeDriveName(form.get("title") || file.name, file.name || "Document CRM");
 
     const multipart = new FormData();
@@ -23,11 +37,8 @@ export async function POST(request: Request) {
     })], { type: "application/json" }));
     multipart.append("file", file, file.name || requestedName);
 
-    const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,mimeType,size,webViewLink,webContentLink,iconLink,createdTime,modifiedTime", {
+    const response = await fetchDrive("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,mimeType,size,webViewLink,webContentLink,iconLink,createdTime,modifiedTime", {
       method: "POST",
-      headers: {
-        authorization: `Bearer ${accessToken}`
-      },
       body: multipart
     });
 
@@ -39,6 +50,6 @@ export async function POST(request: Request) {
 
     return Response.json({ ok: true, file: payload });
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : "Erreur serveur Google Drive.");
+    return driveErrorResponse(error, "Erreur serveur Google Drive.");
   }
 }
