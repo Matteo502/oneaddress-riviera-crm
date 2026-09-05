@@ -1,5 +1,15 @@
 import type { HousePayment, HouseTimeEntry, HouseTrackingWorker } from "./types";
 
+export const QUARTER_HOUR_TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, index) => {
+  const hours = Math.floor(index / 4).toString().padStart(2, "0");
+  const minutes = ((index % 4) * 15).toString().padStart(2, "0");
+  return `${hours}:${minutes}`;
+});
+
+export function isQuarterHourTime(value: string) {
+  return /^(?:[01]\d|2[0-3]):(?:00|15|30|45)$/.test(value);
+}
+
 export function isHouseTrackingWorkerActive(worker: Pick<HouseTrackingWorker, "status">) {
   return worker.status !== "Inactif";
 }

@@ -57,8 +57,10 @@ import {
   getHouseTimeHours,
   getHouseTrackingWorkerHistorySummary,
   houseTrackingWorkerHasHistory,
+  isQuarterHourTime,
   isHouseTrackingWorkerActive,
   permanentlyDeleteHouseTrackingWorker,
+  QUARTER_HOUR_TIME_OPTIONS,
   setHouseTrackingWorkerStatus
 } from "@/lib/houseTracking";
 import {
@@ -3829,6 +3831,10 @@ function HouseTrackingView({
   function submitTimeEntry(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (!isQuarterHourTime(hourDraft.startTime) || !isQuarterHourTime(hourDraft.endTime)) {
+      return window.alert("Les heures de début et de fin doivent être saisies par quart d’heure.");
+    }
+
     const house = houses.find((item) => item.id === hourDraft.houseId);
     const worker = activeWorkers.find((item) => item.id === hourDraft.workerId);
 
@@ -4117,10 +4123,14 @@ function HouseTrackingView({
                 </select>
               </label>
               <label>Début
-                <input type="time" value={hourDraft.startTime} onChange={(event) => setHourDraft((current) => ({ ...current, startTime: event.target.value }))} />
+                <select value={hourDraft.startTime} onChange={(event) => setHourDraft((current) => ({ ...current, startTime: event.target.value }))}>
+                  {QUARTER_HOUR_TIME_OPTIONS.map((time) => <option key={time} value={time}>{time}</option>)}
+                </select>
               </label>
               <label>Fin
-                <input type="time" value={hourDraft.endTime} onChange={(event) => setHourDraft((current) => ({ ...current, endTime: event.target.value }))} />
+                <select value={hourDraft.endTime} onChange={(event) => setHourDraft((current) => ({ ...current, endTime: event.target.value }))}>
+                  {QUARTER_HOUR_TIME_OPTIONS.map((time) => <option key={time} value={time}>{time}</option>)}
+                </select>
               </label>
               <label>Pause minutes
                 <input type="number" min="0" value={hourDraft.breakMinutes} onChange={(event) => setHourDraft((current) => ({ ...current, breakMinutes: event.target.value }))} />
